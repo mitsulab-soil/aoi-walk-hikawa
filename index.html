@@ -3651,8 +3651,8 @@ const _v = { x: 0 };
 let swayT = null;
 function sway(on) {
   if (swayT) cancelAnimationFrame(swayT); swayT = null; if (!on || RM || NO3D) return;
-  const y0 = C.yaw, p0 = C.pitch, t0 = performance.now();
-  const f = () => { if (turnAnim) { swayT = requestAnimationFrame(f); return; } const k = (performance.now() - t0) / 1000; C.look(y0 + Math.sin(k / 3.2) * .07, p0 + Math.sin(k / 4.1) * .015); swayT = requestAnimationFrame(f); };
+  let y0 = null, p0 = 0, t0 = 0;   /* 向き直り（faceTo）が終わってから、その向きを中心に */
+  const f = () => { if (turnAnim) { swayT = requestAnimationFrame(f); return; } if (y0 == null) { y0 = C.yaw; p0 = C.pitch; t0 = performance.now(); } const k = (performance.now() - t0) / 1000; C.look(y0 + Math.sin(k / 3.2) * .07, p0 + Math.sin(k / 4.1) * .015); swayT = requestAnimationFrame(f); };
   setTimeout(() => { if (phase === "listen") swayT = requestAnimationFrame(f); }, 1600);
 }
 // やさしい達成：歩いた道のり（画面では進んだ距離、現地では位置の変化の合計）・立ち止まった数・謎・道具・図鑑。順位や点数はつけない
