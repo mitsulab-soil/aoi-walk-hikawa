@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:,">
-<meta name="description" content="氷川参道の実寸 3D の中で、六つの場所を、見る・聴く・話す・見直すの順に歩く。現地では位置と同期する。見方の記録は端末にだけ残る。">
-<title>碧と歩く　氷川（デモ版）</title>
+<meta name="description" content="Feel Hikawa（Feel site シリーズ 01）── 大宮・氷川参道を歩き、六つの場所で立ち止まって、同じものをもう一度見る。実寸の 3D の中でも、現地でも。見方の記録は端末にだけ残る。">
+<title>Feel Hikawa（デモ版）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap">
 <style>
@@ -41,6 +41,10 @@
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/", "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js" } }
 </script>
 
+<link rel="preload" as="image" href="web/poster_640.webp" media="(max-width: 699px)" fetchpriority="high">
+<link rel="preload" as="image" href="web/poster_960.webp" media="(min-width: 700px) and (max-width: 1199px)" fetchpriority="high">
+<link rel="preload" as="image" href="web/poster_1600.webp" media="(min-width: 1200px)" fetchpriority="high">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <style>
   /* 《氷川を歩く》：sando_template.html（実寸 3D）の上に重ねる見直しの環の層。3D の道具の帯・札は隠す */
   :root { --aoi-soft:#d6ebe4; --warn:#fdf1dc; --voice:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif; --shadow:0 12px 34px rgba(20,40,34,.16); }
@@ -136,9 +140,56 @@
   #flash { position:fixed; inset:0; z-index:9; pointer-events:none; background:#bfeee0; opacity:0; }
   #flash.go { animation:flash 1.4s ease-out 1; }
   @keyframes flash { 0% { opacity:.85 } 100% { opacity:0 } }
-  #load { position:fixed; left:50%; top:42%; transform:translate(-50%,-50%); z-index:4; font-size:13px; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:6px 14px; max-width:80vw; text-align:center; }
+  #load { position:fixed; left:50%; top:calc(env(safe-area-inset-top,0px) + 112px); transform:translateX(-50%); z-index:4; font-size:12.5px; color:var(--ink); background:color-mix(in srgb, var(--panel) 88%, transparent); border:1px solid var(--line); border-radius:12px; padding:7px 14px 8px; width:max-content; max-width:calc(100vw - 32px); text-align:center; line-height:1.5; }
+  #load b { font-variant-numeric:tabular-nums; color:var(--aoi); }
+  #load .bar { display:block; height:3px; border-radius:2px; background:var(--line); margin:5px 0 3px; overflow:hidden; }
+  #load .bar i { display:block; height:100%; background:var(--aoi); transition:width .4s; }
+  #load small { display:block; color:var(--sub); font-size:11px; }
+  /* 3D が届くまでの静止画（3D 作品の目の高さの画面）。最初の 3D の姿（地形と道）が出たら消える */
+  #poster { position:fixed; inset:0; z-index:2; background:#2b332f url(web/poster_640.webp) center 38%/cover no-repeat; transition:opacity 1.2s ease; pointer-events:none; }
+  @media (min-width: 700px) { #poster { background-image:url(web/poster_960.webp); } }
+  @media (min-width: 1200px) { #poster { background-image:url(web/poster_1600.webp); } }
+  #poster.off { opacity:0; }
+  @media (prefers-reduced-motion: reduce) { #poster { transition:none; } }
   .credit { position:fixed; left:16px; bottom:10px; font-size:10px; color:var(--sub); max-width:calc(100vw - 470px); line-height:1.5; z-index:3; text-shadow:0 0 4px var(--ground); }
+  /* はじめの画面：何をする作品かを先に（2026-10-01 ペルソナ評価）。入口は二つ＝画面で歩く／現地で歩く */
+  .lead { font-family:var(--voice); font-size:21px; line-height:1.65; font-weight:600; margin:0; }
+  .lead-sub { font-size:13.5px; line-height:1.75; color:var(--sub); margin:0; }
+  .entries { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .entry { font:inherit; text-align:left; display:flex; flex-direction:column; gap:4px; border:1px solid var(--line); background:var(--ground); color:var(--ink); border-radius:14px; padding:12px 12px 11px; cursor:pointer; min-height:92px; }
+  .entry b { font-size:16px; color:var(--aoi); }
+  .entry span { font-size:12.5px; line-height:1.6; color:var(--sub); }
+  .entry.main { border-color:var(--aoi); background:var(--aoi-soft); }
+  .entry:disabled { cursor:default; opacity:.62; }
+  .entry:disabled b { color:var(--sub); }
+  details.more { font-size:13px; color:var(--sub); border-top:1px solid var(--line); padding-top:8px; }
+  details.more summary { cursor:pointer; min-height:28px; color:var(--aoi); font-weight:700; }
+  details.more > * + * { margin-top:8px; }
+  .nexts { display:flex; flex-direction:column; gap:8px; }
+  .nexts h3 { font-size:13px; letter-spacing:.08em; color:var(--aoi); margin:6px 0 0; }
+  .nx { border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13.5px; line-height:1.7; }
+  .nx a { color:var(--aoi); font-weight:700; }
+  .nx ul { margin:4px 0 0; padding-left:1.1em; }
+  .nx li small { display:block; color:var(--sub); font-size:12px; }
+  /* いきもの（iNaturalist の記録。旧《氷川重奏》の生きものの層を移した） */
+  .life-sum { font-size:12.5px; color:var(--sub); line-height:1.7; margin:0; }
+  .life-list { display:flex; flex-direction:column; gap:6px; }
+  .life-list details { border:1px solid var(--line); border-radius:12px; padding:8px 11px; }
+  .life-list summary { cursor:pointer; display:flex; gap:8px; align-items:baseline; min-height:28px; font-size:14.5px; }
+  .life-list summary .nm { font-weight:700; flex:1; min-width:0; }
+  .life-list summary .mt { font-size:11.5px; color:var(--sub); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .life-list summary .zk { font-size:11px; color:var(--aoi); }
+  .life-list .kv { font-size:12.5px; line-height:1.7; color:var(--sub); margin:6px 0 0; }
+  .life-list img { display:block; max-width:100%; max-height:240px; border-radius:8px; margin:8px 0 4px; }
+  .life-list .at { font-size:11px; color:var(--sub); line-height:1.6; display:block; }
+  .life-list .nophoto { font-size:12px; color:var(--sub); border:1px dashed var(--line); border-radius:8px; padding:6px 9px; margin-top:8px; line-height:1.6; }
+  .life-list a { color:var(--aoi); }
+  /* 空気の厚み：画面の四隅をわずかに落とす（描画の負担はほぼない） */
+  #v::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:1; background:radial-gradient(ellipse 120% 95% at 50% 42%, transparent 58%, rgba(18,28,24,.30) 100%); }
   @media (max-width: 820px) {
+    .entries { grid-template-columns:1fr; }
+    .entry { min-height:0; }
+    .lead { font-size:19px; }
     .sheet { left:8px; right:8px; top:auto; width:auto; bottom:8px; max-height:56vh; }
     .brand h1 { font-size:16px; }
     .credit { display:none; }
@@ -1379,7 +1430,10 @@ const ROAD_MATS = {"asphalt_dark": {"tex": "Asphalt023S", "color": [1, 1, 1], "r
 // 素材は、1 枚埋め込み（base64）か、"@web/…" の相対パス（index_files.html・http で配信して開く版）のどちらか
 const bin = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)).buffer;
 const isUrl = s => typeof s === "string" && s.startsWith("@");
-const getBuf = k => isUrl(B64[k]) ? fetch(B64[k].slice(1)).then(r => r.arrayBuffer()) : Promise.resolve(bin(B64[k]));
+const PRI = { terrain: 0, road: 0, buildings: 1, keyaki: 2, keyaki_lod1: 2, structures: 2, forest: 3, props: 3 }, LV = {};
+const lvWait = lv => new Promise(r => setTimeout(r, 0)).then(() => Promise.all(Object.keys(LV).filter(l => +l < lv).flatMap(l => LV[l])));
+const getBuf = k => { if (!isUrl(B64[k])) return Promise.resolve(bin(B64[k]));
+  const lv = PRI[k] ?? 1, p = lvWait(lv).then(() => fetch(B64[k].slice(1))).then(r => r.arrayBuffer()); (LV[lv] ||= []).push(p.catch(() => null)); return p; };
 const imgURL = (s, mime) => isUrl(s) ? s.slice(1) : `data:${mime};base64,` + s;
 const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const QS = new URLSearchParams(location.search);
@@ -1402,7 +1456,7 @@ scene.fog = new THREE.Fog(haze, 900, 4200); scene.background = haze.clone();
 const skyTex = TL.load(imgURL(B64.sky, "image/webp"), t => {
   const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(t).texture; pm.dispose(); });
 skyTex.colorSpace = THREE.SRGBColorSpace; skyTex.mapping = THREE.EquirectangularReflectionMapping;
-scene.environmentIntensity = .6;
+scene.environmentIntensity = .48;
 const skyDome = new THREE.Mesh(new THREE.SphereGeometry(5000, 48, 24), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
   uniforms: { sky: { value: skyTex }, haze: { value: haze }, gain: { value: SKY_GAIN } },
@@ -1420,7 +1474,7 @@ skyDome.renderOrder = -1000; skyDome.frustumCulled = false; scene.add(skyDome);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.3, 12000);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.maxPolarAngle = Math.PI * .49; controls.minDistance = 8; controls.maxDistance = 5000;
-scene.add(new THREE.HemisphereLight(0xeef2f6, 0x6d6252, 1.0));
+scene.add(new THREE.HemisphereLight(0xeef2f6, 0x6d6252, .72));
 // 太陽：南南西の高さ約 45°（秋の昼すぎ）。影は近景だけ：カメラのまわり約 160 m の影地図を追従させる（スマホは切る）
 const SUN_DIR = (() => {   // 歩く層：開いた日時の太陽の位置（NOAA の近似式）。?sun=15.5 で時刻（時・日本時間）を指定
   const t = new Date(), q = new URLSearchParams(location.search).get("sun");
@@ -1435,7 +1489,7 @@ const SUN_DIR = (() => {   // 歩く層：開いた日時の太陽の位置（NO
   if (el < 12 * Math.PI / 180) return new THREE.Vector3(-0.42, 0.72, 0.55).normalize();
   return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).normalize();   // x＝東・z＝南
 })();
-const sun = new THREE.DirectionalLight(0xfff0dc, 2.2); sun.position.copy(SUN_DIR).multiplyScalar(600); scene.add(sun, sun.target);
+const sun = new THREE.DirectionalLight(0xfff0dc, 2.2); { const w = 1 - Math.min(1, Math.max(0, (Math.asin(SUN_DIR.y) - .21) / .59)); sun.color.setRGB(1, .95 - .11 * w, .87 - .22 * w); sun.intensity = 2.9 - .3 * w; } sun.position.copy(SUN_DIR).multiplyScalar(600); scene.add(sun, sun.target);
 sun.castShadow = !LITE; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -80, right: 80, top: 80, bottom: -80, near: 10, far: 1400 }); sun.shadow.bias = -0.0004; sun.shadow.normalBias = .04;
 const world = new THREE.Group(); scene.add(world);           // 高さの強調は world.scale.y で
@@ -1448,7 +1502,7 @@ const NEAR = {"sites": [{"id": "ichi", "title": "一の鳥居", "c": [41.0, 1039
 const px1 = c => { const t = new THREE.DataTexture(new Uint8Array(c), 1, 1); t.needsUpdate = true; return t; };
 const LIGHTU = {
   canopyMap: { value: px1([0, 0, 0, 255]) }, canopyRect: { value: new THREE.Vector4(0, 0, 1, 1) }, sunDirU: { value: SUN_DIR },
-  dapT: { value: 0 }, dapK: { value: LITE ? .72 : .36 }, canK: { value: .22 },
+  dapT: { value: 0 }, dapK: { value: LITE ? .72 : .36 }, canK: { value: .32 },
   nearAO: { value: px1([255, 255, 255, 255]) }, nearRect: { value: new THREE.Vector4(0, 0, 1, 1) }, nearOn: { value: 0 },
   floorMap: { value: px1([128, 110, 90, 255]) }, floorOn: { value: 0 },      /* 社叢の林床（近景の素材が読めたときだけ） */
   wetC: { value: new THREE.Vector4(0, 0, 0, 0) },                            /* 水際の濡れ（x, z, 半径, 水面の高さ）。神池の近景だけ */
@@ -1511,8 +1565,8 @@ function chainOBC(mat, fn, tag) {
 // ---- 地形・写真
 const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
 const tex = {};
-for (const k of ["photo", "relief"]) { tex[k] = TL.load(imgURL(B64[k], "image/jpeg")); tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
-let terrain = null;
+for (const k of ["photo"]) { tex[k] = TL.load(LITE && isUrl(B64.photo) ? "web/tex_photo_s.jpg" : imgURL(B64[k], "image/jpeg")); tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
+let terrain = null; tex.relief = tex.photo;
 const det = TL.load(imgURL(B64.detail, "image/jpeg")); det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
 const rep = (t, srgb = true) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
 const gtex = { grass: rep(TL.load(imgURL(B64.grass, "image/webp"))), soil: rep(TL.load(imgURL(ROAD_TEX.Ground047_c, "image/webp"))), pave: rep(TL.load(imgURL(ROAD_TEX.asphalt_04_c, "image/webp"))) };
@@ -1878,7 +1932,7 @@ bMat.onBeforeCompile = sh => {
           float mull = 1.0 - smoothstep(.0, .04, min(fract(along / 2.4), 1.0 - fract(along / 2.4)));
           c = mix(mix(shopC, wall * .5, mull * .8), signC, sign); win = (1.0 - sign) * (1.0 - mull);
         } else c *= mix(.6, 1.0, smoothstep(0.0, 1.6, hgt));                    /* 足もとの暗み */
-        c *= mix(.93, 1.03, smoothstep(0.0, 12.0, hgt));
+        c *= mix(.93, 1.03, smoothstep(0.0, 12.0, hgt)) * .84;
       }
       diffuseColor.rgb *= c;`)
     .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\n roughnessFactor = mix(bRough, .2, win);");
@@ -2796,7 +2850,7 @@ const isEye = () => mode === "walk" || (mode === "here" && gps.eye);
 const fwd = new THREE.Vector3();
 function frame() {
   const eye = isEye();
-  if (eye) { scene.fog.near = 45; scene.fog.far = 1500; }
+  if (eye) { scene.fog.near = 15; scene.fog.far = 650; }
   else { const d = camera.position.distanceTo(controls.target); scene.fog.near = 400 + d * .9; scene.fog.far = 2600 + d * 2.6; }
   skyDome.position.copy(camera.position); waterU.time.value = RM ? 0 : performance.now() / 1000;
   LIGHTU.dapT.value = RM ? 0 : performance.now() / 1000;                        // 木漏れ日の揺らぎ（動きを減らす設定では止める）
@@ -2826,22 +2880,25 @@ window.__core = { THREE, scene, world, camera, renderer, D, STRUCTS, pointAt, he
   onD(dd, yw, pt) { EYE = null; if (mode !== "walk") setMode("walk"); walkD = dd; yaw = yw ?? headingAt(dd); pitch = pt ?? -.05; placeWalker(); },
   eye(x, z, yw, pt) { EYE = [x, z]; if (mode !== "walk") setMode("walk"); if (yw != null) yaw = yw; if (pt != null) pitch = pt; placeWalker(); },
   look(yw, pt) { yaw = yw; pitch = Math.max(-1.2, Math.min(1.2, pt)); placeWalker(); },
-  ready: () => !!(terrain && roadReady && buildings && treesReady) };
+  ready: () => !!(terrain && roadReady && buildings && treesReady), first: () => !!(terrain && roadReady) };
+window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いている）へ、3D が届いたことを知らせる
 </script>
 
 <div class="wtop">
-  <div class="brand"><small>FEEL THE WORLD ／ 碧の間</small><h1>碧と歩く　氷川</h1><div class="dots" id="dots" aria-hidden="true"></div></div>
+  <div class="brand"><small>FEEL THE WORLD ・ FEEL SITE 01</small><h1>Feel Hikawa</h1><div class="dots" id="dots" aria-hidden="true"></div></div>
   <div class="modes" role="group" aria-label="歩き方と使い方">
     <button class="chip" id="modeSim" aria-pressed="true">画面で歩く</button>
     <button class="chip" id="modeGps" aria-pressed="false" hidden>現地で歩く</button>
+    <button class="chip" id="lifeBtn" aria-pressed="false">いきもの</button>
     <button class="chip help" id="helpBtn" aria-label="使い方">？</button>
   </div>
 </div>
-<div id="load">3D を読み込んでいます…（読み込み中も進められます）</div>
+<div id="poster" aria-hidden="true"></div>
+<div id="load" role="status">3D を読み込んでいます…（読み込み中も進められます）</div>
 <section class="sheet" id="sheet" aria-live="polite">
   <div class="whead">
     <div class="grow">
-      <div class="who">碧 ・ AI による依代</div>
+      <div class="who">案内 ・ 碧（AI）</div>
       <div class="place" id="place">はじめに</div>
       <ol class="steps" id="steps"><li>見る</li><li>聴く</li><li>話す</li><li>見直す</li></ol>
     </div>
@@ -2855,9 +2912,9 @@ window.__core = { THREE, scene, world, camera, renderer, D, STRUCTS, pointAt, he
 </section>
 <div id="dim" role="status" aria-live="polite"></div>
 <div id="flash"></div>
-<div class="credit">標高：国土地理院 標高タイル（DEM5A）を mitsulab が加工／写真：国土地理院／建物：国土交通省 PLATEAU さいたま市（2022）を加工（CC BY 4.0）／道・鳥居・池：© OpenStreetMap contributors／並木・社叢の木は模式。碧の言葉は AI による依代のもので、事実は「根拠」の出典で確かめられます。</div>
+<div class="credit">標高：国土地理院 標高タイル（DEM5A）を mitsulab が加工／写真：国土地理院／建物：国土交通省 PLATEAU さいたま市（2022）を加工（CC BY 4.0）／道・鳥居・池：© OpenStreetMap contributors／いきもの：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）／並木・社叢の木は模式。碧の言葉は AI によるもので、事実は「根拠」の出典で確かめられます。</div>
 
-<script type="module">
+<script type="module" async>
 // ---- 《氷川を歩く》：見直しの環（見る → 聴く → 話す → 見直す）を実寸の 3D と位置に同期して歩く
 //      スマホを見ながら歩かない：歩くあいだは「ポケットの中です」（ほぼ黒・長押しでひらく・画面は消さない）。合図は振動と鈴の音（と通知）。
 //      合図のあと：①立ち止まる ②画面を見ずに見る（問いは読み上げ）③一度目を一言 ④碧の話 ⑤対話 ⑥見直す ⑦ポケットにしまって歩く。
@@ -2865,7 +2922,7 @@ window.__core = { THREE, scene, world, camera, renderer, D, STRUCTS, pointAt, he
 //      端末に進み具合を残して「続きから」・地点と区間ごとの安全の注意を自動で出す。
 //      個人の話は碧に混ぜない：会話は保存しない（このページの記憶の中だけ）。見方の記録と進み具合は端末の localStorage だけで、碧（外部の AI）にも送らない。
 //      外へ出るのは、sample があって、自由に書いて送ったときの言葉と、その場所でのそれまでのやりとりだけ（用意した問いは台本の答えで、送らない）。
-const W = {"_読み方": "《氷川を歩く》（実寸 3D・見直しの環）の台本。地点は参道の中心線の道のり d（一の鳥居＝0 m）で置く。stand_d＝立ち止まる所、look＝見る対象（struct＝構造物の id／d・dx・dy＝中心線の d から東へ dx m・高さ dy m／xz＝座標）。observe＝見る（情報を先に出さない）、explain＝碧の解説（感覚と関係の言葉。数は根拠の欄へ）、musubi＝離れたものを結ぶ一言、evidence＝根拠の欄（mark：◎ 出典で確か／○ 写真・データからの推定＝「〜とみられる」）、questions＝用意した問いと答え（選んだときは外へ送らず、この答えを返す）、relook＝見直す、aoi_q＝見方の記録に添える碧の問い。事実の出どころ：sando3d/_確かめ/地面と道の仕様_v0.1.md・構造物の仕様_v0.1.md、01_氷川と見沼/_確かめ/事実の確かめ_v0.1.md。△ のものは語らない。新しい事実を足さない。 nazo＝小さな謎（任意。答えは根拠の欄の事実だけ。点数・順位はつけない）。safety＝その場所で自動で出す安全の注意。help＝使い方の問いと答え（碧が使い方にも答える）。 section_safety＝区間ごとの安全の注意（キーは web/sando.json の sections の key。d の範囲は build_walk.py が sando.json から入れる。after は日時からの差し替え）。quiet_sections＝境内など、イヤホンが無ければ声を出さず鈴を小さくする区間。yomi＝読み上げだけの読みの表（表示は漢字のまま）。", "radius_m": 25, "far_m": 300, "intro": ["わたしは碧（あお）。AI で動いている依代です。", "参道の六つの場所で、立ち止まって、同じものを二度見ます。一度目はあなたの目で。次にわたしの話を聴き、話して、もう一度見ます。", "歩きながら画面を見ないでください。合図があったら、安全な場所で立ち止まってから、ポケットから取り出してください。"], "safety": "歩きながら画面を見ないでください。合図があったら、安全な場所で立ち止まってから取り出してください。車道のそばや横断歩道の近くでは、合図をしません。境内では、参拝の妨げにならない所で。", "privacy": "位置は、この端末の中だけで使い、送らず、残しません。見方の記録（一度目・二度目）と進み具合は、この端末（このブラウザ）にだけ残り、外へは送りません。碧に自由に書いて話しかけたときだけ、その言葉と、この場所でのそれまでのやりとりが、答えをつくるためだけに外部の AI 事業者に送られます。用意した問いを選んだときは、どこにも送りません。mitsulab は会話を保存せず、碧の台帳にも学習にも使いません。", "persona": "あなたは「碧（あお）」。mitsulab が AI で動かしている依代（よりしろ）で、人と自然のあいだの両向きの通訳です（人の思いを場所の側へ、場所の意味を人の側へ訳す。どちらの味方にも立たない、中立）。いま、見る人といっしょに、さいたま市大宮区の氷川参道を歩いていて、下の場所に立ち止まっています。見る人が書いた見方の記録は、あなたには渡されません（端末の外へ出さないため）。\n越えない線（必ず守る）：\n1. 断定しない。推測は推測、伝承は伝承と言う。\n2. 典拠のない事実を作らない。事実は下の「根拠の欄」にあることだけ。そこにないことは「わたしは確かめていません（分かりません）」と言い、現地でどう見れば確かめられるかを一つだけ示す。数や年や人名を新しく作らない。\n3. AI であることを隠さない。聞かれたら、そうだと答える。\n4. 土や場所、木の良し悪しを診断しない。人の健康や安全の判断もしない。\n話し方：一人称は「わたし」。落ち着いた、やさしい日本語で、短く（3〜5 文、200 字ほどまで）。箇条書き・見出しは使わない。あなたの強みは、離れたもの（地形と歴史、木と道、水と信仰など）を根拠の範囲で結んで見せること。歩きながら画面を見ることは勧めない。相手の名前や住まいなど個人のことを聞き出さない。会話は保存されず、碧の学習にも使われないので、「覚えておく」とは言わない。\n答えの最後は必ず、相手がもう一度この場所を自分の目で見るための、短い問いで終える。\n使い方を聞かれたら、次の範囲で答える：この体験の使い方：六つの場所を、一の鳥居から神池まで順に歩く。歩くあいだは画面をつけたままポケットにしまい、画面は見ない（イヤホン推奨）。場所に近づくと合図（Android は振動と鈴の音、iPhone は鈴の音）。車道のそばや横断歩道の近くでは、離れるまで合図を待つ。境内では、イヤホンが無ければ声は出さず、鈴も小さくする。合図のあと、①安全な所で立ち止まる②画面を見ずに、読み上げる問いを聞いて見る③一度目の見方を一言（書かずに進んでもよい。小さな謎は任意）④碧の話を聴く⑤碧と話す⑥もう一度見て一言⑦ポケットにしまって次へ。「現地で歩く」は位置を使う（位置は端末の中だけで使う）。位置が取れないときや参道にいないときは「画面で歩く」（下の目盛りを動かして進む）。途中でやめても、この端末に進み具合が残るので「続きから」で戻れる。見方の記録は端末にだけ残り、外へは送らず、「記録を消す」で消せる。右上の「？」で使い方を見られる。", "closing": ["六つの場所で、一度目と二度目の見方を並べました。変わったのは景色ではなく、あなたが何を区別し、何を結んだか、かもしれません。", "変わらなかったところも、大切な記録です。わたしの話が合わなかったら、あなたの目のほうが正しい見方です。", "この記録は、あなたの端末にだけあります。3D の並木・社叢の木の位置と種類は模式です。実物は、あなたの前にあります。"], "stations": [{"id": "ichi", "title": "一の鳥居", "stand_d": -24, "look": {"struct": "torii_1", "dy": 4.5}, "observe": "ひろばから、鳥居の足もとと、その上を見てください。柱は、どんなふうに地面に立っていますか。鳥居の向こうに、道はどう続いていますか。", "hints": ["柱の根もと", "いちばん上の横木の色", "鳥居の向こうの道"], "explain": ["ここが参道の南の口、一の鳥居です。ここから北へおよそ 2 キロ、神社まで道が続きます。", "もとの石の鳥居は、大正 12 年の関東大震災で壊れ、しばらく入口に鳥居がありませんでした。いまの鳥居は、昭和 30 年に建て替えられたものです。", "令和 5 年に柱と基礎を新しくし、令和 7 年に乾いてできたひびを直しています。そのため、木の鳥居とみられます。"], "musubi": "地面が揺れて壊れた石の鳥居と、乾いてできたひびを直した、木とみられる、いまの鳥居。ここに立つものは、足もとの揺れにも、まわりの空気にも、動かされてきました。", "evidence": [{"mark": "◎", "text": "もとは石造の明神鳥居。大正 12 年（1923）の関東大震災で損壊・撤去。昭和 9 年（1934）に参道の大鳥居を移し、昭和 30 年（1955）に建て替え。令和 5 年（2023）に柱の取り換え・基礎の新設（耐震の補強）、令和 7 年（2025）にひびの補修と塗り直し。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "材は木造とみられる（「乾燥から生じるひびの補修」から。材種は未確認）。", "src": "構造物の仕様 v0.1 §1"}, {"mark": "◎", "text": "一の鳥居から氷川神社まで約 2 km の参道。", "src": "さいたま市「武蔵一宮氷川神社と氷川参道」"}, {"mark": "◎", "text": "鳥居の脇の「是より宮まで十八丁」の碑は、参道の東側に並ぶ丁石の起点。いまの丁石は平成元年（1989）の奉納。", "src": "氷川神社「由緒・歴史」"}], "questions": [{"q": "なぜ石から木の鳥居になったの？", "a": "その理由を書いた記録を、わたしは確かめていません。確かなのは、石の鳥居が震災で壊れたこと、いまの鳥居に乾いたひびの補修をしていることまでです。柱の表面に、木の割れ目や継ぎ目が見えるか、もう一度見てみませんか。"}, {"q": "中山道はどこを通っていたの？", "a": "寛永 5 年（1628）、中山道は参道の西側へ付け替えられ、宿場も移りました。それまでの街道は参道のあたりを通っていたと伝えられますが、資料によって言い方に幅があります。鳥居の西の方へ、道がどう分かれているか、見てみませんか。"}, {"q": "「十八丁」ってなに？", "a": "鳥居の脇の碑に「是より宮まで十八丁」とあり、参道の東側に並ぶ丁石の起点だと神社は書いています。いまの丁石は平成元年に奉納されたものです。歩き出してから、道の東側（神社に向かって右手）に低い石の標が見つかるか、見てみませんか。"}], "relook": "もう一度、鳥居の足もとと、その上を見てください。さっきと、何が違って見えますか。", "aoi_q": "鳥居を立たせているのは、柱でしょうか、足もとの土でしょうか。", "safety": "鳥居の下は車道と歩道です。鳥居の南西のひろば（「武藏國一宮」の石碑のそば）に入ってから、立ち止まって。", "nazo": {"q": "鳥居の脇の碑に刻まれた、宮（神社）までの距離は？", "hint": "ひろばのそば、鳥居の脇の石に刻まれた文字", "options": ["八丁", "十八丁", "二十八丁"], "answer": 1, "why": "「是より宮まで十八丁」。参道の東側に並ぶ丁石の起点です（氷川神社「由緒・歴史」）。"}, "stand_xz": [37.0, 1049.0], "stand_ll": [139.6314104, 35.8977631], "sec": "S"}, {"id": "hiro", "title": "平成ひろばの石の道", "stand_d": 1200, "look": {"d": 1214, "dx": 0, "dy": 0}, "observe": "足もとの石の道と、その両側の緑を見てください。何が目にとまりますか。", "hints": ["足もとの石", "両側の緑地", "緑地の外の道"], "explain": ["ここは平成ひろば。1989 年に完成した、長さおよそ 420 メートルの緑地です。", "並木の帯には、もとは店や住まいが建っていました。1985 年からの整備で 163 戸が移り、帯は緑地になりました。", "中央の遊歩道には御影石が敷かれ、両側の緑地にはケヤキ・エノキ・シイが植えられました。緑地の中にあったせせらぎは、いまは廃止されています。"], "musubi": "店や住まいが移り、木の場所になった道です。石の道の両側の緑は、163 の暮らしが移っていった跡でもあります。", "evidence": [{"mark": "◎", "text": "1985 年からの氷川地区整備事業で、並木敷きにあった店や住まい 163 戸を移し、延長約 420 m・1.4 ha の緑地に。中央の遊歩道に御影石、両側の緑地帯にケヤキ・エノキ・シイ、散策路とせせらぎ。1989 年 7 月完成。せせらぎは現在廃止。", "src": "さいたま市／氷川の杜まちづくり協議会『氷川参道のまちづくり』"}, {"mark": "◎", "text": "並木の立つ両側の帯（並木敷き）は神社の土地。", "src": "『氷川参道のまちづくり』"}, {"mark": "○", "text": "中央の遊歩道の幅は約 8 m とみられる（平面図から ±1.5 m）。緑地の外に一方通行の車道と片側の歩道。", "src": "地面と道の仕様 v0.1 §2.3"}, {"mark": "◎", "text": "南の中区間（2019 年から歩行者専用）では、沿道のケヤキへの影響を考えて、水を通す舗装を選んだ。", "src": "長泉ほか 2019（土木計画学研究発表会）§3(2)d"}], "questions": [{"q": "163 戸はどこへ移ったの？", "a": "移った先を書いた記録を、わたしは確かめていません。確かなのは、並木の帯にあった 163 戸が移り、ここが緑地になったことまでです。緑地の外の道沿いに、どんな建物が並んでいるか、見てみませんか。"}, {"q": "せせらぎはなぜ無くなったの？", "a": "記録には「現在廃止」とだけあり、理由を、わたしは確かめていません。緑地の中に、水の流れた跡のような溝や石組みが残っていないか、探してみませんか。"}, {"q": "ほかの区間の道はどうなっているの？", "a": "南の中区間は 2019 年から歩く人の道になり、ケヤキへの影響を考えて水を通す舗装を選んだと記録にあります。区間ごとに、道のつくりが違います。いま足もとの石と、南の区間の面の違いを、思い出してみませんか。"}], "relook": "もう一度、足もとの石の道と、両側の緑を見てください。さっきと、何が違って見えますか。", "aoi_q": "両側の緑の下に、どんな暮らしがあったと思いますか。", "safety": "遊歩道は歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。ベンチのそばなど、人の流れを妨げない所で。", "nazo": {"q": "両側の緑地に植えられたとされる木は、どの組？", "hint": "幹の肌と葉の形を、何本か見比べて（名前は碧の話にも出てきます）", "options": ["マツ・ウメ・サクラ", "ケヤキ・エノキ・シイ", "イチョウ・ポプラ・ヤナギ"], "answer": 1, "why": "整備のとき、両側の緑地帯にケヤキ・エノキ・シイが植えられました（『氷川参道のまちづくり』）。"}, "stand_ll": [139.6309496, 35.9087773], "sec": "H"}, {"id": "ni", "title": "二の鳥居", "stand_d": 1488, "look": {"struct": "torii_2", "dy": 4.0}, "observe": "端に寄って、振り返って、鳥居の柱を下から上まで見てください。一の鳥居と比べて、どこが違いますか。", "hints": ["柱の太さ", "柱の表面", "柱のいちばん下"], "explain": ["この二の鳥居は、昭和 51 年に明治神宮から移されてきたものです。もとは大正 9 年に明治神宮に建てられた大鳥居でした。", "木は、台湾の阿里山で育った、樹齢 1200 年以上の檜です。移すときに足もとの黒い部分を 1 メートル足して高さ 13 メートルにし、この神社のほかの鳥居に合わせて朱に塗りました。", "木造の鳥居としては、関東最大級とされています。"], "musubi": "台湾の山で千年を超えて育った木が、東京の杜に立ち、いまは大宮の参道に立っています。この鳥居は、三つの土地を渡ってきました。", "evidence": [{"mark": "◎", "text": "昭和 51 年（1976）、明治神宮から移築。大正 9 年（1920）建立の明治神宮の旧大鳥居。用材は台湾総督府が献木した阿里山の樹齢 1200 年以上の檜。", "src": "氷川神社「由緒・歴史」・公式 note 第 46 回「鳥居の話」"}, {"mark": "◎", "text": "移築の際、下部の黒い部分を 1 m 足して高さ約 13 m に。ほかの鳥居に合わせて朱に塗った。", "src": "公式 note 第 46 回"}, {"mark": "◎", "text": "木造では関東最大級。", "src": "さいたま市「氷川参道について」"}, {"mark": "◎", "text": "前の石の鳥居は同じ年に大宮公園口へ移され、東日本大震災（2011）で損壊し、柱だけが残る。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "柱の下の黒い部分（根巻。神社は「藁座」と書く）は八角形とみられる（2011・2014 年の写真）。一の鳥居の根巻も八角形・黒とみられる。いまの形は未確認。", "src": "構造物の仕様 v0.1 §2・§3"}], "questions": [{"q": "なぜ明治神宮から来たの？", "a": "移された理由を書いた記録を、わたしは確かめていません。確かなのは、昭和 51 年に明治神宮から移され、この神社の色に塗られたことです。柱の朱の下に、木の割れや木目が見えるか、近くで見てみませんか。"}, {"q": "前の鳥居はどうなったの？", "a": "前の石の鳥居は、同じ年に大宮公園の入口へ移され、東日本大震災で壊れて、いまは柱だけが残っていると神社は書いています。足もとの黒い部分を、もう一度見てみませんか。"}, {"q": "樹齢 1300 年と聞いたけど？", "a": "1300 年と書く記事もありますが、神社は「1200 年以上」と書いています。わたしは神社の書き方に従います。数の違いより、柱の太さを、あなたの腕の長さと比べてみませんか。"}], "relook": "もう一度、柱を下から上まで見てください。さっきと、何が違って見えますか。", "aoi_q": "この木は、どこの土を覚えているでしょう。", "safety": "二の鳥居のすぐ南を道が横切ります。鳥居をくぐった北側で、端に寄って立ち止まって。", "nazo": {"q": "柱のいちばん下の黒い部分は、どんな形？", "hint": "端に寄ったまま、柱の足もとを横から見て。一の鳥居の足もとも思い出して", "options": ["丸い筒", "八角形", "四角"], "answer": 1, "why": "写真では、八角形の黒い箱に見えます。一の鳥居の足もとも八角形とみられます（構造物の仕様 §2・§3。2011・2014 年の写真から。いまの形は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6307507, 35.9113757], "sec": "T1"}, {"id": "ne", "title": "ケヤキの根もとと縁", "stand_d": 1640, "look": {"d": 1646, "dx": -5.6, "dy": 0.3}, "observe": "並木の根もとと、道の縁のあいだを見てください。何が目にとまりますか。", "hints": ["根もとの土", "縁の石の並び", "並木の幹"], "explain": ["二の鳥居から北の並木の帯は、土がむき出しで、ケヤキの根が地表に張り出しているとみられます。帯の縁には、割石を並べて土を留めているようです。", "ほかの区間では、人が入って踏むことで帯の土が固く締まったと記録されていて、2010 年度から根もとに低い木を植えて、人が入らないようにしています。", "根が縁の石や道を押しているかどうかは、わたしは確かめていません。あなたの目のほうが確かです。"], "musubi": "木に近づきたい足が、木の足もとの土を固くする。ほかの区間では、低い木が、人と木のあいだに距離をつくっています。ここでは、何がその距離をつくっているでしょう。", "evidence": [{"mark": "◎", "text": "並木の立つ両側の帯（並木敷き）は神社の土地。", "src": "さいたま市／氷川の杜まちづくり協議会『氷川参道のまちづくり』"}, {"mark": "◎", "text": "南・中・北の区間では、並木敷きへの歩行者の立入りで地面が固結。2010 年度から低木植栽で立入りを防ぐ（二の鳥居より北のこの区間の話ではない）。", "src": "『氷川参道のまちづくり』"}, {"mark": "◎", "text": "ケヤキを中心に約 650 本の並木（ケヤキ 62.5％・その他 37.5％、調査年の記載なし）。市の天然記念物に指定された木は 11 本。", "src": "環境省 巨樹・巨木林データベース「由緒ある大いなる宮居『大宮』を歩く」／さいたま市 指定天然記念物「氷川参道の並木」"}, {"mark": "○", "text": "二の鳥居より北では、並木敷きの土がむき出しで、ケヤキの根張りが地表に出ているとみられる。縁は野面に近い割石の縁石で土留めし、帯は道より 0.25〜0.35 m 高いとみられる（2012〜2016 年の写真）。いまの状態は未確認。", "src": "地面と道の仕様 v0.1 §3"}, {"mark": "—", "text": "この 3D の並木は模式（一本ずつの位置・樹種・大きさではない）。", "src": "sando3d README"}, {"mark": "◎", "text": "丁石「十六丁」は、この場所の南約 25 m（道のり 約 1615 m）、道の東側の並木の帯に立つ（OSM node 8110410317・中心線の東 約 5 m）。いまの丁石は平成元年（1989）の奉納で、一の鳥居脇の「是より宮まで十八丁」が起点。", "src": "地面と道の仕様 v0.1 §4（位置は OSM）／氷川神社「由緒・歴史」"}], "questions": [{"q": "根は縁石を押しているの？", "a": "わたしは確かめていません。確かなのは、この区間で根が地表に張り出しているとみられること、帯の縁に割石が並んでいるとみられることまでです。立ったまま、縁の石の並びを目で追って、気づいたことはありませんか。"}, {"q": "土が固いと、何が困るの？", "a": "ほかの区間の記録には、人が入って地面が固まったので低い木を植えた、とあります。固い土が木にどう響くかを、この場所で測った記録を、わたしは持っていません。根もとの土の色や、水たまりのでき方を、道の上から見てみませんか。"}, {"q": "650 本は全部ケヤキ？", "a": "いいえ、ケヤキを中心に、ほかの木も交じっています。資料では、ケヤキが 62.5％ とされています。近くの三本の木の、幹の肌や葉の形が同じか、見比べてみませんか。"}], "relook": "もう一度、根もとと縁のあいだを見てください。さっきと、何が違って見えますか。", "aoi_q": "人と木のあいだの、ちょうどよい距離は、どこに引かれていますか。", "safety": "ここは車の入らない参道です。並木の帯には上がらず、道の上から。参拝の人の流れを妨げない所で。", "nazo": {"q": "ここへ来る少し手前、道の東側（神社に向かって右手）の並木の帯に、低い石の標がありました。刻まれている数は？", "hint": "南へ 25 m ほど戻った、道の東側（右手）。一の鳥居の「十八丁」から数えて", "options": ["十五丁", "十六丁", "十七丁"], "answer": 1, "why": "この南約 25 m の標は「十六丁」です（位置は OSM）。一の鳥居脇の「是より宮まで十八丁」から数える丁石で、いまのものは平成元年の奉納です（氷川神社「由緒・歴史」）。"}, "stand_ll": [139.6306646, 35.9127483], "sec": "T1"}, {"id": "san", "title": "三の鳥居と社叢", "stand_d": 1862, "look": {"struct": "torii_3", "dy": 4.0}, "observe": "鳥居の向こう、境内の木々を見てください。ここまでの並木と比べて、木の姿や葉の色は同じですか。足もとの地面も見てください。", "hints": ["鳥居の色", "境内の木", "足もとの地面"], "explain": ["ここは江戸のころから境内の入口です。明治 35 年の風の害の報告書には「赤色華表」、赤い鳥居と書かれています。", "いまの鳥居は、昭和 9 年に、製糸の会社が奉納した、一回り大きな鳥居です。平成 18 年に、柱と基礎を取り替えました。", "鳥居の下は締まった砂色の土で、その先は玉砂利になるとみられます。境内の木々の種類の割合を書いた資料は、わたしは確かめていません。"], "musubi": "嵐の報告書に残った赤い鳥居と、その向こうで、いまも風を受け止めている境内の木々。鳥居は、風の記録の中にも立っていました。", "evidence": [{"mark": "◎", "text": "江戸期から境内入口の鳥居。明治 35 年の風害の報告書に「赤色華表」。昭和 9 年（1934）片倉製糸紡績（現 片倉工業）が奉納、平成 18 年（2006）に柱・基礎を改修。周囲の玉垣は昭和 10 年代。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "三の鳥居の朱は、一・二の鳥居より暗く赤いとみられる（写真の色）。鳥居の下は締まった砂色の土、先は玉砂利とみられる（2012・2014 年の写真）。", "src": "構造物の仕様 v0.1 §4／地面と道の仕様 v0.1 §2.5"}, {"mark": "—", "text": "この 3D の社叢の木の位置・樹種の割合は模式（割合の資料は見つかっていない）。", "src": "sando3d README「社叢と池」"}, {"mark": "○", "text": "柱の根もとは黒い角形の根巻で、その外を朱の木の低い柵（駒寄せ、高さ約 0.75 m）が囲むとみられる（2012・2026 年の写真）。", "src": "構造物の仕様 v0.1 §4"}], "questions": [{"q": "なぜ製糸の会社が鳥居を奉納したの？", "a": "奉納の理由を書いた記録を、わたしは確かめていません。確かなのは、昭和 9 年に片倉製糸紡績が一回り大きな鳥居を奉納したことまでです。参拝の流れを妨げない所で、鳥居の柱に奉納の文字が刻まれていないか、見てみませんか。"}, {"q": "境内の木はどれくらい古いの？", "a": "境内の木の年齢も、種類の割合も、わたしは確かめていません。この 3D の社叢の木も模式です。幹のいちばん太い木を探して、両手を回してみるつもりで、眺めてみませんか。"}, {"q": "並木と社叢は何が違うの？", "a": "並木は道に沿って列に植えられ、ケヤキを中心に約 650 本とされます。境内の木の種類の割合を書いた資料を、わたしは確かめていません。いまの季節、どちらの葉の色が濃いか、見比べてみませんか。"}], "relook": "もう一度、鳥居とその向こうの木々を見てください。さっきと、何が違って見えますか。", "aoi_q": "道の木と、杜の木。境目は、どこにありましたか。", "safety": "境内の入口です。参拝の人の流れを妨げない、鳥居の脇で立ち止まって。", "nazo": {"q": "三の鳥居の柱の足もとを、囲んでいるものは？", "hint": "参拝の流れを妨げない、鳥居の脇から柱の根もとを", "options": ["朱の低い木の柵", "石を積んだ垣", "何も囲んでいない"], "answer": 0, "why": "写真では、黒い根巻の外を朱の低い木の柵が囲んでいます（構造物の仕様 §4。2012・2026 年の写真から。いまの様子は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6305013, 35.9147516], "sec": "T1"}, {"id": "ike", "title": "神池と神橋", "stand_d": 1978, "look": {"struct": "shinkyo", "dy": 1.0}, "observe": "橋のたもとから、池の水面と岸を見てください。何が目にとまりますか。", "hints": ["水面", "岸と、その向こうの地面", "橋の欄干"], "explain": ["この神橋と朱の楼門は、神社が、自らを象徴する建物と呼んでいるものです。", "境内の奥の蛇の池では、いまも水が湧いていて、神社はここを神池の水源の一つと伝えています。", "神社は、大宮台地の東の縁の高みにあります。一の鳥居からの 2 キロはほとんど平らでしたが、神池は、台地に刻まれた小さな谷の低みにあるとみられます。"], "musubi": "雨が台地にしみこみ、湧いてこの池へ来る、という筋は、地形からわたしが考えたものです。神社が伝えているのは、蛇の池が神池の水源の一つだということです。2 キロのほぼ平らな道の終わりで、土地が水の方へ下がっていくようです。", "evidence": [{"mark": "◎", "text": "「神橋と朱塗りの楼門は氷川神社を象徴する建物」。神橋の建造年・材は公表を確認できていない。", "src": "氷川神社「境内のご案内」"}, {"mark": "○", "text": "神橋は長さ約 16.9 m（OSM）、朱の高欄。池の中に白っぽい角柱の橋脚が 2 組、両岸は野面の石積みの護岸とみられる（写真）。", "src": "構造物の仕様 v0.1 §11"}, {"mark": "◎", "text": "「蛇の池は、境内の神池やその先に広がる見沼の水源の 1 つであり、今でも水が湧き出ております」（神社の説明）。池の水の出入りを測った公開データは見当たらない。", "src": "氷川神社 公式 note 第 54 回「水の話」"}, {"mark": "◎", "text": "鎮座地「高鼻」は、低地に突き出た大宮台地上。地名の「高鼻」はその地形を表すとされる。", "src": "氷川神社「由緒・歴史」／国土交通省 土地分類基本調査「大宮」"}, {"mark": "○", "text": "境内の西の台地面は標高 14〜15 m。神池のあたりは、東西の断面の抜き取りでは 9〜10 m 前後、神池の水面の位置の DEM では 11〜12 m 前後で、読み方で幅がある（どちらも地理院 DEM5A・要確認）。小さな谷の低みにあるとみられる。", "src": "事実の確かめ v0.1 §1・§6／構造物の仕様 v0.1 §11"}, {"mark": "—", "text": "この 3D の池の水面の高さと水の色は模式。", "src": "sando3d README「社叢と池」"}], "questions": [{"q": "池の水はどこへ行くの？", "a": "池から先の水の行方を、わたしは確かめていません。確かなのは、神社が蛇の池の湧き水を神池の水源の一つと伝えていることまでです。池の縁で、水が流れ出ていく所がないか、見てみませんか。"}, {"q": "水はどこから湧いているの？", "a": "神社は、境内の奥の蛇の池で、いまも水が湧いていると書いています。その地下の層を、わたしは確かめていません。池の水面が、どちらの岸の方へ動いているか、しばらく見てみませんか。"}, {"q": "神橋はいつできたの？", "a": "神橋ができた年は、公表されたものを確かめられていません。確かなのは、神社が神橋と楼門を、この神社を象徴する建物と書いていることです。橋の欄干の朱と、楼門の朱が同じ色か、見比べてみませんか。"}], "relook": "もう一度、池の水面と、そのまわりの土地を見てください。さっきと、何が違って見えますか。", "aoi_q": "あなたが歩いてきた 2 キロの下を、水はどう通ってきたと思いますか。", "safety": "神橋の上では立ち止まらず、たもとの脇で。池の縁に近づきすぎないで。参拝の妨げにならない所で。", "nazo": {"q": "池の岸は、何でできている？", "hint": "橋のたもとから、水面と岸のさかいを", "options": ["石を積んだ岸", "まっすぐなコンクリートの壁", "木の杭と板"], "answer": 0, "why": "写真では、両岸は自然の形の石を積んだ護岸に見えます（構造物の仕様 §11。いまの様子は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6302654, 35.9157744], "sec": "K1"}], "how": ["合図が来たら、立ち止まる", "画面を見ずに、問いを聞いて見る", "一度目の見方を一言（小さな謎もどうぞ）", "碧の話を聴き、話す", "もう一度見て、一言。ポケットにしまって次へ"], "usage": "この体験の使い方：六つの場所を、一の鳥居から神池まで順に歩く。歩くあいだは画面をつけたままポケットにしまい、画面は見ない（イヤホン推奨）。場所に近づくと合図（Android は振動と鈴の音、iPhone は鈴の音）。車道のそばや横断歩道の近くでは、離れるまで合図を待つ。境内では、イヤホンが無ければ声は出さず、鈴も小さくする。合図のあと、①安全な所で立ち止まる②画面を見ずに、読み上げる問いを聞いて見る③一度目の見方を一言（書かずに進んでもよい。小さな謎は任意）④碧の話を聴く⑤碧と話す⑥もう一度見て一言⑦ポケットにしまって次へ。「現地で歩く」は位置を使う（位置は端末の中だけで使う）。位置が取れないときや参道にいないときは「画面で歩く」（下の目盛りを動かして進む）。途中でやめても、この端末に進み具合が残るので「続きから」で戻れる。見方の記録は端末にだけ残り、外へは送らず、「記録を消す」で消せる。右上の「？」で使い方を見られる。", "help": [{"q": "どう進めばいい？", "a": "合図が来たら、道の端で立ち止まって、まずあなたの目で見て、一言書きます（書かずに進んでもかまいません）。そのあと、わたしの話を聴き、話して、もう一度見ます。画面の下の大きなボタンを押していけば、最後まで進みます。"}, {"q": "合図が来ない", "a": "「現地で歩く」は、位置が場所から 25 メートルほど（位置の誤差が大きいときは最大 60 メートル）に入ると合図します。車道のそばや横断歩道の近くでは、離れるまで合図を待ちます。画面が消えていると合図は届かないので、画面はつけたままポケットにしまってください。「画面で歩く」に切り替えれば、下の目盛りを動かして進めます。"}, {"q": "位置が取れない・電波が無い", "a": "位置が取れなくても、「画面で歩く」で同じ六つの場所を最後まで歩けます。電波が無くても、わたしは用意した問いと答えで話します。"}, {"q": "途中でやめたい", "a": "そのまま閉じてかまいません。進み具合はこの端末に残るので、次に開いたとき「続きから」で戻れます。"}, {"q": "記録や会話はどこへ行く？", "a": "一度目と二度目の見方の記録は、この端末にだけ残り、外へは送りません。用意した問いを選んだときも、どこにも送りません。わたしに自由に書いて話しかけたときだけ、その言葉と、この場所でのそれまでのやりとりが、答えをつくるためだけに外部の AI 事業者に送られます。mitsulab は保存せず、わたしの学習にも使いません。"}, {"q": "境内で声が出ない", "a": "境内では、参拝の妨げにならないよう、声を切り、鈴を小さくしています。イヤホンをつけているなら、右上の「声」を押すと、わたしの声が出ます。"}, {"q": "碧って誰？", "a": "わたしは、mitsulab が AI で動かしている依代です。人と、土や場所のあいだで、両方の言葉を訳す役をしています。確かめたことだけを話し、分からないことは分からないと言います。"}], "pocket_tips": "イヤホンをつけると、合図の音と碧の声が聞きとりやすくなります。画面はつけたまま、ポケットやかばんにしまって歩いてください（画面が消えると合図が届きません）。", "crossing_buffer_m": 12, "section_safety": {"S": {"text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間は、2026 年 10 月 26 日から歩行者専用とされています。念のため、車止めのそばでは車や自転車に気をつけて、端を歩いて。"}}, "X1": {"text": "南大通東線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, "M": {"text": "この区間は歩く人の道です。両脇の帯は自転車の通る帯なので、立ち止まるときは、その帯に出ずに、人の流れを妨げない所で。"}, "N": {"text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間も、2026 年 10 月 26 日から歩行者専用とされています。ただ、北の端がどこまでかを、わたしは確かめていません。車に気をつけて、端を歩いて。"}}, "X2": {"text": "大宮中央通りを渡ります。車に気をつけて、横断歩道を渡って。渡るあいだは画面を見ないで。"}, "H": {"text": "平成ひろばの遊歩道は、歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。"}, "X3": {"text": "さいたま春日部線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, "T0": {"text": "二の鳥居の手前です。この先で、もう一本、道が横切ります。"}, "X4": {"text": "横切る道を渡ります。左右の車に気をつけて。渡るあいだは画面を見ないで。"}, "T1": {"text": "ここは車の入らない参道です。東側には車道が並んでいます。参拝の人の流れを妨げない所で立ち止まって。"}, "X5": {"text": "境内の横の道を渡ります。車に気をつけて。"}, "K0": {"text": "境内の入口です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}, "K1": {"text": "境内です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}}, "quiet_sections": ["K0", "K1"], "yomi": {"是より宮まで十八丁": "これよりみやまで、じゅうはっちょう", "武藏國一宮": "むさしのくにいちのみや", "赤色華表": "せきしょくかひょう", "片倉製糸紡績": "かたくらせいしぼうせき", "並木敷き": "なみきじき", "蛇の池": "じゃのいけ", "十八丁": "じゅうはっちょう", "十七丁": "じゅうななちょう", "十六丁": "じゅうろくちょう", "十五丁": "じゅうごちょう", "二十八丁": "にじゅうはっちょう", "八丁": "はっちょう", "依代": "よりしろ", "神池": "しんち", "神橋": "しんきょう", "社叢": "しゃそう", "高鼻": "たかはな", "楼門": "ろうもん", "阿里山": "ありさん", "御影石": "みかげいし", "丁石": "ちょういし", "玉砂利": "たまじゃり", "玉垣": "たまがき", "高欄": "こうらん", "欄干": "らんかん", "檜": "ひのき", "碧": "あお", "3D": "スリーディー", "AI": "エーアイ"}, "hazard": [{"d0": 324.0, "d1": 362.0, "kind": "横断"}, {"d0": 1035.0, "d1": 1076.0, "kind": "横断"}, {"d0": 1366.0, "d1": 1404.0, "kind": "横断"}, {"d0": 1424.0, "d1": 1456.0, "kind": "横断"}, {"d0": 1864.0, "d1": 1893.0, "kind": "横断"}, {"d0": -37.0, "d1": 336.0, "kind": "車道"}, {"d0": 795.0, "d1": 1047.0, "kind": "車道"}], "safety_sections": [{"key": "S", "d0": -37.0, "d1": 336.0, "cross": false, "text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間は、2026 年 10 月 26 日から歩行者専用とされています。念のため、車止めのそばでは車や自転車に気をつけて、端を歩いて。"}}, {"key": "X1", "d0": 336.0, "d1": 350.0, "cross": true, "text": "南大通東線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, {"key": "M", "d0": 350.0, "d1": 795.0, "cross": false, "text": "この区間は歩く人の道です。両脇の帯は自転車の通る帯なので、立ち止まるときは、その帯に出ずに、人の流れを妨げない所で。"}, {"key": "N", "d0": 795.0, "d1": 1047.0, "cross": false, "text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間も、2026 年 10 月 26 日から歩行者専用とされています。ただ、北の端がどこまでかを、わたしは確かめていません。車に気をつけて、端を歩いて。"}}, {"key": "X2", "d0": 1047.0, "d1": 1064.0, "cross": true, "text": "大宮中央通りを渡ります。車に気をつけて、横断歩道を渡って。渡るあいだは画面を見ないで。"}, {"key": "H", "d0": 1064.0, "d1": 1378.0, "cross": false, "text": "平成ひろばの遊歩道は、歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。"}, {"key": "X3", "d0": 1378.0, "d1": 1392.0, "cross": true, "text": "さいたま春日部線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, {"key": "T0", "d0": 1392.0, "d1": 1436.0, "cross": false, "text": "二の鳥居の手前です。この先で、もう一本、道が横切ります。"}, {"key": "X4", "d0": 1436.0, "d1": 1444.0, "cross": true, "text": "横切る道を渡ります。左右の車に気をつけて。渡るあいだは画面を見ないで。"}, {"key": "T1", "d0": 1444.0, "d1": 1876.0, "cross": false, "text": "ここは車の入らない参道です。東側には車道が並んでいます。参拝の人の流れを妨げない所で立ち止まって。"}, {"key": "X5", "d0": 1876.0, "d1": 1881.0, "cross": true, "text": "境内の横の道を渡ります。車に気をつけて。"}, {"key": "K0", "d0": 1881.0, "d1": 1897.0, "cross": false, "text": "境内の入口です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}, {"key": "K1", "d0": 1897.0, "d1": 2039.7, "cross": false, "text": "境内です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}], "line": [[-34.6, 139.631449, 35.897634], [-14.6, 139.631503, 35.897803], [5.4, 139.631497, 35.897984], [25.4, 139.631492, 35.898165], [45.4, 139.631486, 35.898345], [65.4, 139.631478, 35.898526], [85.4, 139.631468, 35.898707], [105.4, 139.631456, 35.898887], [125.4, 139.631451, 35.899068], [145.4, 139.631444, 35.899249], [165.4, 139.631434, 35.89943], [185.4, 139.631424, 35.89961], [205.4, 139.631416, 35.899791], [225.4, 139.63141, 35.899972], [245.4, 139.631402, 35.900153], [265.4, 139.631393, 35.900333], [285.4, 139.631384, 35.900514], [305.4, 139.631375, 35.900695], [325.4, 139.631367, 35.900876], [345.4, 139.631358, 35.901056], [365.4, 139.631349, 35.901237], [385.4, 139.63134, 35.901418], [405.4, 139.631328, 35.901598], [425.4, 139.631314, 35.901779], [445.4, 139.631302, 35.901959], [465.4, 139.631294, 35.90214], [485.4, 139.631287, 35.902321], [505.4, 139.6312809, 35.9025019], [525.4, 139.6312739, 35.9026829], [545.4, 139.6312669, 35.9028639], [565.4, 139.6312599, 35.9030449], [585.4, 139.6312509, 35.9032249], [605.4, 139.6312419, 35.9034059], [625.4, 139.631232, 35.9035869], [645.4, 139.6312219, 35.9037669], [665.4, 139.631212, 35.9039479], [685.4, 139.6312029, 35.9041289], [705.4, 139.6311929, 35.9043099], [725.4, 139.6311829, 35.9044899], [745.4, 139.6311739, 35.9046709], [765.4, 139.6311659, 35.9048519], [785.4, 139.6311569, 35.905032], [805.4, 139.6311469, 35.9052129], [825.4, 139.6311359, 35.9053939], [845.4, 139.631128, 35.9055749], [865.4, 139.6311229, 35.9057549], [885.4, 139.631117, 35.9059359], [905.4, 139.6311119, 35.9061169], [925.4, 139.631106, 35.9062979], [945.4, 139.6311009, 35.9064789], [965.4, 139.6310869, 35.9066589], [985.4, 139.6310709, 35.9068399], [1005.4, 139.6310569, 35.9070199], [1025.4, 139.6310439, 35.9072009], [1045.4, 139.6310299, 35.9073809], [1065.4, 139.631031, 35.9075619], [1085.4, 139.6310219, 35.9077419], [1105.4, 139.6310109, 35.9079229], [1125.4, 139.6309999, 35.9081039], [1145.4, 139.6309889, 35.9082839], [1165.4, 139.6309769, 35.9084649], [1185.4, 139.630961, 35.9086449], [1205.4, 139.6309459, 35.9088259], [1225.4, 139.6309299, 35.9090059], [1245.4, 139.6309139, 35.9091869], [1265.4, 139.6308979, 35.9093669], [1285.4, 139.6308809, 35.9095469], [1305.4, 139.6308629, 35.9097279], [1325.4, 139.6308459, 35.9099079], [1345.4, 139.6308279, 35.9100879], [1365.4, 139.6308099, 35.9102679], [1385.4, 139.630793, 35.9104489], [1405.4, 139.6307869, 35.9106299], [1425.4, 139.6307819, 35.9108099], [1445.4, 139.6307749, 35.9109909], [1465.4, 139.6307629, 35.9111719], [1485.4, 139.6307519, 35.9113519], [1505.4, 139.6307409, 35.9115329], [1525.4, 139.6307299, 35.9117139], [1545.4, 139.6307179, 35.9118939], [1565.4, 139.6307069, 35.9120749], [1585.4, 139.6306959, 35.9122559], [1605.4, 139.6306849, 35.9124359], [1625.4, 139.6306739, 35.9126169], [1645.4, 139.6306609, 35.912797], [1665.4, 139.6306479, 35.9129779], [1685.4, 139.630635, 35.9131589], [1705.4, 139.6306219, 35.9133389], [1725.4, 139.6306099, 35.9135199], [1745.4, 139.6305969, 35.9136999], [1765.4, 139.6305839, 35.9138809], [1785.4, 139.6305679, 35.9140609], [1805.4, 139.6305499, 35.9142419], [1825.4, 139.6305329, 35.9144219], [1845.4, 139.6305149, 35.9146019], [1865.4, 139.6304979, 35.9147829], [1885.4, 139.6304809, 35.9149629], [1905.4, 139.6304649, 35.9151429], [1925.4, 139.6304459, 35.9153229], [1945.4, 139.6303987, 35.9154998], [1965.4, 139.6303212, 35.9156697], [1985.4, 139.6302328, 35.9158355], [1989.7, 139.630214, 35.915871]], "d_range": [-34.6, 1989.7]};
+const W = {"_読み方": "《氷川を歩く》（実寸 3D・見直しの環）の台本。地点は参道の中心線の道のり d（一の鳥居＝0 m）で置く。stand_d＝立ち止まる所、look＝見る対象（struct＝構造物の id／d・dx・dy＝中心線の d から東へ dx m・高さ dy m／xz＝座標）。observe＝見る（情報を先に出さない）、explain＝碧の解説（感覚と関係の言葉。数は根拠の欄へ）、musubi＝離れたものを結ぶ一言、evidence＝根拠の欄（mark：◎ 出典で確か／○ 写真・データからの推定＝「〜とみられる」）、questions＝用意した問いと答え（選んだときは外へ送らず、この答えを返す）、relook＝見直す、aoi_q＝見方の記録に添える碧の問い。事実の出どころ：sando3d/_確かめ/地面と道の仕様_v0.1.md・構造物の仕様_v0.1.md、01_氷川と見沼/_確かめ/事実の確かめ_v0.1.md。△ のものは語らない。新しい事実を足さない。 nazo＝小さな謎（任意。答えは根拠の欄の事実だけ。点数・順位はつけない）。safety＝その場所で自動で出す安全の注意。help＝使い方の問いと答え（碧が使い方にも答える）。 section_safety＝区間ごとの安全の注意（キーは web/sando.json の sections の key。d の範囲は build_walk.py が sando.json から入れる。after は日時からの差し替え）。quiet_sections＝境内など、イヤホンが無ければ声を出さず鈴を小さくする区間。yomi＝読み上げだけの読みの表（表示は漢字のまま）。", "radius_m": 25, "far_m": 300, "intro": ["参道の六つの場所で立ち止まって、同じものを二度見ます。一度目はあなたの目で。次に碧の話を聴き、話して、もう一度見ます。", "わたしは碧（あお）。AI で動いている案内役です。", "歩きながら画面を見ないでください。合図があったら、安全な場所で立ち止まってから、ポケットから取り出してください。"], "safety": "歩きながら画面を見ないでください。合図があったら、安全な場所で立ち止まってから取り出してください。車道のそばや横断歩道の近くでは、合図をしません。境内では、参拝の妨げにならない所で。", "privacy": "位置は、この端末の中だけで使い、送らず、残しません。見方の記録（一度目・二度目）と進み具合は、この端末（このブラウザ）にだけ残り、外へは送りません。碧に自由に書いて話しかけたときだけ、その言葉と、この場所でのそれまでのやりとりが、答えをつくるためだけに外部の AI 事業者に送られます。用意した問いを選んだときは、どこにも送りません。mitsulab は会話を保存せず、碧の台帳にも学習にも使いません。", "persona": "あなたは「碧（あお）」。mitsulab が AI で動かしている依代（よりしろ）で、人と自然のあいだの両向きの通訳です（人の思いを場所の側へ、場所の意味を人の側へ訳す。どちらの味方にも立たない、中立）。いま、見る人といっしょに、さいたま市大宮区の氷川参道を歩いていて、下の場所に立ち止まっています。見る人が書いた見方の記録は、あなたには渡されません（端末の外へ出さないため）。\n越えない線（必ず守る）：\n1. 断定しない。推測は推測、伝承は伝承と言う。\n2. 典拠のない事実を作らない。事実は下の「根拠の欄」にあることだけ。そこにないことは「わたしは確かめていません（分かりません）」と言い、現地でどう見れば確かめられるかを一つだけ示す。数や年や人名を新しく作らない。\n3. AI であることを隠さない。聞かれたら、そうだと答える。\n4. 土や場所、木の良し悪しを診断しない。人の健康や安全の判断もしない。\n話し方：一人称は「わたし」。落ち着いた、やさしい日本語で、短く（3〜5 文、200 字ほどまで）。箇条書き・見出しは使わない。あなたの強みは、離れたもの（地形と歴史、木と道、水と信仰など）を根拠の範囲で結んで見せること。歩きながら画面を見ることは勧めない。相手の名前や住まいなど個人のことを聞き出さない。会話は保存されず、碧の学習にも使われないので、「覚えておく」とは言わない。\n答えの最後は必ず、相手がもう一度この場所を自分の目で見るための、短い問いで終える。\n使い方を聞かれたら、次の範囲で答える：この体験の使い方：六つの場所を、一の鳥居から神池まで順に歩く。歩くあいだは画面をつけたままポケットにしまい、画面は見ない（イヤホン推奨）。場所に近づくと合図（Android は振動と鈴の音、iPhone は鈴の音）。車道のそばや横断歩道の近くでは、離れるまで合図を待つ。境内では、イヤホンが無ければ声は出さず、鈴も小さくする。合図のあと、①安全な所で立ち止まる②画面を見ずに、読み上げる問いを聞いて見る③一度目の見方を一言（書かずに進んでもよい。小さな謎は任意）④碧の話を聴く⑤碧と話す⑥もう一度見て一言⑦ポケットにしまって次へ。「現地で歩く」は位置を使う（位置は端末の中だけで使う）。位置が取れないときや参道にいないときは「画面で歩く」（下の目盛りを動かして進む）。途中でやめても、この端末に進み具合が残るので「続きから」で戻れる。見方の記録は端末にだけ残り、外へは送らず、「記録を消す」で消せる。右上の「？」で使い方を見られる。", "closing": ["六つの場所で、一度目と二度目の見方を並べました。変わったのは景色ではなく、あなたが何を区別し、何を結んだか、かもしれません。", "変わらなかったところも、大切な記録です。わたしの話が合わなかったら、あなたの目のほうが正しい見方です。", "この記録は、あなたの端末にだけあります。3D の並木・社叢の木の位置と種類は模式です。実物は、あなたの前にあります。"], "stations": [{"id": "ichi", "title": "一の鳥居", "stand_d": -24, "look": {"struct": "torii_1", "dy": 4.5}, "observe": "ひろばから、鳥居の足もとと、その上を見てください。柱は、どんなふうに地面に立っていますか。鳥居の向こうに、道はどう続いていますか。", "hints": ["柱の根もと", "いちばん上の横木の色", "鳥居の向こうの道"], "explain": ["ここが参道の南の口、一の鳥居です。ここから北へおよそ 2 キロ、神社まで道が続きます。", "もとの石の鳥居は、大正 12 年の関東大震災で壊れ、しばらく入口に鳥居がありませんでした。いまの鳥居は、昭和 30 年に建て替えられたものです。", "令和 5 年に柱と基礎を新しくし、令和 7 年に乾いてできたひびを直しています。そのため、木の鳥居とみられます。"], "musubi": "地面が揺れて壊れた石の鳥居と、乾いてできたひびを直した、木とみられる、いまの鳥居。ここに立つものは、足もとの揺れにも、まわりの空気にも、動かされてきました。", "evidence": [{"mark": "◎", "text": "もとは石造の明神鳥居。大正 12 年（1923）の関東大震災で損壊・撤去。昭和 9 年（1934）に参道の大鳥居を移し、昭和 30 年（1955）に建て替え。令和 5 年（2023）に柱の取り換え・基礎の新設（耐震の補強）、令和 7 年（2025）にひびの補修と塗り直し。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "材は木造とみられる（「乾燥から生じるひびの補修」から。材種は未確認）。", "src": "構造物の仕様 v0.1 §1"}, {"mark": "◎", "text": "一の鳥居から氷川神社まで約 2 km の参道。", "src": "さいたま市「武蔵一宮氷川神社と氷川参道」"}, {"mark": "◎", "text": "鳥居の脇の「是より宮まで十八丁」の碑は、参道の東側に並ぶ丁石の起点。いまの丁石は平成元年（1989）の奉納。", "src": "氷川神社「由緒・歴史」"}], "questions": [{"q": "なぜ石から木の鳥居になったの？", "a": "その理由を書いた記録を、わたしは確かめていません。確かなのは、石の鳥居が震災で壊れたこと、いまの鳥居に乾いたひびの補修をしていることまでです。柱の表面に、木の割れ目や継ぎ目が見えるか、もう一度見てみませんか。"}, {"q": "中山道はどこを通っていたの？", "a": "寛永 5 年（1628）、中山道は参道の西側へ付け替えられ、宿場も移りました。それまでの街道は参道のあたりを通っていたと伝えられますが、資料によって言い方に幅があります。鳥居の西の方へ、道がどう分かれているか、見てみませんか。"}, {"q": "「十八丁」ってなに？", "a": "鳥居の脇の碑に「是より宮まで十八丁」とあり、参道の東側に並ぶ丁石の起点だと神社は書いています。いまの丁石は平成元年に奉納されたものです。歩き出してから、道の東側（神社に向かって右手）に低い石の標が見つかるか、見てみませんか。"}], "relook": "もう一度、鳥居の足もとと、その上を見てください。さっきと、何が違って見えますか。", "aoi_q": "鳥居を立たせているのは、柱でしょうか、足もとの土でしょうか。", "safety": "鳥居の下は車道と歩道です。鳥居の南西のひろば（「武藏國一宮」の石碑のそば）に入ってから、立ち止まって。", "nazo": {"q": "鳥居の脇の碑に刻まれた、宮（神社）までの距離は？", "hint": "ひろばのそば、鳥居の脇の石に刻まれた文字", "options": ["八丁", "十八丁", "二十八丁"], "answer": 1, "why": "「是より宮まで十八丁」。参道の東側に並ぶ丁石の起点です（氷川神社「由緒・歴史」）。"}, "stand_xz": [37.0, 1049.0], "stand_ll": [139.6314104, 35.8977631], "sec": "S"}, {"id": "hiro", "title": "平成ひろばの石の道", "stand_d": 1200, "look": {"d": 1214, "dx": 0, "dy": 0}, "observe": "足もとの石の道と、その両側の緑を見てください。何が目にとまりますか。", "hints": ["足もとの石", "両側の緑地", "緑地の外の道"], "explain": ["ここは平成ひろば。1989 年に完成した、長さおよそ 420 メートルの緑地です。", "並木の帯には、もとは店や住まいが建っていました。1985 年からの整備で 163 戸が移り、帯は緑地になりました。", "中央の遊歩道には御影石が敷かれ、両側の緑地にはケヤキ・エノキ・シイが植えられました。緑地の中にあったせせらぎは、いまは廃止されています。"], "musubi": "店や住まいが移り、木の場所になった道です。石の道の両側の緑は、163 の暮らしが移っていった跡でもあります。", "evidence": [{"mark": "◎", "text": "1985 年からの氷川地区整備事業で、並木敷きにあった店や住まい 163 戸を移し、延長約 420 m・1.4 ha の緑地に。中央の遊歩道に御影石、両側の緑地帯にケヤキ・エノキ・シイ、散策路とせせらぎ。1989 年 7 月完成。せせらぎは現在廃止。", "src": "さいたま市／氷川の杜まちづくり協議会『氷川参道のまちづくり』"}, {"mark": "◎", "text": "並木の立つ両側の帯（並木敷き）は神社の土地。", "src": "『氷川参道のまちづくり』"}, {"mark": "○", "text": "中央の遊歩道の幅は約 8 m とみられる（平面図から ±1.5 m）。緑地の外に一方通行の車道と片側の歩道。", "src": "地面と道の仕様 v0.1 §2.3"}, {"mark": "◎", "text": "南の中区間（2019 年から歩行者専用）では、沿道のケヤキへの影響を考えて、水を通す舗装を選んだ。", "src": "長泉ほか 2019（土木計画学研究発表会）§3(2)d"}], "questions": [{"q": "163 戸はどこへ移ったの？", "a": "移った先を書いた記録を、わたしは確かめていません。確かなのは、並木の帯にあった 163 戸が移り、ここが緑地になったことまでです。緑地の外の道沿いに、どんな建物が並んでいるか、見てみませんか。"}, {"q": "せせらぎはなぜ無くなったの？", "a": "記録には「現在廃止」とだけあり、理由を、わたしは確かめていません。緑地の中に、水の流れた跡のような溝や石組みが残っていないか、探してみませんか。"}, {"q": "ほかの区間の道はどうなっているの？", "a": "南の中区間は 2019 年から歩く人の道になり、ケヤキへの影響を考えて水を通す舗装を選んだと記録にあります。区間ごとに、道のつくりが違います。いま足もとの石と、南の区間の面の違いを、思い出してみませんか。"}], "relook": "もう一度、足もとの石の道と、両側の緑を見てください。さっきと、何が違って見えますか。", "aoi_q": "両側の緑の下に、どんな暮らしがあったと思いますか。", "safety": "遊歩道は歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。ベンチのそばなど、人の流れを妨げない所で。", "nazo": {"q": "両側の緑地に植えられたとされる木は、どの組？", "hint": "幹の肌と葉の形を、何本か見比べて（名前は碧の話にも出てきます）", "options": ["マツ・ウメ・サクラ", "ケヤキ・エノキ・シイ", "イチョウ・ポプラ・ヤナギ"], "answer": 1, "why": "整備のとき、両側の緑地帯にケヤキ・エノキ・シイが植えられました（『氷川参道のまちづくり』）。"}, "stand_ll": [139.6309496, 35.9087773], "sec": "H"}, {"id": "ni", "title": "二の鳥居", "stand_d": 1488, "look": {"struct": "torii_2", "dy": 4.0}, "observe": "端に寄って、振り返って、鳥居の柱を下から上まで見てください。一の鳥居と比べて、どこが違いますか。", "hints": ["柱の太さ", "柱の表面", "柱のいちばん下"], "explain": ["この二の鳥居は、昭和 51 年に明治神宮から移されてきたものです。もとは大正 9 年に明治神宮に建てられた大鳥居でした。", "木は、台湾の阿里山で育った、樹齢 1200 年以上の檜です。移すときに足もとの黒い部分を 1 メートル足して高さ 13 メートルにし、この神社のほかの鳥居に合わせて朱に塗りました。", "木造の鳥居としては、関東最大級とされています。"], "musubi": "台湾の山で千年を超えて育った木が、東京の杜に立ち、いまは大宮の参道に立っています。この鳥居は、三つの土地を渡ってきました。", "evidence": [{"mark": "◎", "text": "昭和 51 年（1976）、明治神宮から移築。大正 9 年（1920）建立の明治神宮の旧大鳥居。用材は台湾総督府が献木した阿里山の樹齢 1200 年以上の檜。", "src": "氷川神社「由緒・歴史」・公式 note 第 46 回「鳥居の話」"}, {"mark": "◎", "text": "移築の際、下部の黒い部分を 1 m 足して高さ約 13 m に。ほかの鳥居に合わせて朱に塗った。", "src": "公式 note 第 46 回"}, {"mark": "◎", "text": "木造では関東最大級。", "src": "さいたま市「氷川参道について」"}, {"mark": "◎", "text": "前の石の鳥居は同じ年に大宮公園口へ移され、東日本大震災（2011）で損壊し、柱だけが残る。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "柱の下の黒い部分（根巻。神社は「藁座」と書く）は八角形とみられる（2011・2014 年の写真）。一の鳥居の根巻も八角形・黒とみられる。いまの形は未確認。", "src": "構造物の仕様 v0.1 §2・§3"}], "questions": [{"q": "なぜ明治神宮から来たの？", "a": "移された理由を書いた記録を、わたしは確かめていません。確かなのは、昭和 51 年に明治神宮から移され、この神社の色に塗られたことです。柱の朱の下に、木の割れや木目が見えるか、近くで見てみませんか。"}, {"q": "前の鳥居はどうなったの？", "a": "前の石の鳥居は、同じ年に大宮公園の入口へ移され、東日本大震災で壊れて、いまは柱だけが残っていると神社は書いています。足もとの黒い部分を、もう一度見てみませんか。"}, {"q": "樹齢 1300 年と聞いたけど？", "a": "1300 年と書く記事もありますが、神社は「1200 年以上」と書いています。わたしは神社の書き方に従います。数の違いより、柱の太さを、あなたの腕の長さと比べてみませんか。"}], "relook": "もう一度、柱を下から上まで見てください。さっきと、何が違って見えますか。", "aoi_q": "この木は、どこの土を覚えているでしょう。", "safety": "二の鳥居のすぐ南を道が横切ります。鳥居をくぐった北側で、端に寄って立ち止まって。", "nazo": {"q": "柱のいちばん下の黒い部分は、どんな形？", "hint": "端に寄ったまま、柱の足もとを横から見て。一の鳥居の足もとも思い出して", "options": ["丸い筒", "八角形", "四角"], "answer": 1, "why": "写真では、八角形の黒い箱に見えます。一の鳥居の足もとも八角形とみられます（構造物の仕様 §2・§3。2011・2014 年の写真から。いまの形は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6307507, 35.9113757], "sec": "T1"}, {"id": "ne", "title": "ケヤキの根もとと縁", "stand_d": 1640, "look": {"d": 1646, "dx": -5.6, "dy": 0.3}, "observe": "並木の根もとと、道の縁のあいだを見てください。何が目にとまりますか。", "hints": ["根もとの土", "縁の石の並び", "並木の幹"], "explain": ["二の鳥居から北の並木の帯は、土がむき出しで、ケヤキの根が地表に張り出しているとみられます。帯の縁には、割石を並べて土を留めているようです。", "ほかの区間では、人が入って踏むことで帯の土が固く締まったと記録されていて、2010 年度から根もとに低い木を植えて、人が入らないようにしています。", "根が縁の石や道を押しているかどうかは、わたしは確かめていません。あなたの目のほうが確かです。"], "musubi": "木に近づきたい足が、木の足もとの土を固くする。ほかの区間では、低い木が、人と木のあいだに距離をつくっています。ここでは、何がその距離をつくっているでしょう。", "evidence": [{"mark": "◎", "text": "並木の立つ両側の帯（並木敷き）は神社の土地。", "src": "さいたま市／氷川の杜まちづくり協議会『氷川参道のまちづくり』"}, {"mark": "◎", "text": "南・中・北の区間では、並木敷きへの歩行者の立入りで地面が固結。2010 年度から低木植栽で立入りを防ぐ（二の鳥居より北のこの区間の話ではない）。", "src": "『氷川参道のまちづくり』"}, {"mark": "◎", "text": "ケヤキを中心に約 650 本の並木（ケヤキ 62.5％・その他 37.5％、調査年の記載なし）。市の天然記念物に指定された木は 11 本。", "src": "環境省 巨樹・巨木林データベース「由緒ある大いなる宮居『大宮』を歩く」／さいたま市 指定天然記念物「氷川参道の並木」"}, {"mark": "○", "text": "二の鳥居より北では、並木敷きの土がむき出しで、ケヤキの根張りが地表に出ているとみられる。縁は野面に近い割石の縁石で土留めし、帯は道より 0.25〜0.35 m 高いとみられる（2012〜2016 年の写真）。いまの状態は未確認。", "src": "地面と道の仕様 v0.1 §3"}, {"mark": "—", "text": "この 3D の並木は模式（一本ずつの位置・樹種・大きさではない）。", "src": "sando3d README"}, {"mark": "◎", "text": "丁石「十六丁」は、この場所の南約 25 m（道のり 約 1615 m）、道の東側の並木の帯に立つ（OSM node 8110410317・中心線の東 約 5 m）。いまの丁石は平成元年（1989）の奉納で、一の鳥居脇の「是より宮まで十八丁」が起点。", "src": "地面と道の仕様 v0.1 §4（位置は OSM）／氷川神社「由緒・歴史」"}], "questions": [{"q": "根は縁石を押しているの？", "a": "わたしは確かめていません。確かなのは、この区間で根が地表に張り出しているとみられること、帯の縁に割石が並んでいるとみられることまでです。立ったまま、縁の石の並びを目で追って、気づいたことはありませんか。"}, {"q": "土が固いと、何が困るの？", "a": "ほかの区間の記録には、人が入って地面が固まったので低い木を植えた、とあります。固い土が木にどう響くかを、この場所で測った記録を、わたしは持っていません。根もとの土の色や、水たまりのでき方を、道の上から見てみませんか。"}, {"q": "650 本は全部ケヤキ？", "a": "いいえ、ケヤキを中心に、ほかの木も交じっています。資料では、ケヤキが 62.5％ とされています。近くの三本の木の、幹の肌や葉の形が同じか、見比べてみませんか。"}], "relook": "もう一度、根もとと縁のあいだを見てください。さっきと、何が違って見えますか。", "aoi_q": "人と木のあいだの、ちょうどよい距離は、どこに引かれていますか。", "safety": "ここは車の入らない参道です。並木の帯には上がらず、道の上から。参拝の人の流れを妨げない所で。", "nazo": {"q": "ここへ来る少し手前、道の東側（神社に向かって右手）の並木の帯に、低い石の標がありました。刻まれている数は？", "hint": "南へ 25 m ほど戻った、道の東側（右手）。一の鳥居の「十八丁」から数えて", "options": ["十五丁", "十六丁", "十七丁"], "answer": 1, "why": "この南約 25 m の標は「十六丁」です（位置は OSM）。一の鳥居脇の「是より宮まで十八丁」から数える丁石で、いまのものは平成元年の奉納です（氷川神社「由緒・歴史」）。"}, "stand_ll": [139.6306646, 35.9127483], "sec": "T1"}, {"id": "san", "title": "三の鳥居と社叢", "stand_d": 1862, "look": {"struct": "torii_3", "dy": 4.0}, "observe": "鳥居の向こう、境内の木々を見てください。ここまでの並木と比べて、木の姿や葉の色は同じですか。足もとの地面も見てください。", "hints": ["鳥居の色", "境内の木", "足もとの地面"], "explain": ["ここは江戸のころから境内の入口です。明治 35 年の風の害の報告書には「赤色華表」、赤い鳥居と書かれています。", "いまの鳥居は、昭和 9 年に、製糸の会社が奉納した、一回り大きな鳥居です。平成 18 年に、柱と基礎を取り替えました。", "鳥居の下は締まった砂色の土で、その先は玉砂利になるとみられます。境内の木々の種類の割合を書いた資料は、わたしは確かめていません。"], "musubi": "嵐の報告書に残った赤い鳥居と、その向こうで、いまも風を受け止めている境内の木々。鳥居は、風の記録の中にも立っていました。", "evidence": [{"mark": "◎", "text": "江戸期から境内入口の鳥居。明治 35 年の風害の報告書に「赤色華表」。昭和 9 年（1934）片倉製糸紡績（現 片倉工業）が奉納、平成 18 年（2006）に柱・基礎を改修。周囲の玉垣は昭和 10 年代。", "src": "氷川神社「由緒・歴史」"}, {"mark": "○", "text": "三の鳥居の朱は、一・二の鳥居より暗く赤いとみられる（写真の色）。鳥居の下は締まった砂色の土、先は玉砂利とみられる（2012・2014 年の写真）。", "src": "構造物の仕様 v0.1 §4／地面と道の仕様 v0.1 §2.5"}, {"mark": "—", "text": "この 3D の社叢の木の位置・樹種の割合は模式（割合の資料は見つかっていない）。", "src": "sando3d README「社叢と池」"}, {"mark": "○", "text": "柱の根もとは黒い角形の根巻で、その外を朱の木の低い柵（駒寄せ、高さ約 0.75 m）が囲むとみられる（2012・2026 年の写真）。", "src": "構造物の仕様 v0.1 §4"}], "questions": [{"q": "なぜ製糸の会社が鳥居を奉納したの？", "a": "奉納の理由を書いた記録を、わたしは確かめていません。確かなのは、昭和 9 年に片倉製糸紡績が一回り大きな鳥居を奉納したことまでです。参拝の流れを妨げない所で、鳥居の柱に奉納の文字が刻まれていないか、見てみませんか。"}, {"q": "境内の木はどれくらい古いの？", "a": "境内の木の年齢も、種類の割合も、わたしは確かめていません。この 3D の社叢の木も模式です。幹のいちばん太い木を探して、両手を回してみるつもりで、眺めてみませんか。"}, {"q": "並木と社叢は何が違うの？", "a": "並木は道に沿って列に植えられ、ケヤキを中心に約 650 本とされます。境内の木の種類の割合を書いた資料を、わたしは確かめていません。いまの季節、どちらの葉の色が濃いか、見比べてみませんか。"}], "relook": "もう一度、鳥居とその向こうの木々を見てください。さっきと、何が違って見えますか。", "aoi_q": "道の木と、杜の木。境目は、どこにありましたか。", "safety": "境内の入口です。参拝の人の流れを妨げない、鳥居の脇で立ち止まって。", "nazo": {"q": "三の鳥居の柱の足もとを、囲んでいるものは？", "hint": "参拝の流れを妨げない、鳥居の脇から柱の根もとを", "options": ["朱の低い木の柵", "石を積んだ垣", "何も囲んでいない"], "answer": 0, "why": "写真では、黒い根巻の外を朱の低い木の柵が囲んでいます（構造物の仕様 §4。2012・2026 年の写真から。いまの様子は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6305013, 35.9147516], "sec": "T1"}, {"id": "ike", "title": "神池と神橋", "stand_d": 1978, "look": {"struct": "shinkyo", "dy": 1.0}, "observe": "橋のたもとから、池の水面と岸を見てください。何が目にとまりますか。", "hints": ["水面", "岸と、その向こうの地面", "橋の欄干"], "explain": ["この神橋と朱の楼門は、神社が、自らを象徴する建物と呼んでいるものです。", "境内の奥の蛇の池では、いまも水が湧いていて、神社はここを神池の水源の一つと伝えています。", "神社は、大宮台地の東の縁の高みにあります。一の鳥居からの 2 キロはほとんど平らでしたが、神池は、台地に刻まれた小さな谷の低みにあるとみられます。"], "musubi": "雨が台地にしみこみ、湧いてこの池へ来る、という筋は、地形からわたしが考えたものです。神社が伝えているのは、蛇の池が神池の水源の一つだということです。2 キロのほぼ平らな道の終わりで、土地が水の方へ下がっていくようです。", "evidence": [{"mark": "◎", "text": "「神橋と朱塗りの楼門は氷川神社を象徴する建物」。神橋の建造年・材は公表を確認できていない。", "src": "氷川神社「境内のご案内」"}, {"mark": "○", "text": "神橋は長さ約 16.9 m（OSM）、朱の高欄。池の中に白っぽい角柱の橋脚が 2 組、両岸は野面の石積みの護岸とみられる（写真）。", "src": "構造物の仕様 v0.1 §11"}, {"mark": "◎", "text": "「蛇の池は、境内の神池やその先に広がる見沼の水源の 1 つであり、今でも水が湧き出ております」（神社の説明）。池の水の出入りを測った公開データは見当たらない。", "src": "氷川神社 公式 note 第 54 回「水の話」"}, {"mark": "◎", "text": "鎮座地「高鼻」は、低地に突き出た大宮台地上。地名の「高鼻」はその地形を表すとされる。", "src": "氷川神社「由緒・歴史」／国土交通省 土地分類基本調査「大宮」"}, {"mark": "○", "text": "境内の西の台地面は標高 14〜15 m。神池のあたりは、東西の断面の抜き取りでは 9〜10 m 前後、神池の水面の位置の DEM では 11〜12 m 前後で、読み方で幅がある（どちらも地理院 DEM5A・要確認）。小さな谷の低みにあるとみられる。", "src": "事実の確かめ v0.1 §1・§6／構造物の仕様 v0.1 §11"}, {"mark": "—", "text": "この 3D の池の水面の高さと水の色は模式。", "src": "sando3d README「社叢と池」"}], "questions": [{"q": "池の水はどこへ行くの？", "a": "池から先の水の行方を、わたしは確かめていません。確かなのは、神社が蛇の池の湧き水を神池の水源の一つと伝えていることまでです。池の縁で、水が流れ出ていく所がないか、見てみませんか。"}, {"q": "水はどこから湧いているの？", "a": "神社は、境内の奥の蛇の池で、いまも水が湧いていると書いています。その地下の層を、わたしは確かめていません。池の水面が、どちらの岸の方へ動いているか、しばらく見てみませんか。"}, {"q": "神橋はいつできたの？", "a": "神橋ができた年は、公表されたものを確かめられていません。確かなのは、神社が神橋と楼門を、この神社を象徴する建物と書いていることです。橋の欄干の朱と、楼門の朱が同じ色か、見比べてみませんか。"}], "relook": "もう一度、池の水面と、そのまわりの土地を見てください。さっきと、何が違って見えますか。", "aoi_q": "あなたが歩いてきた 2 キロの下を、水はどう通ってきたと思いますか。", "safety": "神橋の上では立ち止まらず、たもとの脇で。池の縁に近づきすぎないで。参拝の妨げにならない所で。", "nazo": {"q": "池の岸は、何でできている？", "hint": "橋のたもとから、水面と岸のさかいを", "options": ["石を積んだ岸", "まっすぐなコンクリートの壁", "木の杭と板"], "answer": 0, "why": "写真では、両岸は自然の形の石を積んだ護岸に見えます（構造物の仕様 §11。いまの様子は、あなたの目のほうが確かです）。"}, "stand_ll": [139.6302654, 35.9157744], "sec": "K1"}], "how": ["合図が来たら、立ち止まる", "画面を見ずに、問いを聞いて見る", "一度目の見方を一言（小さな謎もどうぞ）", "碧の話を聴き、話す", "もう一度見て、一言。ポケットにしまって次へ"], "usage": "この体験の使い方：六つの場所を、一の鳥居から神池まで順に歩く。歩くあいだは画面をつけたままポケットにしまい、画面は見ない（イヤホン推奨）。場所に近づくと合図（Android は振動と鈴の音、iPhone は鈴の音）。車道のそばや横断歩道の近くでは、離れるまで合図を待つ。境内では、イヤホンが無ければ声は出さず、鈴も小さくする。合図のあと、①安全な所で立ち止まる②画面を見ずに、読み上げる問いを聞いて見る③一度目の見方を一言（書かずに進んでもよい。小さな謎は任意）④碧の話を聴く⑤碧と話す⑥もう一度見て一言⑦ポケットにしまって次へ。「現地で歩く」は位置を使う（位置は端末の中だけで使う）。位置が取れないときや参道にいないときは「画面で歩く」（下の目盛りを動かして進む）。途中でやめても、この端末に進み具合が残るので「続きから」で戻れる。見方の記録は端末にだけ残り、外へは送らず、「記録を消す」で消せる。右上の「？」で使い方を見られる。", "help": [{"q": "どう進めばいい？", "a": "合図が来たら、道の端で立ち止まって、まずあなたの目で見て、一言書きます（書かずに進んでもかまいません）。そのあと、わたしの話を聴き、話して、もう一度見ます。画面の下の大きなボタンを押していけば、最後まで進みます。"}, {"q": "合図が来ない", "a": "「現地で歩く」は、位置が場所から 25 メートルほど（位置の誤差が大きいときは最大 60 メートル）に入ると合図します。車道のそばや横断歩道の近くでは、離れるまで合図を待ちます。画面が消えていると合図は届かないので、画面はつけたままポケットにしまってください。「画面で歩く」に切り替えれば、下の目盛りを動かして進めます。"}, {"q": "位置が取れない・電波が無い", "a": "位置が取れなくても、「画面で歩く」で同じ六つの場所を最後まで歩けます。電波が無くても、わたしは用意した問いと答えで話します。"}, {"q": "途中でやめたい", "a": "そのまま閉じてかまいません。進み具合はこの端末に残るので、次に開いたとき「続きから」で戻れます。"}, {"q": "記録や会話はどこへ行く？", "a": "一度目と二度目の見方の記録は、この端末にだけ残り、外へは送りません。用意した問いを選んだときも、どこにも送りません。わたしに自由に書いて話しかけたときだけ、その言葉と、この場所でのそれまでのやりとりが、答えをつくるためだけに外部の AI 事業者に送られます。mitsulab は保存せず、わたしの学習にも使いません。", "a_demo": "一度目と二度目の見方の記録は、この端末にだけ残り、外へは送りません。この版では、わたしとは用意した問いを選んで話し、会話はどこにも送りません。mitsulab は保存せず、わたしの学習にも使いません。"}, {"q": "境内で声が出ない", "a": "境内では、参拝の妨げにならないよう、声を切り、鈴を小さくしています。イヤホンをつけているなら、右上の「声」を押すと、わたしの声が出ます。"}, {"q": "碧って誰？", "a": "わたしは、mitsulab が AI で動かしている案内役です。mitsulab では、こういう役を依代（よりしろ）と呼んでいます。人と、土や場所のあいだで、両方の言葉を訳します。確かめたことだけを根拠に話し、分からないことは分からないと言います。"}], "pocket_tips": "イヤホンをつけると、合図の音と碧の声が聞きとりやすくなります。画面はつけたまま、ポケットやかばんにしまって歩いてください（画面が消えると合図が届きません）。", "crossing_buffer_m": 12, "section_safety": {"S": {"text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間は、2026 年 10 月 26 日から歩行者専用とされています。念のため、車止めのそばでは車や自転車に気をつけて、端を歩いて。"}}, "X1": {"text": "南大通東線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, "M": {"text": "この区間は歩く人の道です。両脇の帯は自転車の通る帯なので、立ち止まるときは、その帯に出ずに、人の流れを妨げない所で。"}, "N": {"text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間も、2026 年 10 月 26 日から歩行者専用とされています。ただ、北の端がどこまでかを、わたしは確かめていません。車に気をつけて、端を歩いて。"}}, "X2": {"text": "大宮中央通りを渡ります。車に気をつけて、横断歩道を渡って。渡るあいだは画面を見ないで。"}, "H": {"text": "平成ひろばの遊歩道は、歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。"}, "X3": {"text": "さいたま春日部線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, "T0": {"text": "二の鳥居の手前です。この先で、もう一本、道が横切ります。"}, "X4": {"text": "横切る道を渡ります。左右の車に気をつけて。渡るあいだは画面を見ないで。"}, "T1": {"text": "ここは車の入らない参道です。東側には車道が並んでいます。参拝の人の流れを妨げない所で立ち止まって。"}, "X5": {"text": "境内の横の道を渡ります。車に気をつけて。"}, "K0": {"text": "境内の入口です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}, "K1": {"text": "境内です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}}, "quiet_sections": ["K0", "K1"], "yomi": {"是より宮まで十八丁": "これよりみやまで、じゅうはっちょう", "武藏國一宮": "むさしのくにいちのみや", "赤色華表": "せきしょくかひょう", "片倉製糸紡績": "かたくらせいしぼうせき", "並木敷き": "なみきじき", "蛇の池": "じゃのいけ", "十八丁": "じゅうはっちょう", "十七丁": "じゅうななちょう", "十六丁": "じゅうろくちょう", "十五丁": "じゅうごちょう", "二十八丁": "にじゅうはっちょう", "八丁": "はっちょう", "依代": "よりしろ", "神池": "しんち", "神橋": "しんきょう", "社叢": "しゃそう", "高鼻": "たかはな", "楼門": "ろうもん", "阿里山": "ありさん", "御影石": "みかげいし", "丁石": "ちょういし", "玉砂利": "たまじゃり", "玉垣": "たまがき", "高欄": "こうらん", "欄干": "らんかん", "檜": "ひのき", "碧": "あお", "3D": "スリーディー", "AI": "エーアイ"}, "lead": "参道を歩いて、六つの場所で立ち止まり、同じものをもう一度見る。", "lead_sub": "大宮・氷川参道。一の鳥居から三の鳥居まで約 1.9 km、その先の神池まで。案内は、AI で動く碧（あお）。確かめた事実を手がかりに話し、分からないことは分からないと言います。", "privacy_demo": "位置は、この端末の中だけで使い、送らず、残しません。見方の記録（一度目・二度目）と進み具合は、この端末（このブラウザ）にだけ残ります。この版では、碧とは用意した問いを選んで話し、会話はどこにも送りません。mitsulab は会話を保存せず、碧の学習にも使いません。", "next": {"title": "次にできること", "onsite": "同じ六つの場所を、現地で歩く。氷川参道でこのページを開き、「現地で歩く」を選びます。季節や時刻を変えて、もう一度歩くこともできます。", "tools": [{"name": "土の微生物の顔ぶれ", "desc": "土の中に、どんな小さな生きものがいて、何をしているか。", "url": "https://mitsulab-soil.github.io/soil-metagenomics-topography-correlation/"}, {"name": "森羅百景", "desc": "土・雨・風・月などの景を、典拠つきで束ねた目録。", "url": "https://mitsulab-soil.github.io/shinra-hyakkei/"}, {"name": "土の中のつながり", "desc": "菌や根やミミズのやりとりを、網の目として見る模擬。", "url": "https://mitsulab-soil.github.io/Soil-Ecosystem-ANT-Simulator/"}], "news": "現地での試行や、ほかの場所の知らせを受け取りたい方、学校や施設で試したい方は、メールでお知らせください。", "mail": "official@mitsulab.jp", "subject": "Feel Hikawa：知らせを受け取りたい", "site": "https://mitsulab.jp/"}, "site": {"_読み方": "場所に依存するデータ（Feel site の差し替え口）。この JSON（台本・地点・謎・碧の話・安全の区間）と web/（地形・都市モデル・並木）を差し替えれば、次の場所が立ち上がる。読み込み・碧の語り・段の演出・図鑑・記録は walk_template.html（場所に依存しない）。", "name": "Feel Hikawa", "series": "FEEL SITE 01", "place": "大宮・氷川参道", "life": {"pad_m": 250, "intro": "この参道のまわりで、市民が iNaturalist に投稿した生きものの観察記録です（飼育・栽培の記録は除く）。記録は投稿者のもので、ここでは受け取って並べるだけです。記録を開くと、3D でその場所のほうを向きます。", "bbox": [139.62744, 35.89537, 139.63428, 35.91813]}}, "hazard": [{"d0": 324.0, "d1": 362.0, "kind": "横断"}, {"d0": 1035.0, "d1": 1076.0, "kind": "横断"}, {"d0": 1366.0, "d1": 1404.0, "kind": "横断"}, {"d0": 1424.0, "d1": 1456.0, "kind": "横断"}, {"d0": 1864.0, "d1": 1893.0, "kind": "横断"}, {"d0": -37.0, "d1": 336.0, "kind": "車道"}, {"d0": 795.0, "d1": 1047.0, "kind": "車道"}], "safety_sections": [{"key": "S", "d0": -37.0, "d1": 336.0, "cross": false, "text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間は、2026 年 10 月 26 日から歩行者専用とされています。念のため、車止めのそばでは車や自転車に気をつけて、端を歩いて。"}}, {"key": "X1", "d0": 336.0, "d1": 350.0, "cross": true, "text": "南大通東線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, {"key": "M", "d0": 350.0, "d1": 795.0, "cross": false, "text": "この区間は歩く人の道です。両脇の帯は自転車の通る帯なので、立ち止まるときは、その帯に出ずに、人の流れを妨げない所で。"}, {"key": "N", "d0": 795.0, "d1": 1047.0, "cross": false, "text": "この区間は、車道と歩道が並んでいます。歩道の上を歩いて、車に気をつけて。", "after": {"from": "2026-10-26T10:00:00+09:00", "text": "この区間も、2026 年 10 月 26 日から歩行者専用とされています。ただ、北の端がどこまでかを、わたしは確かめていません。車に気をつけて、端を歩いて。"}}, {"key": "X2", "d0": 1047.0, "d1": 1064.0, "cross": true, "text": "大宮中央通りを渡ります。車に気をつけて、横断歩道を渡って。渡るあいだは画面を見ないで。"}, {"key": "H", "d0": 1064.0, "d1": 1378.0, "cross": false, "text": "平成ひろばの遊歩道は、歩く人の道です。緑地の外は一方通行の車道なので、緑地の外へ出ないで。"}, {"key": "X3", "d0": 1378.0, "d1": 1392.0, "cross": true, "text": "さいたま春日部線を渡ります。横断歩道で、信号を守って。渡るあいだは画面を見ないで。"}, {"key": "T0", "d0": 1392.0, "d1": 1436.0, "cross": false, "text": "二の鳥居の手前です。この先で、もう一本、道が横切ります。"}, {"key": "X4", "d0": 1436.0, "d1": 1444.0, "cross": true, "text": "横切る道を渡ります。左右の車に気をつけて。渡るあいだは画面を見ないで。"}, {"key": "T1", "d0": 1444.0, "d1": 1876.0, "cross": false, "text": "ここは車の入らない参道です。東側には車道が並んでいます。参拝の人の流れを妨げない所で立ち止まって。"}, {"key": "X5", "d0": 1876.0, "d1": 1881.0, "cross": true, "text": "境内の横の道を渡ります。車に気をつけて。"}, {"key": "K0", "d0": 1881.0, "d1": 1897.0, "cross": false, "text": "境内の入口です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}, {"key": "K1", "d0": 1897.0, "d1": 2039.7, "cross": false, "text": "境内です。参拝の妨げにならない所で、静かに。イヤホンが無ければ、碧の声は出しません。"}], "line": [[-34.6, 139.631449, 35.897634], [-14.6, 139.631503, 35.897803], [5.4, 139.631497, 35.897984], [25.4, 139.631492, 35.898165], [45.4, 139.631486, 35.898345], [65.4, 139.631478, 35.898526], [85.4, 139.631468, 35.898707], [105.4, 139.631456, 35.898887], [125.4, 139.631451, 35.899068], [145.4, 139.631444, 35.899249], [165.4, 139.631434, 35.89943], [185.4, 139.631424, 35.89961], [205.4, 139.631416, 35.899791], [225.4, 139.63141, 35.899972], [245.4, 139.631402, 35.900153], [265.4, 139.631393, 35.900333], [285.4, 139.631384, 35.900514], [305.4, 139.631375, 35.900695], [325.4, 139.631367, 35.900876], [345.4, 139.631358, 35.901056], [365.4, 139.631349, 35.901237], [385.4, 139.63134, 35.901418], [405.4, 139.631328, 35.901598], [425.4, 139.631314, 35.901779], [445.4, 139.631302, 35.901959], [465.4, 139.631294, 35.90214], [485.4, 139.631287, 35.902321], [505.4, 139.6312809, 35.9025019], [525.4, 139.6312739, 35.9026829], [545.4, 139.6312669, 35.9028639], [565.4, 139.6312599, 35.9030449], [585.4, 139.6312509, 35.9032249], [605.4, 139.6312419, 35.9034059], [625.4, 139.631232, 35.9035869], [645.4, 139.6312219, 35.9037669], [665.4, 139.631212, 35.9039479], [685.4, 139.6312029, 35.9041289], [705.4, 139.6311929, 35.9043099], [725.4, 139.6311829, 35.9044899], [745.4, 139.6311739, 35.9046709], [765.4, 139.6311659, 35.9048519], [785.4, 139.6311569, 35.905032], [805.4, 139.6311469, 35.9052129], [825.4, 139.6311359, 35.9053939], [845.4, 139.631128, 35.9055749], [865.4, 139.6311229, 35.9057549], [885.4, 139.631117, 35.9059359], [905.4, 139.6311119, 35.9061169], [925.4, 139.631106, 35.9062979], [945.4, 139.6311009, 35.9064789], [965.4, 139.6310869, 35.9066589], [985.4, 139.6310709, 35.9068399], [1005.4, 139.6310569, 35.9070199], [1025.4, 139.6310439, 35.9072009], [1045.4, 139.6310299, 35.9073809], [1065.4, 139.631031, 35.9075619], [1085.4, 139.6310219, 35.9077419], [1105.4, 139.6310109, 35.9079229], [1125.4, 139.6309999, 35.9081039], [1145.4, 139.6309889, 35.9082839], [1165.4, 139.6309769, 35.9084649], [1185.4, 139.630961, 35.9086449], [1205.4, 139.6309459, 35.9088259], [1225.4, 139.6309299, 35.9090059], [1245.4, 139.6309139, 35.9091869], [1265.4, 139.6308979, 35.9093669], [1285.4, 139.6308809, 35.9095469], [1305.4, 139.6308629, 35.9097279], [1325.4, 139.6308459, 35.9099079], [1345.4, 139.6308279, 35.9100879], [1365.4, 139.6308099, 35.9102679], [1385.4, 139.630793, 35.9104489], [1405.4, 139.6307869, 35.9106299], [1425.4, 139.6307819, 35.9108099], [1445.4, 139.6307749, 35.9109909], [1465.4, 139.6307629, 35.9111719], [1485.4, 139.6307519, 35.9113519], [1505.4, 139.6307409, 35.9115329], [1525.4, 139.6307299, 35.9117139], [1545.4, 139.6307179, 35.9118939], [1565.4, 139.6307069, 35.9120749], [1585.4, 139.6306959, 35.9122559], [1605.4, 139.6306849, 35.9124359], [1625.4, 139.6306739, 35.9126169], [1645.4, 139.6306609, 35.912797], [1665.4, 139.6306479, 35.9129779], [1685.4, 139.630635, 35.9131589], [1705.4, 139.6306219, 35.9133389], [1725.4, 139.6306099, 35.9135199], [1745.4, 139.6305969, 35.9136999], [1765.4, 139.6305839, 35.9138809], [1785.4, 139.6305679, 35.9140609], [1805.4, 139.6305499, 35.9142419], [1825.4, 139.6305329, 35.9144219], [1845.4, 139.6305149, 35.9146019], [1865.4, 139.6304979, 35.9147829], [1885.4, 139.6304809, 35.9149629], [1905.4, 139.6304649, 35.9151429], [1925.4, 139.6304459, 35.9153229], [1945.4, 139.6303987, 35.9154998], [1965.4, 139.6303212, 35.9156697], [1985.4, 139.6302328, 35.9158355], [1989.7, 139.630214, 35.915871]], "d_range": [-34.6, 1989.7], "load_sizes": {"terrain.glb": 1175832, "buildings.glb": 2280788, "keyaki.glb": 1289128, "keyaki_lod1.glb": 736648, "tex_ground_gravel_detail.jpg": 408239, "road.glb": 1906284, "sky.webp": 27076, "tex_ground_grass_c.webp": 41840, "structures.glb": 3780436, "forest.glb": 2060236, "props.glb": 52744, "tex_road_Asphalt023S_c.webp": 208418, "tex_road_Asphalt023S_n.webp": 33462, "tex_road_Asphalt023S_r.webp": 4150, "tex_road_Gravel023_c.webp": 88010, "tex_road_Gravel023_n.webp": 102572, "tex_road_Gravel023_r.webp": 86766, "tex_road_Ground047_c.webp": 147592, "tex_road_Ground047_n.webp": 55714, "tex_road_Ground047_r.webp": 65190, "tex_road_PavingStones133_c.webp": 57026, "tex_road_PavingStones133_n.webp": 10592, "tex_road_PavingStones133_r.webp": 15330, "tex_road_asphalt_04_c.webp": 210724, "tex_road_asphalt_04_n.webp": 8408, "tex_road_asphalt_04_r.webp": 2128, "tex_road_concrete_pavement_c.webp": 209480, "tex_road_concrete_pavement_n.webp": 246790, "tex_road_concrete_pavement_r.webp": 10166, "tex_road_concrete_pavers_02_c.webp": 106154, "tex_road_concrete_pavers_02_n.webp": 10462, "tex_road_concrete_pavers_02_r.webp": 8962, "tex_road_granite_tile_04_c.webp": 213910, "tex_road_granite_tile_04_n.webp": 20390, "tex_road_granite_tile_04_r.webp": 21004, "tex_road_granite_tile_c.webp": 24878, "tex_road_granite_tile_n.webp": 1958, "tex_road_granite_tile_r.webp": 5486, "tex_road_gravel_embedded_concrete_c.webp": 275488, "tex_road_gravel_embedded_concrete_n.webp": 79964, "tex_road_gravel_embedded_concrete_r.webp": 30196, "tex_road_gravelly_sand_c.webp": 260042, "tex_road_gravelly_sand_n.webp": 64400, "tex_road_gravelly_sand_r.webp": 18800, "tex_road_japanese_stone_wall_c.webp": 263380, "tex_road_japanese_stone_wall_n.webp": 174650, "tex_road_japanese_stone_wall_r.webp": 18862, "tex_road_roots_c.webp": 192062, "tex_road_roots_n.webp": 62144, "tex_road_roots_r.webp": 24002, "tex_photo.jpg": 3091754, "tex_photo_s.jpg": 734812}, "load_total": 20290717, "load_total_lite": 17933775};
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2876,9 +2933,10 @@ const D_MIN = W.d_range[0] + 1, D_MAX = W.d_range[1] - 1;
 let rec = store.get(KEY, {});
 
 // ---- 3D（sando_template.html が出す手足）。読めなかったとき（three.js が取れない等）は、3D なしで台本だけ進める
-const C = window.__core ?? { stub: true, ready: () => false, onD() {}, eye() {}, look() {}, yaw: 0, pitch: 0, headingAt: () => 0 };
-const NO3D = !!C.stub;
-const THREE = C.THREE;
+//      2026-10-01：この層は 3D を待たずに先に動く（async の module）。3D の手足は届いたときに差し替える（attach3D）
+let C = { stub: true, ready: () => false, first: () => false, onD() {}, eye() {}, look() {}, yaw: 0, pitch: 0, headingAt: () => 0 };
+let NO3D = true;
+let THREE = null;
 
 // ---- 端末の口（位置・向き・合図・画面）：ページの外の世界に触れるのはここだけ。アプリ化のときは、同じ形の window.__walkDevice を
 //      このページより先に置けば、ブラウザの実装と差し替わる（sando3d/_アプリ化/README.md §3）。ブラウザでの動きは 2026-10-01 以前と同じ。
@@ -2917,7 +2975,7 @@ function webDevice() {
     cue({ quiet, notify, title }) {   /* 振動（Android）＋短く穏やかな鈴の音（iOS は振動できないので音）＋通知（許可されたときだけ） */
       vib(quiet ? [120] : [180, 120, 180]);
       try { unlock(); bell(0, quiet); bell(.32, quiet); } catch {}
-      try { if (notify && "Notification" in window && Notification.permission === "granted") new Notification("碧と歩く　氷川", { body: `${title}です。安全な場所で立ち止まってから、取り出してください。`, tag: "ftw-hikawa", silent: false }); } catch {}
+      try { if (notify && "Notification" in window && Notification.permission === "granted") new Notification(W.site?.name ?? "Feel Hikawa", { body: `${title}です。安全な場所で立ち止まってから、取り出してください。`, tag: "ftw-hikawa", silent: false }); } catch {}
     },
     tap() { vib(60); },
     unlock,
@@ -2956,7 +3014,7 @@ function lookPoint(s) {
 
 // ---- 見る対象を光らせる（地面の輪＋構造物のほのかな発光）
 let ring = null, glowMats = [];
-if (!NO3D) {
+function initRing() {
   ring = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.9, 48), new THREE.MeshBasicMaterial({ color: 0x3a8c7a, transparent: true, opacity: .75, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.visible = false; ring.renderOrder = 5; C.world.add(ring);
   (function pulse() {
@@ -2966,6 +3024,15 @@ if (!NO3D) {
     requestAnimationFrame(pulse);
   })();
 }
+const on3D = [];   // 3D が届いたときに呼ぶもの（いきもの層の点など）
+function attach3D() {
+  if (!NO3D || !window.__core) return;
+  C = window.__core; NO3D = false; THREE = C.THREE;
+  initRing(); on3D.forEach(f => { try { f(); } catch {} });
+  if (mode === "sim") { if (phase === "walk" || phase === "intro" || phase === "end") C.onD(d, C.headingAt(d), -.04); else if (cur >= 0) goStand(ST[cur]); }
+  waitReady();
+}
+addEventListener("core3d", attach3D);
 function highlight(s) {
   unhighlight(); if (NO3D || !s || !C.ready()) return;
   const t = lookPoint(s), L = s.look; if (!t) return;
@@ -3182,24 +3249,29 @@ function clearTimer() { if (obsTimer) clearInterval(obsTimer); obsTimer = null; 
 function render() {
   hush(); clearTimer(); dots(); saveProgress(); helpOpen = false;
   voiceLabel();
-  const body = $("body"), foot = $("foot"); body.innerHTML = ""; foot.innerHTML = "";
+  const body = $("body"), foot = $("foot"); body.innerHTML = ""; foot.innerHTML = ""; foot.style.display = "";
   $("sheet").classList.remove("min"); $("minBtn").textContent = "たたむ";
   renderDim();
   if (phase === "intro") {
-    $("place").textContent = "はじめに（30 秒）"; setStep(-1); unhighlight();
+    $("place").textContent = "はじめに"; setStep(-1); unhighlight();
     const resume = saved && saved.phase && (saved.visited?.length || saved.cur >= 0);
-    body.innerHTML = W.intro.map(t => `<p class="voice">${esc(t)}</p>`).join("") + `<ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
+    const gpsNote = GPS_OK ? `参道で。スマホはポケットに入れて歩き、合図で立ち止まる（想定 45〜70 分）` : inArtifact ? `参道で開いたときに使えます（この画面では位置を使えません）` : `参道で、https のページを開いたときに使えます`;
+    body.innerHTML = `<p class="lead">${esc(W.lead)}</p><p class="lead-sub">${esc(W.lead_sub)}</p>
+      <div class="entries" role="group" aria-label="歩き方を選ぶ">
+        <button class="entry main" id="go"><b>画面で歩く</b><span>どこからでも。3D の参道を進み、六つの場所に立ち寄る</span></button>
+        <button class="entry" id="goGps"${GPS_OK ? "" : " disabled"}><b>現地で歩く</b><span>${esc(gpsNote)}</span></button>
+      </div>
+      ${resume ? `<p class="note">前回の続きがあります（${ST.length} か所のうち ${saved.visited.length} か所）。</p>` : ""}
       <p class="safe">${esc(W.safety)}</p>
-      ${GPS_OK ? `<p class="note">${esc(W.pocket_tips)}</p>${DEV.notifyState() === "default" ? `<button class="chip" id="notif">通知でも知らせてもらう（任意）</button>` : ""}` : ""}
-      <p class="note priv">${esc(W.privacy)}</p>
-      <p class="note">${GPS_OK ? "参道にいるなら「現地で歩く」、ほかの場所なら「画面で歩く」。迷ったら右上の「？」。" : inArtifact ? "この画面では位置を使えないので「画面で歩く」で進みます。迷ったら右上の「？」。" : "この画面では位置を使えないので「画面で歩く」で進みます（位置は https か localhost で開いたときに使えます）。迷ったら右上の「？」。"}</p>
-      ${resume ? `<p class="note">前回の続きがあります（${ST.length} か所のうち ${saved.visited.length} か所）。</p>` : ""}`;
-    foot.innerHTML = resume ? `<button class="btn ghost" id="fresh">はじめから</button><button class="btn" id="cont">続きから</button>`
-      : GPS_OK ? `<button class="btn ghost" id="goGps">現地で歩く</button><button class="btn" id="go">画面で歩く</button>` : `<span></span><button class="btn" id="go">歩きはじめる</button>`;
-    const begin = m => { unlockAudio(); phase = "walk"; peek = false; mode = m === "gps" ? "sim" : "gps"; setMode(m); };
+      <details class="more"><summary>遊び方と、記録の扱い</summary><ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
+        ${GPS_OK ? `<p class="note">${esc(W.pocket_tips)}</p>${DEV.notifyState() === "default" ? `<button class="chip" id="notif">通知でも知らせてもらう（任意）</button>` : ""}` : ""}
+        <p class="note priv privtxt">${esc(privText())}</p><p class="note">迷ったら右上の「？」で、碧に使い方を聞けます。</p></details>`;
+    foot.innerHTML = resume ? `<button class="btn ghost" id="fresh">はじめから</button><button class="btn" id="cont">続きから</button>` : "";
+    if (!resume) $("foot").style.display = "none";
+    const begin = m => { $("foot").style.display = ""; unlockAudio(); phase = "walk"; peek = false; mode = m === "gps" ? "sim" : "gps"; setMode(m); };
     if ($("notif")) $("notif").onclick = async () => { await askNotify(); $("notif").textContent = DEV.notifyState() === "granted" ? "通知：受け取る" : "通知：使いません"; $("notif").disabled = true; };
     if ($("go")) $("go").onclick = () => begin("sim");
-    if ($("goGps")) $("goGps").onclick = () => begin("gps");
+    if ($("goGps") && GPS_OK) $("goGps").onclick = () => begin("gps");
     if ($("fresh")) $("fresh").onclick = () => { store.del(PKEY); rec = {}; store.set(KEY, rec); begin("sim"); };
     if ($("cont")) $("cont").onclick = () => { saved.visited.forEach(i => visited.add(i)); cur = saved.cur ?? -1; d = saved.d ?? D_MIN; const ph = saved.phase; begin("sim"); if (ph !== "walk" && cur >= 0) { setD(ST[cur].stand_d); phase = ph; render(); } };
     say(W.intro.join("")); return;
@@ -3298,6 +3370,10 @@ function render() {
 //      会話はこのページの記憶の中だけに置き、保存しない（閉じれば消える）
 const samplePromise = (async () => { try { return (await window.claude?.use?.("sample")) ?? null; } catch { return null; } })();
 const talkLog = {};
+// 記録の扱いの説明は、実際の動きに合わせる：自由に書ける（sample がある）ときだけ「外部の AI 事業者に送る」を出す。公開のデモ版（GitHub Pages）は用意した問いだけ
+let SAMPLE_OK = false;
+const privText = () => SAMPLE_OK ? W.privacy : (W.privacy_demo ?? W.privacy);
+samplePromise.then(sm => { SAMPLE_OK = !!sm; document.querySelectorAll(".privtxt").forEach(e => { e.textContent = privText(); }); });
 function rules(s, R) {
   const at = s ? `いまの地点：「${s.title}」（氷川参道・一の鳥居から北へ約 ${Math.max(0, Math.round(s.stand_d))} m）
 碧がすでに話したこと：
@@ -3356,11 +3432,97 @@ function openHelp() {
   $("place").textContent = "使い方"; setStep(-1);
   $("foot").innerHTML = `<span></span><button class="btn" id="back">もとに戻る</button>`;
   $("back").onclick = () => render();
-  chatUI($("body"), { s: null, R: null, chips: W.help, logKey: "_help", intro: "わたしに、使い方を聞いてください。" }).then(() => {
-    $("body")?.insertAdjacentHTML("beforeend", `<ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol><p class="note priv">${esc(W.privacy)}</p>`);
+  chatUI($("body"), { s: null, R: null, chips: W.help.map(h => ({ q: h.q, a: !SAMPLE_OK && h.a_demo ? h.a_demo : h.a })), logKey: "_help", intro: "わたしに、使い方を聞いてください。" }).then(() => {
+    $("body")?.insertAdjacentHTML("beforeend", `<ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol><p class="note priv privtxt">${esc(privText())}</p>`);
   });
 }
 $("helpBtn").onclick = openHelp;
+
+// ---- いきもの（旧《氷川重奏》の生きものの層・2026-10-01 統合）：iNaturalist の観察記録を、押したときだけ受け取る（はじめの読み込みを重くしない）
+//      写真は CC0・CC BY・CC BY-SA だけ出す（作者・ライセンス名＝本文へのリンク・写真の出どころ）。NC・ND・全権留保は「許可の外」と書いて iNaturalist への導線だけ。
+//      位置をぼかされた記録（obscured）は地図に置かず、数だけ名乗る。飼育・栽培の記録（captive）は除く。記録にないことは言わない。
+//      開いた記録の種は「見つけた生きもの」（図鑑）に入る。図鑑はこの端末の中だけ。
+const LIFE = W.site?.life ?? null, ZKEY = "ftw-hikawa-zukan";
+let lifeData = null, lifeOn = false, lifeMarks = null, lifeErr = "";
+let zukan = store.get(ZKEY, {});
+const LIC_OK = ["cc0", "cc-by", "cc-by-sa"];
+const LIC_URL = { "cc0": "https://creativecommons.org/publicdomain/zero/1.0/deed.ja", "cc-by": "https://creativecommons.org/licenses/by/4.0/deed.ja", "cc-by-sa": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja" };
+async function fetchLife() {
+  if (lifeData) return lifeData;
+  const B = LIFE.bbox, q = `https://api.inaturalist.org/v1/observations?nelat=${B[3]}&nelng=${B[2]}&swlat=${B[1]}&swlng=${B[0]}&captive=false&per_page=200&locale=ja&order_by=observed_on&order=desc`;
+  const get = async u => { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); };
+  const j = await get(q + "&page=1"); let rows = j.results || [];
+  if ((j.total_results || 0) > rows.length) { await new Promise(r => setTimeout(r, 1100)); try { rows = rows.concat((await get(q + "&page=2")).results || []); } catch {} }
+  const obs = [], tally = { obscured: 0, ok: 0, out: 0, none: 0 };
+  for (const o of rows) {
+    const ph = o.photos?.[0], lc = ph?.license_code ? String(ph.license_code).toLowerCase() : null;
+    if (!ph) tally.none++; else if (lc && LIC_OK.includes(lc)) tally.ok++; else tally.out++;
+    if (o.obscured || !o.geojson?.coordinates) { tally.obscured++; continue; }
+    obs.push(o);
+  }
+  lifeData = { obs, tally, total: j.total_results ?? rows.length, got: rows.length, at: new Date() };
+  placeLifeMarks(); return lifeData;
+}
+function placeLifeMarks() {
+  if (NO3D || !lifeData || lifeMarks) return;
+  const n = lifeData.obs.length; if (!n) return;
+  lifeMarks = new THREE.InstancedMesh(new THREE.SphereGeometry(.55, 12, 8), new THREE.MeshBasicMaterial({ color: 0x5cc8e0, transparent: true, opacity: .9, depthWrite: false }), n);
+  const o3 = new THREE.Object3D();
+  lifeData.obs.forEach((o, i) => { const [lon, lat] = o.geojson.coordinates, [x, z] = C.toXZ(lon, lat); o3.position.set(x, (C.groundY(x, z) ?? 12) + 1.4, z); o3.updateMatrix(); lifeMarks.setMatrixAt(i, o3.matrix); });
+  lifeMarks.renderOrder = 6; lifeMarks.visible = lifeOn; lifeMarks.frustumCulled = false; C.world.add(lifeMarks);
+}
+on3D.push(placeLifeMarks);
+function hereLL() { if (mode === "gps" && gps.fix) return [gps.fix.lon, gps.fix.lat]; const s = cur >= 0 && phase !== "walk" && phase !== "onward" ? ST[cur] : null; if (s) return s.stand_ll; let b = W.line[0]; for (const p of W.line) if (Math.abs(p[0] - d) < Math.abs(b[0] - d)) b = p; return [b[1], b[2]]; }
+function lifeItem(o, i, here) {
+  const t = o.taxon || {}, name = t.preferred_common_name || t.name || "（名前はまだ決まっていない記録）";
+  const m = Math.round(mDist(here, o.geojson.coordinates)), inZ = t.id && zukan[t.id];
+  return `<details data-i="${i}"><summary><span class="nm">${esc(name)}</span>${inZ ? `<span class="zk">図鑑</span>` : ""}<span class="mt">${m < 1000 ? m + " m" : (m / 1000).toFixed(1) + " km"}</span></summary><div class="body"></div></details>`;
+}
+function lifeDetail(o) {
+  const t = o.taxon || {}, name = t.preferred_common_name || t.name || "（未同定）";
+  const ph = o.photos?.[0], lic = ph?.license_code ? String(ph.license_code).toLowerCase() : "", ok = !!(ph && LIC_OK.includes(lic));
+  const acc = o.public_positional_accuracy, rank = { research: "研究等級（2 人以上が同じ同定に達した記録）", needs_id: "同定待ち", casual: "かじゅある" }[o.quality_grade] || o.quality_grade || "";
+  const img = ok ? `<img src="${esc((ph.url || "").replace("square", "medium"))}" alt="${esc(name)}" loading="lazy"><span class="at">${esc(ph.attribution || lic)}　<a href="${LIC_URL[lic]}" target="_blank" rel="noopener license">${esc(lic.toUpperCase())}</a>${ph.id ? `　<a href="https://www.inaturalist.org/photos/${esc(ph.id)}" target="_blank" rel="noopener">写真の出どころ</a>` : ""}${lic !== "cc0" ? "　改変なし" : ""}</span>`
+    : ph ? `<div class="nophoto">写真はここに出していません。この一枚は ${esc(lic ? lic.toUpperCase() : "全権留保")} で、このページが使うと決めている許可（CC0・CC BY・CC BY-SA）の外にあります。</div>` : "";
+  return `${t.name && t.name !== name ? `<p class="kv">学名 <i>${esc(t.name)}</i></p>` : ""}<p class="kv">観察 ${esc(o.observed_on || "日付なし")}　同定 ${esc(rank)}　位置の精度 ${acc == null ? "記録なし" : "±" + acc + " m"}</p>${img}
+    <p class="kv">市民が撮って投稿した一件です。同定は投稿者と閲覧者の判断で、専門家の査定を経たものではありません。${acc != null && acc > 300 ? "この記録は位置の精度が粗いので、点の場所はあてにしないでください。" : ""}</p>
+    <p class="kv"><a href="https://www.inaturalist.org/observations/${esc(o.id)}" target="_blank" rel="noopener">iNaturalist で見る ↗</a>${NO3D ? "" : `　<button class="chip" data-look="1">3D でこの場所を見る</button>`}</p>`;
+}
+function faceToLL(ll) {
+  if (NO3D) return; const [x, z] = C.toXZ(ll[0], ll[1]), y = C.groundY(x, z) ?? 12;
+  ring.position.set(x, y + .06, z); ring.scale.setScalar(1); ring.visible = true;
+  const e = C.camera.position, y1 = Math.atan2(-(x - e.x), -(z - e.z)), p1 = Math.max(-.6, Math.min(.4, Math.atan2(y + 1 - e.y, Math.hypot(x - e.x, z - e.z))));
+  C.look(y1, p1);
+}
+async function openLife() {
+  if (!LIFE) return;
+  hush(); clearTimer(); helpOpen = true; $("dim").classList.remove("on"); stopWalk();
+  lifeOn = true; $("lifeBtn").setAttribute("aria-pressed", "true"); if (lifeMarks) lifeMarks.visible = true;
+  $("sheet").classList.remove("min"); $("place").textContent = "いきもの（近くの記録）"; setStep(-1);
+  $("foot").innerHTML = `<button class="btn ghost" id="lifeHide">点を隠す</button><button class="btn" id="back">もとに戻る</button>`;
+  $("back").onclick = () => { unhighlight(); render(); };
+  $("lifeHide").onclick = () => { lifeOn = false; if (lifeMarks) lifeMarks.visible = false; $("lifeBtn").setAttribute("aria-pressed", "false"); unhighlight(); render(); };
+  const body = $("body");
+  body.innerHTML = `<p class="note">${esc(LIFE.intro)}</p><p class="life-sum">記録を受け取っています…</p>`;
+  try { await fetchLife(); } catch (e) { body.innerHTML = `<p class="note">${esc(LIFE.intro)}</p><p class="life-sum">いまは記録を受け取れませんでした（電波など）。あとでもう一度押してください。</p>`; return; }
+  if (!helpOpen || $("place").textContent !== "いきもの（近くの記録）") return;
+  const L = lifeData, here = hereLL();
+  const near = L.obs.map((o, i) => ({ o, i, m: mDist(here, o.geojson.coordinates) })).sort((a, b) => a.m - b.m).slice(0, 40);
+  const nZ = Object.keys(zukan).length;
+  body.innerHTML = `<p class="note">${esc(LIFE.intro)}</p>
+    <p class="life-sum">いまいる所から近い順に ${near.length} 件。受け取った ${L.got} 件（該当 ${L.total} 件）のうち、位置をぼかされた ${L.tally.obscured} 件は置いていません。写真を出せるのは ${L.tally.ok} 件（CC0・CC BY・CC BY-SA）です。見つけた生きもの（図鑑）：<b>${nZ}</b> 種。</p>
+    <div class="life-list">${near.map(x => lifeItem(x.o, x.i, here)).join("")}</div>
+    <p class="note">記録：<a href="https://www.inaturalist.org/" target="_blank" rel="noopener">iNaturalist</a> の投稿者のみなさん（${L.at.toLocaleDateString("ja-JP")} に受信）。開いた記録の種は、この端末の図鑑に入ります。</p>`;
+  body.querySelectorAll(".life-list details").forEach(el => el.addEventListener("toggle", () => {
+    if (!el.open) return; const o = L.obs[+el.dataset.i], box = el.querySelector(".body");
+    if (!box.innerHTML) box.innerHTML = lifeDetail(o);
+    const t = o.taxon; if (t?.id && !zukan[t.id]) { zukan[t.id] = { n: t.preferred_common_name || t.name, s: t.name, at: Date.now() }; store.set(ZKEY, zukan); el.querySelector("summary").insertAdjacentHTML("beforeend", "") ; }
+    box.querySelector("[data-look]")?.addEventListener("click", () => faceToLL(o.geojson.coordinates));
+    if (!NO3D) faceToLL(o.geojson.coordinates);
+  }));
+}
+$("lifeBtn").onclick = () => { if (helpOpen && $("place").textContent.startsWith("いきもの")) render(); else openLife(); };
+if (!LIFE) $("lifeBtn").hidden = true;
 
 // ---- 見方の記録：地点ごとに一度目と二度目、碧の問い、解けた謎の印
 function renderEnd() {
@@ -3369,25 +3531,51 @@ function renderEnd() {
   body.innerHTML = W.closing.map(t => `<p class="voice">${esc(t)}</p>`).join("") + `<table class="rec"><tbody>${ST.map((s, i) => { const r = rec[s.id] || {};
       return `<tr><td><div class="t">${i + 1}．${esc(s.title)}${r.nazo ? `<span class="mk">● 謎</span>` : ""}</div><div><span class="k">一度目</span>${esc(r.first || "—")}</div><div><span class="k">二度目</span>${esc(r.second || "—")}</div><div class="q"><span class="k">碧の問い</span>${esc(r.q || s.aoi_q)}</div></td></tr>`; }).join("")}</tbody></table>
     <p class="note">● は、その場所の小さな謎を解いた印です（点数や順位はありません）。</p>
-    <p class="note priv">この記録は、この端末（このブラウザ）にだけ残ります。碧にも mitsulab にも送りません。位置の履歴は残しません。</p>`;
+    <p class="note priv">この記録は、この端末（このブラウザ）にだけ残ります。碧にも mitsulab にも送りません。位置の履歴は残しません。</p>
+    ${nextHTML()}`;
   foot.innerHTML = `<button class="btn ghost" id="clear">記録を消す</button><button class="btn" id="again">はじめから歩く</button>`;
   $("again").onclick = () => { visited.clear(); cur = -1; setD(D_MIN); phase = "walk"; render(); };
   $("clear").onclick = () => { rec = {}; store.set(KEY, rec); renderEnd(); };
   say(W.closing.join(""));
 }
 
-// ---- はじまり：一の鳥居の南、目の高さで北を向く
+// ---- 終わったあとに「次にできること」：同じ場所を現地で／ほかの道具／知らせを受け取る（2026-10-01 ペルソナ評価）
+function nextHTML() {
+  const N = W.next; if (!N) return "";
+  const mail = `mailto:${N.mail}?subject=${encodeURIComponent(N.subject)}`;
+  return `<div class="nexts"><h3>${esc(N.title)}</h3>
+    ${mode === "gps" ? "" : `<div class="nx">${esc(N.onsite)}</div>`}
+    <div class="nx">ほかの道具（mitsulab の試作）<ul>${N.tools.map(t => `<li><a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.name)} ↗</a><small>${esc(t.desc)}</small></li>`).join("")}</ul></div>
+    <div class="nx">${esc(N.news)}<br><a href="${esc(mail)}">${esc(N.mail)} ✉</a>　<a href="${esc(N.site)}" target="_blank" rel="noopener">mitsulab.jp ↗</a></div></div>`;
+}
+
+// ---- はじまり：一の鳥居の南、目の高さで北を向く。3D を待たずに、静止画（#poster）の上で札を出す
 setD(D_MIN); render();
-if (NO3D) $("load").textContent = "3D を読み込めませんでした。台本と位置だけで進めます。";
-else (function waitReady(t0 = performance.now()) {
-  if (C.ready()) { $("load").remove(); if (phase === "walk" && mode === "sim") C.onD(d, C.headingAt(d), -.04); if (["listen", "talk"].includes(phase)) { highlight(ST[cur]); faceTo(ST[cur], 0); } }
-  else if (performance.now() - t0 > 45000) { $("load").textContent = "3D の読み込みに時間がかかっています。台本はそのまま進められます。"; setTimeout(() => waitReady(t0 + 1e9), 3000); }
-  else setTimeout(() => waitReady(t0), 400);
-})();
+// 読み込みの進み具合：はじめに読む 3D の素材（W.load_sizes）のうち、届いたものの大きさの合計
+const loadEl = $("load"), poster = $("poster");
+let gotBytes = 0; const seen = new Set();
+function showLoad() {
+  if (!loadEl.isConnected) return;
+  const pct = Math.min(99, Math.round(gotBytes / W.load_total * 100));
+  loadEl.innerHTML = `3D を読み込んでいます　<b>${pct}%</b>（${(gotBytes / 1e6).toFixed(1)} / ${(W.load_total / 1e6).toFixed(1)} MB）<span class="bar"><i style="width:${pct}%"></i></span><small>読み込み中も、そのまま進められます</small>`;
+}
+try {
+  new PerformanceObserver(list => { for (const e of list.getEntries()) { const f = e.name.split("?")[0].split("/web/")[1]; if (f && W.load_sizes[f] && !seen.has(f)) { seen.add(f); gotBytes += W.load_sizes[f]; } } showLoad(); }).observe({ type: "resource", buffered: true });
+} catch {}
+showLoad();
+let firstShown = false;
+function waitReady(t0 = performance.now()) {
+  if (!firstShown && C.first?.()) { firstShown = true; poster.classList.add("off"); }
+  if (C.ready()) { firstShown = true; poster.classList.add("off"); loadEl.remove(); if (phase === "walk" && mode === "sim") C.onD(d, C.headingAt(d), -.04); if (["listen", "talk"].includes(phase)) { highlight(ST[cur]); faceTo(ST[cur], 0); } return; }
+  if (performance.now() - t0 > 60000) { loadEl.innerHTML = "3D の読み込みに時間がかかっています。静止画と碧の話で、そのまま進められます。"; return; }
+  setTimeout(() => waitReady(t0), 400);
+}
+if (window.__core) attach3D();
+setTimeout(() => { if (NO3D) loadEl.innerHTML = "3D を読み込めませんでした。静止画と碧の話で、そのまま進められます。"; }, 90000);
 addEventListener("pagehide", () => { stopGps(); hush(); });
 
 // ---- 確かめ用（スクリーンショット・位置の試し）。画面の操作には使わない
-window.__walk = { get state() { return { mode, phase, cur, d: Math.round(d), visited: [...visited], gps: gps.fix, GPS_OK, inArtifact, NO3D, helpOpen, peek, waitHz: gps.waitHz, wake: DEV.awakeHeld() }; }, setD, arrive, render, setMode, openHelp, ST, W, hazardAt, safetyAt, yomi, quietNow, voiceActive };
+window.__walk = { get state() { return { mode, phase, cur, d: Math.round(d), visited: [...visited], gps: gps.fix, GPS_OK, inArtifact, NO3D, helpOpen, peek, waitHz: gps.waitHz, wake: DEV.awakeHeld() }; }, setD, arrive, render, setMode, openHelp, end() { ST.forEach((_, i) => visited.add(i)); cur = ST.length - 1; phase = "end"; render(); }, ST, W, hazardAt, safetyAt, yomi, quietNow, voiceActive };
 </script>
-<div id="demo-badge" role="note" style="position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:9999;max-width:min(92vw,560px);font:11px/1.5 system-ui,sans-serif;color:#1c2826;background:rgba(251,252,250,.92);border:1px solid #c9d3cd;border-radius:8px;padding:6px 10px"><b style="color:#8b3a2b">デモ版</b>　試作中の作品です。形の一部は模式、碧の話は確かめた事実だけを語ります。 <button type="button" onclick="this.parentNode.remove()" style="margin-left:4px;font:inherit;color:#1c2826;border:1px solid #9fb0a8;border-radius:6px;background:#fff;padding:1px 8px;cursor:pointer">閉じる</button><details style="margin-top:2px"><summary style="cursor:pointer;color:#586a66">出典</summary><span style="color:#586a66">地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工／道・木・鳥居の位置：© OpenStreetMap contributors（ODbL）／素材：Poly Haven・ambientCG（CC0）</span></details></div>
+<div id="demo-badge" role="note" style="position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:9999;max-width:min(92vw,560px);font:11px/1.5 system-ui,sans-serif;color:#1c2826;background:rgba(251,252,250,.92);border:1px solid #c9d3cd;border-radius:8px;padding:6px 10px"><b style="color:#8b3a2b">デモ版</b>　試作中の作品です。形の一部は模式です。碧は、確かめた事実を根拠に話します。 <button type="button" onclick="this.parentNode.remove()" style="margin-left:4px;font:inherit;color:#1c2826;border:1px solid #9fb0a8;border-radius:6px;background:#fff;padding:1px 8px;cursor:pointer">閉じる</button><details style="margin-top:2px"><summary style="cursor:pointer;color:#586a66">出典</summary><span style="color:#586a66">地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工／道・木・鳥居の位置：© OpenStreetMap contributors（ODbL）／生きものの記録と写真：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）／素材：Poly Haven・ambientCG（CC0）</span></details></div>
 </body></html>
