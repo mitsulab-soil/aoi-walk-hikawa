@@ -4,7 +4,7 @@
 <meta name="description" content="Feel Hikawa（Feel site シリーズ 01）── 大宮・氷川参道を歩き、六つの場所で立ち止まって、同じものをもう一度見る。実寸の 3D の中でも、現地でも。見方の記録は端末にだけ残る。">
 <title>Feel Hikawa（デモ版）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
 <style>
   :root { --ground:#e6eae3; --panel:#f7f8f4; --ink:#1b2320; --sub:#5b6660; --line:#d2d9d2; --aoi:#3a8c7a; --suzu:#a37b34; --sando:#c8662e;
     --ui:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif; --title:"Shippori Mincho B1","Hiragino Mincho ProN",serif; }
@@ -2915,6 +2915,7 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
 <div class="credit">標高：国土地理院 標高タイル（DEM5A）を mitsulab が加工／写真：国土地理院／建物：国土交通省 PLATEAU さいたま市（2022）を加工（CC BY 4.0）／道・鳥居・池：© OpenStreetMap contributors／いきもの：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）／並木・社叢の木は模式。碧の言葉は AI によるもので、事実は「根拠」の出典で確かめられます。</div>
 
 <script type="module" async>
+try { performance.mark("walk"); } catch {}
 // ---- 《氷川を歩く》：見直しの環（見る → 聴く → 話す → 見直す）を実寸の 3D と位置に同期して歩く
 //      スマホを見ながら歩かない：歩くあいだは「ポケットの中です」（ほぼ黒・長押しでひらく・画面は消さない）。合図は振動と鈴の音（と通知）。
 //      合図のあと：①立ち止まる ②画面を見ずに見る（問いは読み上げ）③一度目を一言 ④碧の話 ⑤対話 ⑥見直す ⑦ポケットにしまって歩く。
