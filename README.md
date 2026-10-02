@@ -25,7 +25,8 @@ mitsulab の作品《Feel Hikawa》（フィール・ヒカワ）の**デモ版*
 - 素材：[Poly Haven](https://polyhaven.com/)・[ambientCG](https://ambientcg.com/)（CC0）
 - 水の集まる線（Hydro-Qualia）：国土地理院 DEM5A をもとに mitsulab が計算（地表の高さだけからの見込み。下水・側溝・暗渠は入っていない）
 - 3D の表示：[three.js](https://threejs.org/)（MIT）
-- 碧の 3D：mitsulab（試作。素材は CC0）
+- 碧の 3D：© mitsulab（VRoid Studio で作成した VRM・`web/aoi.vrm`）。この作品の中で碧を表示するためだけに置いています。VRM の利用条件は「アバターとして使えるのは作者のみ・再配布不可・改変不可」です。ファイルを取り出して、ほかで使ったり配ったりしないでください。
+- 碧の 3D の表示：[@pixiv/three-vrm](https://github.com/pixiv/three-vrm)（MIT）
 - 木の配置・樹種の割合、根・石・下草の形と並びは模式です。
 
 作品と文章の権利は mitsulab に帰属します。 © mitsulab（https://mitsulab.jp）

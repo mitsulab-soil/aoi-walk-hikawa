@@ -38,7 +38,7 @@
   @media (max-width: 760px) { .ttl h1 { font-size:17px; } .scale { display:none; } .north { top:calc(env(safe-area-inset-top,0px) + 196px); } .card { bottom:calc(env(safe-area-inset-bottom,0px) + 10px); left:10px; width:calc(100vw - 20px); } }
 </style>
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/", "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js" } }
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/", "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js", "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js" } }
 </script>
 
 <link rel="preload" as="image" href="web/poster_640.webp" media="(max-width: 699px)" fetchpriority="high">
@@ -211,6 +211,33 @@
   #bub svg { position:fixed; inset:0; width:100vw; height:100vh; overflow:visible; }
   #bub line { stroke:rgba(250,252,249,.85); stroke-width:1.4; stroke-dasharray:3 4; }
   @media (max-width: 820px) { #bub .bt { font-size:14px; max-width:68vw; } .sheet.min { max-height:none; } }
+  /* 碧の言葉（2026-10-02 本人指示「枠内に出現でなく、氷川参道に 3D キャラクターとして」）：参道に立つ碧の頭の横に浮かぶ吹き出し。
+     日差しの下でも読めるよう、明るい地に濃い字で固定する（画面の明暗の設定によらない）。姿が無いときは、下の札のすぐ上に出す */
+  #say { position:fixed; left:0; top:0; z-index:5; box-sizing:border-box; width:max-content; max-width:min(340px, calc(100vw - 32px)); font-family:var(--voice); font-size:16px; line-height:1.75; color:#14201b; background:rgba(252,253,250,.96); border:1px solid rgba(58,140,122,.6); border-radius:14px; padding:7px 13px 9px; box-shadow:0 8px 26px rgba(10,30,24,.24); opacity:0; visibility:hidden; transition:opacity .45s, visibility .45s; will-change:transform; }
+  #say.on { opacity:1; visibility:visible; }
+  #say p { margin:0; }
+  #say .sw { font-family:var(--ui); font-size:11px; letter-spacing:.08em; color:#2b7262; display:flex; gap:8px; justify-content:space-between; margin-bottom:1px; }
+  #say .sw i { font-style:normal; color:#5d6d68; letter-spacing:0; }
+  #say .sq { font-family:var(--ui); font-size:12.5px; line-height:1.6; color:#4a5a55; border-left:2px solid #c3cfc9; padding-left:7px; margin:2px 0 5px; }
+  #say .st.musubi { color:#1d574a; font-weight:600; }
+  #say .st.wait { color:#5d6d68; }
+  #say .sn { display:flex; justify-content:flex-end; margin-top:5px; }
+  #say .sn[hidden], .ask[hidden] { display:none; }
+  #say .sn button { font:inherit; font-family:var(--ui); font-size:13px; font-weight:700; color:#2b7262; background:#fff; border:1px solid rgba(58,140,122,.6); border-radius:999px; padding:4px 14px; min-height:34px; cursor:pointer; }
+  #sayTail { position:fixed; left:0; top:0; width:100vw; height:100vh; pointer-events:none; z-index:5; overflow:visible; }
+  #sayTail line { stroke:rgba(252,253,250,.95); stroke-width:2.2; stroke-linecap:round; }
+  @media (max-width: 820px) { #say { font-size:15px; line-height:1.7; max-width:min(292px, calc(100vw - 24px)); } }
+  @media (prefers-reduced-motion: reduce) { #say { transition:none; } }
+  /* 碧が場にいるあいだ、札は画面の下の小さな操作の帯（選ぶ・書く・進む）。碧の言葉は吹き出しへ */
+  .sheet.dock { top:auto; left:auto; right:16px; bottom:16px; width:min(500px, calc(100vw - 32px)); max-height:42vh; }
+  .sheet.dock .whead { padding:8px 14px 6px; }
+  .sheet.dock .place { font-size:16px; margin:0 0 4px; }
+  .sheet.dock .wbody { padding:9px 14px; gap:8px; }
+  .sheet.dock .wbody:empty { display:none; }
+  .sheet.dock .wfoot { padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px)); }
+  .sheet.dock .stopmark { font-size:22px; margin:0; }
+  body.docked .credit { max-width:calc(100vw - 560px); }
+  @media (max-width: 820px) { .sheet.dock { left:8px; right:8px; width:auto; bottom:8px; max-height:44vh; } .sheet.dock .steps li { font-size:11px; } }
   /* いきもの（iNaturalist の記録。旧《氷川重奏》の生きものの層を移した） */
   .life-sum { font-size:12.5px; color:var(--sub); line-height:1.7; margin:0; }
   .life-list { display:flex; flex-direction:column; gap:6px; }
@@ -2970,6 +2997,8 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
 <div id="dim" role="status" aria-live="polite"></div>
 <div id="flash"></div>
 <div id="bub" aria-hidden="true"><svg id="bubLine"><line x1="0" y1="0" x2="0" y2="0"/></svg><div class="bt" id="bubT"></div></div>
+<svg id="sayTail" aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0" style="display:none"/></svg>
+<div id="say" role="status" aria-live="polite"><div class="sw"><span>碧（AI）</span><i id="sayLd"></i></div><div id="sayB"></div><div class="sn" id="sayN" hidden><button type="button" id="sayNext">つづき</button></div></div>
 <div class="credit">標高：国土地理院 標高タイル（DEM5A）を mitsulab が加工／写真：国土地理院／建物：国土交通省 PLATEAU さいたま市（2022）を加工（CC BY 4.0）／道・鳥居・池：© OpenStreetMap contributors／いきもの：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）／並木・社叢の木は模式。碧の言葉は AI によるもので、事実は「根拠」の出典で確かめられます。</div>
 
 <script type="module" async>
@@ -3106,7 +3135,7 @@ let turnAnim = null;
 function faceTo(s, dur = 1400) {
   const target = s && lookPoint(s); if (!target) return;
   const e = C.camera.position, dx = target.x - e.x, dz = target.z - e.z, dy = target.y - e.y;
-  const lift = innerWidth <= 820 ? .26 : 0;          /* スマホは下半分を札が覆うので、見る対象が画面の上半分に来るよう少し下を向く */
+  const lift = innerWidth <= 820 ? ($("sheet").classList.contains("dock") ? .05 : .26) : 0;   /* スマホは下半分を札が覆うので、見る対象が画面の上半分に来るよう少し下を向く（札が下の帯のときは、碧の顔が隠れないよう、ほとんど下げない） */
   const y1 = Math.atan2(-dx, -dz), p1 = Math.max(-1.1, Math.min(1.1, Math.atan2(dy, Math.hypot(dx, dz)) - lift));
   const y0 = C.yaw, p0 = C.pitch; let dyw = y1 - y0; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw));
   if (turnAnim) cancelAnimationFrame(turnAnim);
@@ -3259,7 +3288,7 @@ function onFix({ lat, lon, acc }) {
 function farSuggest() {
   $("dim").classList.remove("on");
   const f = gps.fix, km = (f.dist / 1000).toFixed(f.dist > 10000 ? 0 : 1);
-  $("place").textContent = "参道から離れています"; setStep(-1);
+  $("place").textContent = "参道から離れています"; setStep(-1); sayClear(); setDock(false);
   $("body").innerHTML = `<p class="voice">いまの位置は、氷川参道から およそ ${km} km 離れています。</p><p class="note">現地で歩くのは、参道に来てから。いまは「画面で歩く」で、同じ六つの場所をたどれます。</p>`;
   $("foot").innerHTML = `<button class="btn ghost" id="keepGps">このまま待つ</button><button class="btn" id="toSim">画面で歩く</button>`;
   $("toSim").onclick = () => setMode("sim");
@@ -3309,7 +3338,9 @@ function clearTimer() { if (obsTimer) clearInterval(obsTimer); obsTimer = null; 
 function render() {
   hush(); clearTimer(); dots(); saveProgress(); helpOpen = false; sway(false);
   if (activeTool && phase !== "tool") useTool(null);
-  if (phase !== "listen" && phase !== "talk" && phase !== "tool" && phase !== "relook") aoiAt(null);
+  sayClear(); bubble(null);
+  if (phase === "intro" || phase === "end") aoiAt(null);
+  setDock(!(phase === "intro" || phase === "end" || (phase === "walk" && mode === "gps")));   /* 碧が場にいる段は、札を下の操作の帯に */
   voiceLabel();
   const body = $("body"), foot = $("foot"); body.innerHTML = ""; foot.innerHTML = ""; foot.style.display = "";
   $("sheet").classList.remove("min"); $("minBtn").textContent = "たたむ";
@@ -3341,7 +3372,7 @@ function render() {
   if (phase === "walk") {
     const n = nextIdx(); unhighlight();
     if (n < 0) { phase = "end"; render(); return; }
-    $("place").textContent = `次は ${n + 1}．${ST[n].title}`; setStep(-1);
+    $("place").textContent = `次は ${n + 1}．${ST[n].title}`; setStep(-1); aoiLead();
     if (mode === "gps") {           /* 長押しでひらいたとき（peek）だけ見える */
       DEV.targets(ST.map((s, i) => ({ id: s.id, title: s.title, ll: s.stand_ll, r: W.radius_m, i })).filter(t => !visited.has(t.i)));   // アプリでは OS のジオフェンスへ（ブラウザでは何もしない）
       const f = gps.fix, m = f && f.dist <= W.far_m ? Math.round(mDist([f.lon, f.lat], ST[n].stand_ll)) : null;
@@ -3352,9 +3383,9 @@ function render() {
       $("toSim2").onclick = () => setMode("sim"); $("pocket").onclick = () => { peek = false; render(); };
       return;
     }
-    body.innerHTML = `<p class="voice">参道を、一の鳥居から北へ歩きます。${esc(ST[n].title)}に近づくと、合図が来ます。</p>
-      <p class="safe" id="secSafe"></p>
-      <p class="note">現地では、画面をつけたままポケットにしまって歩き、振動と鈴の音（iPhone は音）で知らせます。ここでは音と光で試せます。下の目盛りを動かすか、「次の場所まで歩く」を押してください。${NO3D ? "" : "ドラッグで見回せます。"}</p>`;
+    aoiSays([{ t: `参道を、一の鳥居から北へ歩きます。${ST[n].title}に近づくと、合図が来ます。` }, { t: "現地では、画面をつけたままポケットにしまって歩き、振動と鈴の音（iPhone は音）で知らせます。ここでは音と光で試せます。" }]);
+    body.innerHTML = `<p class="safe" id="secSafe"></p>
+      <p class="note">下の目盛りを動かすか、「次の場所まで歩く」を押してください。${NO3D ? "" : "ドラッグで見回せます。"}</p>`;
     foot.innerHTML = `<div class="walkbar"><span class="note">南</span><input type="range" id="walkR" min="${Math.ceil(D_MIN)}" max="${Math.floor(D_MAX)}" step="1" value="${Math.round(d)}" aria-label="参道の上の位置（一の鳥居からの道のり）"><span class="note">神社</span></div>
       <span class="dist" id="dist"></span><button class="btn" id="autoBtn">次の場所まで歩く</button>`;
     $("walkR").oninput = e => { stopWalk(); unlockAudio(); setD(+e.target.value); checkArriveSim(); };
@@ -3365,17 +3396,18 @@ function render() {
   const s = ST[cur], R = (rec[s.id] ||= {});
   $("place").textContent = `${cur + 1}．${s.title}`;
   if (phase === "stop") {            /* ① 立ち止まる */
-    setStep(0); unhighlight(); goStand(s); aoiAt(null);
-    body.innerHTML = `<p class="stopmark">立ち止まって</p><p class="safe">${esc(s.safety)}</p><p class="voice">それから、見てください。</p>${QUIET.has(s.sec) ? `<p class="note">境内なので、声は切ってあります。イヤホンをつけているなら、右上の「声」で出せます。</p>` : ""}`;
+    setStep(0); unhighlight(); goStand(s); aoiAt(s, "stop");
+    aoiSays([{ t: `${s.title}です。立ち止まって、それから、見てください。` }]);
+    body.innerHTML = `<p class="stopmark">立ち止まって</p><p class="safe">${esc(s.safety)}</p>${QUIET.has(s.sec) ? `<p class="note">境内なので、声は切ってあります。イヤホンをつけているなら、右上の「声」で出せます。</p>` : ""}`;
     foot.innerHTML = `<span></span><button class="btn" id="go">立ち止まりました</button>`;
     $("go").onclick = () => { phase = "observe"; render(); };
     say(`${s.title}です。${s.safety}それから、見てください。`); return;
   }
   if (phase === "observe") {         /* ② 画面を見ずに見る：問いは読み上げ、画面は問いの一文だけ */
-    setStep(0); unhighlight(); goStand(s); faceTo(s, 0);
+    setStep(0); unhighlight(); goStand(s); faceTo(s, 0); aoiAt(s, "observe");
     const [q1, ...qr] = s.observe.split(/(?<=。)/);
-    body.innerHTML = `<p class="oneq">${esc(q1)}</p>${qr.length ? `<details class="note"><summary>問いの続き</summary>${esc(qr.join(""))}</details>` : ""}
-      <p class="note">画面から目を離して、見てください。まず 60 秒ほど。<span class="timer" id="tm"></span></p>`;
+    aoiSays([{ t: q1 }, qr.length ? { t: qr.join("") } : null]);   /* 問いは碧の吹き出しに（続きは「つづき」で） */
+    body.innerHTML = `<p class="note">画面から目を離して、見てください。まず 60 秒ほど。<span class="timer" id="tm"></span></p>`;
     foot.innerHTML = `<span></span><button class="btn" id="go">見終わった</button>`;
     let left = 60; const tm = $("tm"); tm.textContent = `　のこり ${left} 秒`;
     obsTimer = setInterval(() => { left--; tm.textContent = left > 0 ? `　のこり ${left} 秒` : "　見終わったら、下のボタン"; if (left <= 0) { clearTimer(); try { DEV.tap(); } catch {} } }, 1000);
@@ -3383,7 +3415,8 @@ function render() {
     say(s.observe); return;
   }
   if (phase === "first") {           /* ③ 一度目を一言（小さな謎は任意） */
-    setStep(0); unhighlight();
+    setStep(0); unhighlight(); aoiAt(s, "first");
+    aoiSays([{ t: "一度目に見えたものを、一言で書いてみてください。書かずに進んでも大丈夫です。" }]);
     const nz = s.nazo;
     body.innerHTML = `<label class="fld" for="obs1">一度目の見方を一言で（名前など個人のことは書かないでください。この端末にだけ残ります）<input type="text" id="obs1" maxlength="120" value="${esc(R.first)}" placeholder="たとえば「柱の足もとが黒い」" autocomplete="off"></label>
       <div class="hints">${s.hints.map(h => `<span>${esc(h)}</span>`).join("")}</div>
@@ -3400,7 +3433,8 @@ function render() {
   if (phase === "tool") {            /* ④ 碧が「感じ方の道具」を手渡す。答えではなく、道具を */
     const t = TOOLS.find(t => t.at === s.id), using = activeTool === t.id;
     setStep(1); unhighlight(); aoiAt(s, "hand");
-    body.innerHTML = using ? toolCard(t) : `<p class="hand">${esc(t.hand)}</p><p class="note">碧から「${esc(t.name)}」（${esc(t.ja)}）を受け取ります。${toolsGot.has(t.id) ? "（もう手もとにあります）" : "左上の Qualia の箱に入り、このあとも使えます。"}</p>`;
+    if (using) setDock(false); else aoiSays([{ t: t.hand }]);
+    body.innerHTML = using ? toolCard(t) : `<p class="note">碧から「${esc(t.name)}」（${esc(t.ja)}）を受け取ります。${toolsGot.has(t.id) ? "（もう手もとにあります）" : "左上の Qualia の箱に入り、このあとも使えます。"}</p>`;
     if (using) bindSub(t);
     foot.innerHTML = using ? `<button class="btn ghost" id="again">${t.kind === "life" ? "記録をひらく" : "元の見え方"}</button><button class="btn" id="go">しまって、碧の話を聴く</button>`
       : R.tool ? `<button class="btn ghost" id="use">もう一度使う</button><button class="btn" id="go">碧の話を聴く</button>` : `<button class="btn ghost" id="skip">使わずに進む</button><button class="btn" id="use">使ってみる</button>`;
@@ -3411,10 +3445,9 @@ function render() {
     say(using ? "" : t.hand); return;
   }
   if (phase === "listen") {          /* ⑤ 碧の話（読み上げ）。碧が 3D の場に立ち、対象へ光の糸をのばし、要の一文を対象のそばに置く */
-    setStep(2); highlight(s); faceTo(s); setTimeout(() => { if (phase === "listen") { aoiAt(s, "listen"); bubble(s, s.musubi.split(/(?<=。)/)[0]); } }, RM ? 0 : 900); sway(true);
-    if (innerWidth <= 820 && !NO3D) { $("sheet").classList.add("min"); $("minBtn").textContent = "話をひらく"; }
-    body.innerHTML = `${R.first ? `<div class="first">一度目のあなた：<b>${esc(R.first)}</b></div>` : ""}${s.explain.map(t => `<p class="voice">${esc(t)}</p>`).join("")}
-      <p class="voice musubi">${esc(s.musubi)}</p>
+    setStep(2); highlight(s); faceTo(s); aoiAt(s, "listen"); sway(true);
+    aoiSays([...s.explain.map(t => ({ t })), { t: s.musubi, cls: "musubi" }]);   /* 碧の話は吹き出しで、段落ごとに「つづき」 */
+    body.innerHTML = `${R.first ? `<div class="first">一度目のあなた：<b>${esc(R.first)}</b></div>` : ""}
       <details class="ev"><summary>根拠（◎ 出典で確か／○ 写真・データからの推定）</summary><ul>${s.evidence.map(e => `<li><b>${esc(e.mark)}</b>${esc(e.text)}<small>${esc(e.src)}</small></li>`).join("")}</ul></details>`;
     foot.innerHTML = `<button class="btn ghost" id="again">${NO3D ? "見るへ戻る" : "もう一度見回す"}</button><button class="btn" id="go">碧と話す</button>`;
     $("again").onclick = () => { if (NO3D) { phase = "observe"; render(); } else faceTo(s); };
@@ -3424,7 +3457,8 @@ function render() {
   if (phase === "talk") { setStep(3); highlight(s); aoiAt(s, "talk"); renderTalk(s, R); return; }   /* ⑤ 碧と対話 */
   if (phase === "relook") {          /* ⑥ かえりみる */
     setStep(4); unhighlight(); faceTo(s, 900); aoiAt(s, "relook");
-    body.innerHTML = `<p class="voice">${esc(s.relook)}</p>${R.first ? `<div class="first">一度目のあなた：<b>${esc(R.first)}</b></div>` : ""}
+    aoiSays([{ t: s.relook }]);
+    body.innerHTML = `${R.first ? `<div class="first">一度目のあなた：<b>${esc(R.first)}</b></div>` : ""}
       <label class="fld" for="obs2">二度目の見方を一言で<input type="text" id="obs2" maxlength="120" value="${esc(R.second)}" placeholder="変わらなかったことも、そのまま" autocomplete="off"></label>`;
     const last = ST.every((_, i) => i === cur || visited.has(i));
     foot.innerHTML = `<span></span><button class="btn" id="go">${last ? "見方の記録を見る" : "次へ"}</button>`;
@@ -3432,9 +3466,10 @@ function render() {
     say(s.relook); return;
   }
   if (phase === "onward") {          /* ⑦ では、歩きましょう。ポケットにしまって */
-    setStep(5); unhighlight(); aoiAt(null);
+    setStep(5); unhighlight(); aoiAt(s, "onward");
     const n = nextIdx();
-    body.innerHTML = `<p class="voice">では、歩きましょう。${mode === "gps" ? "画面はつけたまま、ポケットにしまって。" : ""}</p><p class="note">次は ${n + 1}．${esc(ST[n].title)}。近づいたら、また合図をします。</p><p class="safe">${esc(W.safety)}</p>`;
+    aoiSays([{ t: `では、歩きましょう。${mode === "gps" ? "画面はつけたまま、ポケットにしまって。" : ""}` }]);
+    body.innerHTML = `<p class="note">次は ${n + 1}．${esc(ST[n].title)}。近づいたら、また合図をします。</p><p class="safe">${esc(W.safety)}</p>`;
     foot.innerHTML = `<span></span><button class="btn" id="go">${mode === "gps" ? "ポケットにしまって歩く" : "歩きはじめる"}</button>`;
     $("go").onclick = () => { phase = "walk"; peek = false; render(); };
     say(mode === "gps" ? "では、歩きましょう。画面はつけたまま、ポケットにしまって。" : "では、歩きましょう。"); return;
@@ -3460,36 +3495,36 @@ ${s.evidence.map(e => `・${e.mark} ${e.text}（${e.src}）`).join("\n")}` : "�
   return `${W.persona}\n\n${at}\nこのあと、見る人が話しかけます。`;
 }
 async function chatUI(host, { s, R, chips, logKey, intro }) {
+  /* 碧の答えは吹き出しに（見る人の問いを上に小さく添える）。下の帯には、問いの選択肢と、書いて送る欄だけ */
   const log = (talkLog[logKey] ||= []);
-  host.innerHTML = `<p class="voice">${esc(intro)}</p><div class="chat" id="chat"></div>
-    <div class="qs" id="qs">${chips.map((q, i) => `<button class="chip" data-i="${i}">${esc(q.q)}</button>`).join("")}</div>
+  host.innerHTML = `<div class="qs" id="qs">${chips.map((q, i) => `<button class="chip" data-i="${i}">${esc(q.q)}</button>`).join("")}</div>
     <form class="ask" id="askf" hidden><input type="text" id="askIn" placeholder="碧にきく" autocomplete="off" aria-label="碧への問い"><button class="btn" id="send" type="submit">送る</button></form>
     <p class="note" id="talkNote">用意した問いから選べます。選んだ問いと答えは、どこにも送りません。</p>`;
-  const chat = $("chat"); let ctl = null;
-  const bubble = (who, text) => { const b = document.createElement("div"); b.className = "msg " + who; b.textContent = text; chat.append(b); b.scrollIntoView({ block: "nearest" }); return b; };
-  for (const m of log) bubble(m.role === "user" ? "me" : "aoi", m.content);
+  const qsEl = $("qs"); let ctl = null;
+  const show = (q, text, cls = "") => aoiSays([{ t: text, cls }], { q });
+  const la = [...log].reverse().find(m => m.role === "assistant"), lq = [...log].reverse().find(m => m.role === "user");
+  show(la ? lq?.content ?? "" : "", la ? la.content : intro);
   const sample = await samplePromise;
-  if (!$("chat") || $("chat") !== chat) return null;
+  if ($("qs") !== qsEl) return null;
   if (sample) { $("askf").hidden = false; $("talkNote").textContent = "自由に書いても話せます。そのときだけ、書いた言葉と、この場所でのそれまでのやりとりが、答えをつくるためだけに外部の AI 事業者に送られます（見方の記録は送りません）。mitsulab は保存せず、碧の学習にも使いません。名前など個人のことは書かないでください。"; }
   const ask = async (q, canned) => {
     q = q.trim(); if (!q) return;
-    bubble("me", q); if ($("askIn")) $("askIn").value = "";
+    if ($("askIn")) $("askIn").value = "";
     const fallback = canned ?? "その問いに答える記録を、わたしはここに持っていません。用意した問いから選ぶか、もう一度この場所を見て、気づいたことを書いてみてください。";
-    if (!sample || canned != null) { bubble("aoi", fallback); say(fallback); log.push({ role: "user", content: q }, { role: "assistant", content: fallback }); return; }   // 用意した問いは外へ送らず、台本の答え
-    const b = bubble("aoi wait", "考えています…"); $("send").disabled = true; ctl = new AbortController();
+    if (!sample || canned != null) { show(q, fallback); say(fallback); log.push({ role: "user", content: q }, { role: "assistant", content: fallback }); return; }   // 用意した問いは外へ送らず、台本の答え
+    show(q, "考えています…", "wait"); $("send").disabled = true; ctl = new AbortController();
     try {
       const turns = [{ role: "user", content: rules(s, R) }, { role: "assistant", content: "はい。根拠の欄の範囲で短く答え、最後に問いを返します。" }, ...log.slice(-8), { role: "user", content: q }];
-      const { text } = await sample(turns, { modelTier: "quick", cache: false, signal: ctl.signal, onText: ({ text }) => { b.className = "msg aoi"; b.textContent = text; } });
-      b.className = "msg aoi"; b.textContent = text; say(text);
+      const { text } = await sample(turns, { modelTier: "quick", cache: false, signal: ctl.signal, onText: ({ text }) => show(q, text) });
+      show(q, text); say(text);
       log.push({ role: "user", content: q }, { role: "assistant", content: text });
     } catch (e) {
-      if (e?.code === "cancelled") { b.remove(); return; }
-      b.className = "msg aoi"; b.textContent = e?.text || "";
+      if (e?.code === "cancelled") return;
       $("talkNote").textContent = { not_granted: "Claude の使用が許可されなかったので、用意した答えで話します。", sampling_disabled: "このアカウントでは碧と自由に話せません。用意した問いで話します。", rate_limited: "少し間をおいてから、もう一度。", refused: "その問いには答えられませんでした。聞き方を変えてみてください。" }[e?.code] ?? "電波などの都合で届きませんでした。用意した答えで話します。";
-      if (!b.textContent) { b.textContent = fallback; log.push({ role: "user", content: q }, { role: "assistant", content: fallback }); }
+      const t = e?.text || fallback; show(q, t); if (!e?.text) log.push({ role: "user", content: q }, { role: "assistant", content: fallback });
     } finally { if ($("send")) $("send").disabled = false; }
   };
-  $("qs").onclick = e => { const i = e.target.closest("button")?.dataset.i; if (i != null) ask(chips[+i].q, chips[+i].a); };
+  qsEl.onclick = e => { const i = e.target.closest("button")?.dataset.i; if (i != null) ask(chips[+i].q, chips[+i].a); };
   $("askf").onsubmit = e => { e.preventDefault(); ask($("askIn").value); };
   return () => ctl?.abort();
 }
@@ -3504,12 +3539,12 @@ async function renderTalk(s, R) {
 function openHelp() {
   if (helpOpen) { render(); return; }
   hush(); clearTimer(); helpOpen = true; $("dim").classList.remove("on"); stopWalk();
-  $("sheet").classList.remove("min");
+  $("sheet").classList.remove("min"); setDock(true);
   $("place").textContent = "使い方"; setStep(-1);
   $("foot").innerHTML = `<span></span><button class="btn" id="back">もとに戻る</button>`;
   $("back").onclick = () => render();
   chatUI($("body"), { s: null, R: null, chips: W.help.map(h => ({ q: h.q, a: !SAMPLE_OK && h.a_demo ? h.a_demo : h.a })), logKey: "_help", intro: "わたしに、使い方を聞いてください。" }).then(() => {
-    $("body")?.insertAdjacentHTML("beforeend", `<ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol><p class="note priv privtxt">${esc(privText())}</p>`);
+    $("body")?.insertAdjacentHTML("beforeend", `<details class="more"><summary>遊び方と、記録の扱い</summary><ol class="how">${W.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol><p class="note priv privtxt">${esc(privText())}</p></details>`);
   });
 }
 $("helpBtn").onclick = openHelp;
@@ -3573,7 +3608,7 @@ function bindSub(t) {
 function openTool(id) {         /* 道具箱から：使っているあいだは札をひらき、「しまう」で元の見え方に戻る */
   const t = toolOf(id); if (!t) return;
   if (t.kind === "life") { useTool(id); openLife(); return; }
-  hush(); clearTimer(); helpOpen = true; $("dim").classList.remove("on"); stopWalk(); aoiAt(null);
+  hush(); clearTimer(); helpOpen = true; $("dim").classList.remove("on"); stopWalk(); aoiAt(null); sayClear(); setDock(false);
   useTool(id); $("sheet").classList.remove("min"); $("place").textContent = t.name; setStep(-1);
   $("body").innerHTML = toolCard(t) + (NO3D ? `<p class="note">3D がまだ届いていないので、届いたら見え方が替わります。</p>` : `<p class="note">ドラッグで見回せます。</p>`); bindSub(t);
   $("foot").innerHTML = `<span></span><button class="btn" id="back">道具をしまう</button>`;
@@ -3604,43 +3639,227 @@ function logoShow(i, auto) {
 function logoStop() { clearInterval(logoT); logoT = null; if (phase !== "listen") bubble(null); }
 drawToolbox();
 
-// ---- 碧を 3D の場に立たせる（読み込みは web/aoi.glb の一か所。立ち止まる場所に現れ、話す対象のほうを向き、鈴から対象へ光の糸をのばす）
-let aoi = null, aoiLoading = null, thread = null, aoiState = null;
+// ---- 碧を 3D の場に立たせる（2026-10-02 本人指示「枠内に出現でなく、氷川参道に 3D キャラクターとして出現させて」）
+//      姿＝VRM（読み込みは web/aoi.vrm の一か所。build_walk.py の AOI_VRM が 06_依代 の最新版から写す。軽い版 aoi_web.vrm があればそれが先）。
+//      等身大（約 1.67 m）で、地面に足をつけて立つ。腕は体の脇へ下ろし（A ポーズのままにしない）、呼吸・まばたき・視線は見る人へ。
+//      歩くあいだは数 m 先を先に立って歩き、立ち止まる場所では、見る人と対象のあいだの脇（並木・構造物に隠れない所を光線で確かめて選ぶ）に立つ。
+//      聴く・話す段では、手もとから対象へ光の糸（破線）をのばす。言葉は碧の頭の横の吹き出し（#say）。
+//      姿が読めない・画面の外・遠いときは、吹き出しを下の札のすぐ上に出す（作品は姿なしでも最後まで進む）。
+//      姿は 3D の素材がそろってから取りに行く（はじめの画面・地形と道の読み込みと取り合わない）。読み込むまでは何も出さない。
+const AOI_URL = "web/aoi.vrm", AOI_H = 1.67, VRM_LIB = "@pixiv/three-vrm";
+let aoi = null, vrm = null, aoiLoading = null, aoiFail = false, thread = null, aoiState = null, aoiMode = "off";
+const A = { pos: null, goal: null, yaw: 0, faceT: null, k: 0, ph: 0, still: 0, blink: 2, bt: -1, twice: false, wan: [0, 0], wto: [0, 0], wn: 1, nk: 0, hd: 0, gaze: null, head: null, hand: null, thrN: 0, spot: {} };
+function glbExt(buf) {    /* glb の JSON から、使っている拡張（圧縮の種類）を読む。要るときだけ復号器を取りに行く */
+  try { const dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) return [];
+    const j = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, dv.getUint32(12, true)))); return [...(j.extensionsUsed || []), ...(j.extensionsRequired || [])]; } catch { return []; }
+}
 function loadAoi() {
-  if (NO3D || aoi || aoiLoading) return aoiLoading;
-  return aoiLoading = fetch("web/aoi.glb").then(r => r.arrayBuffer()).then(b => new Promise(res => C.loader.parse(b, "", g => res(g.scene), () => res(null)))).then(sc => {
-    if (!sc) return null; aoi = new THREE.Group(); aoi.add(sc); aoi.visible = false; sc.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
-    C.world.add(aoi);
+  if (NO3D || vrm || aoiLoading || aoiFail) return aoiLoading;
+  $("sayLd").textContent = "姿を読み込んでいます";
+  return aoiLoading = (async () => {
+    const [buf, V, G] = await Promise.all([fetch(AOI_URL).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); }), import(VRM_LIB), import("three/addons/loaders/GLTFLoader.js")]);
+    const ext = glbExt(buf), ld = new G.GLTFLoader(), lib = p => { try { return import.meta.resolve("three/addons/" + p); } catch { return "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" + p; } };
+    if (ext.includes("EXT_meshopt_compression")) ld.setMeshoptDecoder((await import("three/addons/libs/meshopt_decoder.module.js")).MeshoptDecoder);
+    if (ext.includes("KHR_draco_mesh_compression")) { const { DRACOLoader } = await import("three/addons/loaders/DRACOLoader.js"); ld.setDRACOLoader(new DRACOLoader().setDecoderPath(lib("libs/draco/gltf/"))); }
+    if (ext.includes("KHR_texture_basisu")) { const { KTX2Loader } = await import("three/addons/loaders/KTX2Loader.js"); ld.setKTX2Loader(new KTX2Loader().setTranscoderPath(lib("libs/basis/")).detectSupport(C.renderer)); }
+    ld.register(p => new V.VRMLoaderPlugin(p));
+    const g = await ld.parseAsync(buf, "");
+    const v = g.userData.vrm; if (!v) throw new Error("VRM ではない");
+    V.VRMUtils.removeUnnecessaryVertices(g.scene); (V.VRMUtils.combineSkeletons ?? V.VRMUtils.removeUnnecessaryJoints)?.(g.scene); V.VRMUtils.rotateVRM0(v);
+    v.scene.traverse(o => { o.frustumCulled = false; if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    const N = n => v.humanoid?.getNormalizedBoneNode(n);
+    aoi = new THREE.Group(); aoi.name = "aoi"; aoi.visible = false; aoi.add(v.scene); C.world.add(aoi); vrm = v;
+    aoiPose(0, 0); v.update(0); v.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(v.scene), h = box.max.y - box.min.y;    /* 背丈を約 1.67 m に、足の裏を地面に */
+    const sc = h > .5 && Math.abs(h - AOI_H) / AOI_H > .02 ? AOI_H / h : 1; v.scene.scale.setScalar(sc); v.scene.position.y = -box.min.y * sc;
+    A.h = h * sc; A.head = v.humanoid.getRawBoneNode("head"); A.hand = v.humanoid.getRawBoneNode("rightHand") ?? A.head;
+    A.gaze = new THREE.Object3D(); C.scene.add(A.gaze); if (v.lookAt) v.lookAt.target = A.gaze;
     thread = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xbfeee0, dashSize: .5, gapSize: .35, transparent: true, opacity: .9, depthWrite: false }));
-    thread.renderOrder = 7; thread.visible = false; C.world.add(thread); if (aoiState) aoiAt(...aoiState); return aoi;
-  }).catch(e => { console.error("aoi", e); return null; });
+    thread.renderOrder = 7; thread.visible = false; thread.frustumCulled = false; C.world.add(thread);
+    $("sayLd").textContent = ""; aoiLoading = null;
+    if (aoiState) aoiAt(...aoiState);
+    return vrm;
+  })().catch(e => { aoiFail = true; aoiLoading = null; $("sayLd").textContent = ""; console.warn("碧の姿を読み込めませんでした（言葉は札の上に出します）：", e?.message ?? e); return null; });
 }
-on3D.push(() => { const t = () => (C.ready() ? setTimeout(loadAoi, 400) : setTimeout(t, 500)); t(); });   /* 碧（約 0.8 MB）は 3D の素材がそろってから取りに行く（そろう前に立ち止まったときは、下の aoiAt がすぐ読む） */
+on3D.push(() => { const t = () => (C.ready() ? setTimeout(loadAoi, 400) : setTimeout(t, 500)); t(); });   /* 3D の素材がそろってから（そろう前に立ち止まったときは、aoiAt がすぐ読む） */
+
+// 立つ所：見る人（立つ所の目）から対象への向きに数 m、画面の左右どちらか寄り。並木・構造物・近景の茂みに隠れず、地面の段差（池の底など）のない所
+let _ray = null, _v1 = null, _v2 = null;
+on3D.unshift(() => { _ray = new THREE.Raycaster(); _ray.firstHitOnly = true; _v1 = new THREE.Vector3(); _v2 = new THREE.Vector3(); });
+function occluders() {
+  const out = [], skip = new Set([aoi, thread, ring, C.terrain, C.road, C.buildings, lifeMarks, hydroLines].filter(Boolean));
+  const walk = o => { if (!o.visible || skip.has(o)) return; if (o.isMesh && !(o.geometry?.boundingSphere?.radius > 900)) out.push(o); for (const c of o.children) walk(c); };
+  walk(C.scene); return out;
+}
+function aoiSeen(e, x, y, z, occ) {      /* 目から、碧の頭・胸・腰へ、さえぎるものが無いか */
+  for (const hy of [1.5, 1.05, .55]) {
+    _v1.set(x, y + hy, z).sub(e); const L = _v1.length(); _ray.set(e, _v1.normalize()); _ray.near = .3; _ray.far = L + .35;
+    if (_ray.intersectObjects(occ, false).length) return false;
+  }
+  return true;
+}
+function aoiSpot(s) {
+  const e = C.camera.position.clone(), t = lookPoint(s); if (!t) return null;
+  const key = s.id + ":" + e.toArray().map(v => v.toFixed(1)).join(","); if (A.spot[key]) return A.spot[key];
+  const dx = t.x - e.x, dz = t.z - e.z, L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L, lx = uz, lz = -ux;   /* 左＝（uz, −ux） */
+  const mob = innerWidth <= 820, tanH = Math.tan(C.camera.fov * Math.PI / 360) * C.camera.aspect, eg = e.y - 1.6, occ = occluders();
+  const base = mob ? 4.6 : 4.3; let best = null;
+  const onRoad = (x, z) => { _ray.set(_v1.set(x, 400, z), _v2.set(0, -1, 0)); _ray.near = 0; _ray.far = 800; return C.road.children.length ? _ray.intersectObject(C.road, true).length > 0 : true; };
+  for (const pass of [0, 1]) {     /* 一巡目は道（舗装・砂利の帯）の上だけ。無ければ、木の根もとの帯なども */
+    for (const f0 of [base, base * .85, base * 1.25, base * 1.6]) { for (const q of [.4, .28, .55]) { for (const side of [1, -1]) {
+      const f = Math.max(2.6, Math.min(f0, L * .72)), lat = side * q * f * tanH, x = e.x + ux * f + lx * lat, z = e.z + uz * f + lz * lat;
+      const y = C.groundY(x, z); if (y == null || Math.abs(y - eg) > 1.1) continue;
+      if (!pass && !onRoad(x, z)) continue;
+      if (aoiSeen(e, x, y, z, occ)) { best = new THREE.Vector3(x, y, z); break; }
+    } if (best) break; } if (best) break; }
+    if (best) break;
+  }
+  if (!best) { const f = Math.max(2.4, Math.min(base, L * .6)), x = e.x + ux * f + lx * .5, z = e.z + uz * f + lz * .5; best = new THREE.Vector3(x, C.groundY(x, z) ?? eg, z); }   /* どこも隠れるときは、見る人のすぐ前 */
+  return A.spot[key] = best;
+}
+// 先に立つ所（歩くあいだ）：見る人の進む向き（道の向き）に 8 m 先、視線に対して少し左（画面の横幅の 3 割ほど・最大 1.2 m）
+function leadSpot() {
+  const e = C.camera.position, hd = C.headingAt(d), fx = -Math.sin(hd), fz = -Math.cos(hd);
+  const tanH = Math.tan(C.camera.fov * Math.PI / 360) * C.camera.aspect, lat = Math.min(1.2, .3 * 8 * tanH);
+  const x = e.x + fx * 8 + fz * lat, z = e.z + fz * 8 - fx * lat;
+  return _v2.set(x, C.groundY(x, z) ?? e.y - 1.6, z);
+}
+// 碧の居場所を決める：aoiAt(s, 段)＝その場所に立つ／aoiLead()＝先に立って歩く／aoiAt(null)＝いない
 function aoiAt(s, step) {
-  aoiState = s ? [s, step] : null; bubble(null);
-  if (!aoi) { if (s) loadAoi(); return; }
-  if (!s || NO3D) { aoi.visible = false; thread.visible = false; return; }
-  const e = C.camera.position, t = lookPoint(s); if (!t) return;
-  const dx = t.x - e.x, dz = t.z - e.z, L = Math.hypot(dx, dz) || 1, ux = dx / L, uz = dz / L;   /* 見る人の右手前 2.4 m・前へ 3.2 m */
-  const fw = Math.max(4.5, Math.min(9, L * .32)), lt = innerWidth <= 820 ? 1.3 : 1.9;   /* 見る人と対象のあいだ、少し左に（画面の左下〜中ほどに入る） */
-  const ax = e.x + ux * fw + uz * lt, az = e.z + uz * fw - ux * lt, ay = C.groundY(ax, az) ?? (e.y - 1.6);
-  aoi.position.set(ax, ay, az); aoi.visible = true;
-  const face = step === "relook" ? Math.atan2(e.x - ax, e.z - az) : Math.atan2(t.x - ax, t.z - az);
-  aoi.rotation.set(0, face, 0);
-  if (step === "listen" || step === "talk") {
-    const a = new THREE.Vector3(ax, ay + 1.15, az), mid = a.clone().lerp(t, .5); mid.y += Math.max(2, a.distanceTo(t) * .18);
-    thread.geometry.setFromPoints(new THREE.QuadraticBezierCurve3(a, mid, t).getPoints(40)); thread.computeLineDistances(); thread.visible = true;
-  } else thread.visible = false;
+  aoiState = s ? [s, step] : null; aoiMode = s ? "station" : "off";
+  if (!s) { if (thread) thread.visible = false; return; }
+  if (!vrm) { loadAoi(); return; }
+  if (NO3D) return;
+  A.goal = aoiSpot(s); A.step = step; A.faceT = step === "listen" || step === "talk" ? lookPoint(s) : null; A.onward = step === "onward" ? C.headingAt(s.stand_d) : null; A.thrN = 0;
 }
-// 3D の中の言葉（DOM を、対象の位置へ毎フレーム投影）
+function aoiLead() { aoiState = null; aoiMode = "lead"; if (thread) thread.visible = false; if (!vrm) loadAoi(); }
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+function aoiTick(dt) {
+  if (!vrm) return;
+  const want = aoiMode !== "off" && !NO3D && Math.abs(C.world.scale.y - 1) < .01;
+  if (!want) { aoi.visible = false; if (thread) thread.visible = false; return; }
+  const cam = C.camera.position, goal = aoiMode === "lead" ? leadSpot() : A.goal; if (!goal) return;
+  let jump = !aoi.visible || !A.pos || A.pos.distanceTo(goal) > (aoiMode === "lead" ? 30 : 10);   /* 立つ所が遠いときは、歩かずに静かに移る */
+  const prev = A.pos ? A.pos.clone() : goal.clone();
+  if (jump) A.pos = goal.clone();
+  else if (aoiMode === "lead") A.pos.copy(goal);
+  else { const v = _v1.copy(goal).sub(A.pos), L = v.length(), stepL = RM ? L : Math.min(L, 1.5 * dt); if (L > 1e-3) A.pos.addScaledVector(v.normalize(), stepL); }   /* 立つ所までは、歩く速さで */
+  const mv = Math.hypot(A.pos.x - prev.x, A.pos.z - prev.z), sp = jump ? 0 : mv / Math.max(dt, 1e-3);
+  if (aoiMode !== "lead" && !jump) A.pos.y = C.groundY(A.pos.x, A.pos.z) ?? A.pos.y;
+  A.k += ((sp > .25 ? 1 : 0) - A.k) * (1 - Math.exp(-dt * 6));
+  // 向き：歩くあいだは進む方へ。止まったら見る人のほうへ（聴く・話すときは、少し対象のほうへ体を開く）
+  const toCam = Math.atan2(cam.x - A.pos.x, cam.z - A.pos.z);
+  let fy;
+  if (sp > .25) { fy = Math.atan2(A.pos.x - prev.x, A.pos.z - prev.z); A.still = 0; }
+  else {
+    A.still += dt;
+    if (aoiMode === "lead" && A.still < 1.2) fy = A.yaw;
+    else if (A.onward != null) { const py = Math.atan2(-Math.sin(A.onward), -Math.cos(A.onward)); fy = toCam + wrapA(py - toCam) * .6; }   /* 「では、歩きましょう」：道の先へ半ば向き直る */
+    else if (A.faceT) { const tt = Math.atan2(A.faceT.x - A.pos.x, A.faceT.z - A.pos.z); fy = toCam + wrapA(tt - toCam) * .3; }
+    else fy = toCam;
+  }
+  if (jump) A.yaw = fy; else A.yaw += wrapA(fy - A.yaw) * (1 - Math.exp(-dt * (sp > .25 ? 6 : 3)));
+  aoi.position.copy(A.pos); aoi.rotation.set(0, A.yaw, 0); aoi.visible = true;
+  if (jump || mv > 3) vrm.springBoneManager?.reset?.();
+  aoiPose(dt, sp, wrapA(toCam - A.yaw));
+  vrm.update(dt);
+  // 光の糸：手もとから対象へ（止まってから）
+  if (A.faceT && A.k < .05 && (A.step === "listen" || A.step === "talk")) {
+    if (A.thrN++ % 15 === 0) { const a = A.hand.getWorldPosition(_v1).clone(), t = A.faceT, mid = a.clone().lerp(t, .5); mid.y += Math.max(1.5, a.distanceTo(t) * .18);
+      thread.geometry.setFromPoints(new THREE.QuadraticBezierCurve3(a, mid, t).getPoints(40)); thread.computeLineDistances(); }
+    thread.visible = true; if (!RM) thread.material.dashOffset = -(performance.now() / 1000) * .8;
+  } else if (thread) thread.visible = false;
+}
+// 体の動き：腕を下ろした立ち姿・呼吸（4.6 秒）・歩く足と腕・首を見る人へ・まばたき（3.5〜8 秒に一度）・視線のわずかな揺れ
+function aoiPose(dt, sp, toCamLocal = 0) {
+  const N = n => vrm.humanoid.getNormalizedBoneNode(n), live = !RM, t = performance.now() / 1000;
+  const k = A.k; A.ph += Math.min(sp, 1.4) * dt / .62 * Math.PI; const s1 = Math.sin(A.ph);
+  const br = live ? Math.sin(t * 2 * Math.PI / 4.6) : 0;
+  const set = (n, x, y, z) => { const b = N(n); if (b) b.rotation.set(x, y, z); };
+  set("leftUpperArm", .2 * s1 * k, 0, -1.22); set("rightUpperArm", -.2 * s1 * k, 0, 1.22);
+  set("leftLowerArm", 0, .18 + .1 * k, 0); set("rightLowerArm", 0, -.18 - .1 * k, 0);
+  set("leftUpperLeg", -.3 * s1 * k, 0, 0); set("rightUpperLeg", .3 * s1 * k, 0, 0);
+  set("leftLowerLeg", k * (.12 + .3 * Math.max(0, -Math.cos(A.ph))), 0, 0); set("rightLowerLeg", k * (.12 + .3 * Math.max(0, Math.cos(A.ph))), 0, 0);
+  set("spine", -.006 * br, .04 * s1 * k, 0); set("chest", -.012 * br, 0, 0); set("upperChest", -.01 * br, 0, 0);
+  set("leftShoulder", 0, 0, .006 * br); set("rightShoulder", 0, 0, -.006 * br);
+  // 首と頭：見る人が体の前（±85°）にいるときだけ、そちらへ少し向ける
+  const want = Math.abs(toCamLocal) < 1.5 && k < .5 ? Math.max(-.7, Math.min(.7, toCamLocal)) : 0;
+  A.nk += (want - A.nk) * (1 - Math.exp(-dt * 3)); set("neck", 0, A.nk * .4, 0); set("head", 0, A.nk * .6, 0);
+  // まばたき
+  let bv = 0;
+  if (live) {
+    if (A.bt < 0) { A.blink -= dt; if (A.blink <= 0) { A.bt = 0; A.twice = Math.random() < .1; } }
+    else { A.bt += dt; const u = A.bt; bv = u < .09 ? u / .09 : u < .12 ? 1 : u < .26 ? 1 - (u - .12) / .14 : 0;
+      if (u >= .26) { if (A.twice) { A.twice = false; A.bt = 0; } else { A.bt = -1; A.blink = 3.5 + Math.random() * 4.5; } } }
+  }
+  vrm.expressionManager?.setValue("blink", bv * bv * (3 - 2 * bv));
+  // 視線：見る人の目へ。1.5〜4.5 秒ごとに、ごく小さく揺れる
+  if (A.gaze) {
+    if (live) { A.wn -= dt; if (A.wn <= 0) { A.wto = [(Math.random() - .5) * .25, (Math.random() - .5) * .12]; A.wn = 1.5 + Math.random() * 3; } A.wan[0] += (A.wto[0] - A.wan[0]) * (1 - Math.exp(-dt * 3)); A.wan[1] += (A.wto[1] - A.wan[1]) * (1 - Math.exp(-dt * 3)); }
+    const c = C.camera; _v2.setFromMatrixColumn(c.matrixWorld, 0); A.gaze.position.copy(c.position).addScaledVector(_v2, A.wan[0]); _v2.setFromMatrixColumn(c.matrixWorld, 1); A.gaze.position.addScaledVector(_v2, A.wan[1]);
+  }
+}
+
+// ---- 碧の言葉（吹き出し）：pages＝[{ t, cls }]。長い話は段落ごとに「つづき」で送る。q＝見る人の問い（話す段）
+let sayPages = [], sayI = 0, sayQ = "", sayXY = null;
+function aoiSays(pages, { q = "", keep = false } = {}) {
+  sayPages = (pages || []).filter(p => p && p.t); sayQ = q; if (!keep) sayI = 0; sayI = Math.min(sayI, Math.max(0, sayPages.length - 1)); drawSay();
+}
+function sayClear() { sayPages = []; sayQ = ""; drawSay(); }
+function drawSay() {
+  const n = sayPages.length, p = sayPages[sayI];
+  $("sayB").innerHTML = n ? `${sayQ ? `<p class="sq">あなた：${esc(sayQ)}</p>` : ""}<p class="st ${p.cls || ""}">${esc(p.t)}</p>` : "";
+  $("sayN").hidden = !(n > 1 && sayI < n - 1); $("sayNext").textContent = `つづき（${sayI + 1}/${n}）`;
+}
+$("sayNext").onclick = () => { if (sayI < sayPages.length - 1) { sayI++; drawSay(); } };
+function setDock(on) { $("sheet").classList.toggle("dock", on); document.body.classList.toggle("docked", on); }
+function sayTick() {
+  const el = $("say"), ln = $("sayTail").firstElementChild;
+  if (!sayPages.length || $("dim").classList.contains("on")) { el.classList.remove("on"); ln.style.display = "none"; sayXY = null; return; }
+  el.classList.add("on");
+  const w = innerWidth, h = innerHeight, mob = w <= 820;
+  const topY = document.querySelector(".wtop").getBoundingClientRect().bottom + 8;
+  const sh = $("sheet").getBoundingClientRect(), shOn = sh.height > 0;
+  let anchor = null;
+  if (vrm && aoi.visible && A.head && C.camera) {
+    const hp = A.head.getWorldPosition(_v1); const dist = hp.distanceTo(C.camera.position); hp.y += .16;
+    const v = hp.project(C.camera), sx = (v.x + 1) / 2 * w, sy = (1 - v.y) / 2 * h;
+    if (v.z < 1 && dist < 40 && sx > 4 && sx < w - 4 && sy > topY - 30 && sy < (shOn ? sh.top : h)) anchor = [sx, sy];
+  }
+  // 幅：頭の右（入らなければ左）に、幅を詰めてでも横に置く（顔を覆わない）。どちらも狭いときは頭の上。姿が無いときは札のすぐ上
+  const mw = Math.min(mob ? 292 : 340, w - 24); let side = "dock", want = mw;
+  if (anchor) { const gap = mob ? 16 : 26, ar = w - anchor[0] - gap - 10, al = anchor[0] - gap - 10, lim = Math.min(mw, 190);
+    side = ar >= lim ? "r" : al >= lim ? "l" : "u"; want = side === "r" ? Math.min(mw, ar) : side === "l" ? Math.min(mw, al) : mw; }
+  want = Math.floor(want); if (el.dataset.mw !== String(want)) { el.dataset.mw = want; el.style.maxWidth = want + "px"; }
+  const bw = el.offsetWidth, bh = el.offsetHeight;
+  let x, y;
+  if (anchor) {
+    const [ax, ay] = anchor, gap = mob ? 16 : 26;
+    if (side === "r") { x = ax + gap; y = ay - bh * .78; }
+    else if (side === "l") { x = ax - gap - bw; y = ay - bh * .78; }
+    else { x = Math.max(10, Math.min(w - 10 - bw, ax - bw / 2)); y = ay - bh - 34; }
+  } else { x = mob ? 12 : 16; y = (shOn && (mob || sh.left < x + bw)) ? sh.top - 10 - bh : h - 64 - bh; }
+  const overSheet = shOn && x + bw > sh.left && x < sh.right, maxY = (overSheet ? sh.top - 10 : h - 10) - bh;
+  y = Math.max(topY, Math.min(maxY, y));
+  if (sayXY && !!sayXY.a === !!anchor && !RM) { x = sayXY.x + (x - sayXY.x) * .35; y = sayXY.y + (y - sayXY.y) * .35; }
+  sayXY = { x, y, a: !!anchor };
+  el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+  if (anchor) {   /* しっぽ：吹き出しの近い縁から、碧の頭へ */
+    const [ax, ay] = anchor, ex = Math.max(x + 12, Math.min(x + bw - 12, ax)), ey = Math.max(y + 10, Math.min(y + bh - 10, ay));
+    const bx = ax < x ? x : ax > x + bw ? x + bw : ex, by = ay < y ? y : ay > y + bh ? y + bh : ey;
+    ln.setAttribute("x1", bx); ln.setAttribute("y1", by); ln.setAttribute("x2", ax); ln.setAttribute("y2", ay + 6); ln.style.display = Math.hypot(ax - bx, ay - by) > 6 ? "" : "none";
+  } else ln.style.display = "none";
+}
+// 3D の中の言葉（Logo-Qualia の典拠の一文）：DOM を対象の位置へ毎フレーム投影
 let bubAt = null;
 function bubble(s, text) {
   const el = $("bub"); bubAt = s && !NO3D ? lookPoint(s) : null;
   if (!bubAt) { el.classList.remove("on", "show"); return; }
   $("bubT").textContent = text; el.classList.add("on"); requestAnimationFrame(() => el.classList.add("show"));
 }
-const _v = { x: 0 };
-(function bubLoop() {
+let lastT = performance.now();
+(function aoiLoop(now) {
+  const dt = Math.min(.1, Math.max(0, ((now ?? performance.now()) - lastT) / 1000)); lastT = now ?? performance.now();
   if (bubAt && !NO3D) {
     const v = new THREE.Vector3(bubAt.x, bubAt.y + 2.2, bubAt.z).project(C.camera), w = innerWidth, h = innerHeight;
     const t2 = bubAt.clone().project(C.camera), sx = (v.x + 1) / 2 * w, sy = (1 - v.y) / 2 * h, tx = (t2.x + 1) / 2 * w, ty = (1 - t2.y) / 2 * h;
@@ -3648,10 +3867,10 @@ const _v = { x: 0 };
     bt.style.display = vis ? "" : "none"; const bx = Math.max(150, Math.min(w - (innerWidth > 820 ? 600 : 150), sx)), by = Math.max(innerWidth <= 820 ? 230 : 150, Math.min(maxY, sy));
     bt.style.left = bx + "px"; bt.style.top = by + "px";
     const ln = $("bubLine").firstElementChild; ln.setAttribute("x1", bx); ln.setAttribute("y1", by); ln.setAttribute("x2", tx); ln.setAttribute("y2", ty); ln.style.display = vis && t2.z < 1 ? "" : "none";
-    if (thread?.visible && !RM) thread.material.dashOffset = -(performance.now() / 1000) * .8;
   }
-  if (aoi?.visible && !RM) aoi.children[0].position.y = Math.sin(performance.now() / 1400) * .02;   /* ほんのわずかに呼吸 */
-  requestAnimationFrame(bubLoop);
+  try { if (!NO3D) aoiTick(dt); } catch (e) { console.warn("aoi", e); vrm = null; aoiFail = true; if (aoi) aoi.visible = false; }
+  sayTick();
+  requestAnimationFrame(aoiLoop);
 })();
 // 聴く段のカメラ：対象を中心に、ごくゆっくり左右へ見回す（酔わない速さ。動きを減らす設定では止める）
 let swayT = null;
@@ -3729,7 +3948,7 @@ function faceToLL(ll) {
 async function openLife() {
   if (!LIFE) return;
   hush(); clearTimer(); helpOpen = true; $("dim").classList.remove("on"); stopWalk();
-  lifeOn = true; if (lifeMarks) lifeMarks.visible = true; aoiAt(null);
+  lifeOn = true; if (lifeMarks) lifeMarks.visible = true; aoiAt(null); sayClear(); setDock(false);
   $("sheet").classList.remove("min"); $("place").textContent = "いきもの（近くの記録）"; setStep(-1);
   $("foot").innerHTML = `<button class="btn ghost" id="lifeHide">点を隠す</button><button class="btn" id="back">もとに戻る</button>`;
   $("back").onclick = () => { unhighlight(); useTool(null); render(); };
@@ -3811,7 +4030,8 @@ setTimeout(() => { if (NO3D) loadEl.innerHTML = "3D を読み込めませんで�
 addEventListener("pagehide", () => { stopGps(); hush(); });
 
 // ---- 確かめ用（スクリーンショット・位置の試し）。画面の操作には使わない
-window.__walk = { get state() { return { mode, phase, cur, d: Math.round(d), visited: [...visited], gps: gps.fix, GPS_OK, inArtifact, NO3D, helpOpen, peek, waitHz: gps.waitHz, wake: DEV.awakeHeld() }; }, setD, arrive, render, setMode, openHelp, end() { ST.forEach((_, i) => visited.add(i)); cur = ST.length - 1; phase = "end"; render(); }, aoiDbg: () => ({ aoi: !!aoi, vis: aoi?.visible, pos: aoi?.position.toArray().map(v => +v.toFixed(1)), cam: C.camera?.position.toArray().map(v => +v.toFixed(1)), loading: !!aoiLoading, thread: thread?.visible }), loadAoi, ST, W, hazardAt, safetyAt, yomi, quietNow, voiceActive };
+window.__walk = { get state() { return { mode, phase, cur, d: Math.round(d), visited: [...visited], gps: gps.fix, GPS_OK, inArtifact, NO3D, helpOpen, peek, waitHz: gps.waitHz, wake: DEV.awakeHeld() }; }, setD, arrive, render, setMode, openHelp, end() { ST.forEach((_, i) => visited.add(i)); cur = ST.length - 1; phase = "end"; render(); }, aoiDbg: () => ({ aoi: !!vrm, vis: aoi?.visible, mode: aoiMode, fail: aoiFail, h: A.h, pos: aoi?.position.toArray().map(v => +v.toFixed(2)), cam: C.camera?.position.toArray().map(v => +v.toFixed(2)), dist: aoi && C.camera ? +aoi.position.distanceTo(C.camera.position).toFixed(2) : null, loading: !!aoiLoading, thread: thread?.visible, say: sayPages.map(p => p.t), sayAnchored: !!sayXY?.a }), loadAoi,
+  show(i, ph) { cur = i; visited.delete(i); if (mode === "sim") { stopWalk(); d = ST[i].stand_d; goStand(ST[i]); } phase = ph; render(); }, ST, W, hazardAt, safetyAt, yomi, quietNow, voiceActive };
 </script>
 <script>/* 3D の素材を、本文を受け取り終えた時点から段の順で取りに行く（build_walk.py）。3D の本体の getBuf がこれを受け取る */
 (() => { if (!window.WebGLRenderingContext) return;   /* WebGL の文脈をここで作って確かめると、それだけで 2 秒ほど止まる端末がある（headless で起きた）ので、有無だけ見る */
