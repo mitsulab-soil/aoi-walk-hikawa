@@ -4156,7 +4156,7 @@ function sayGo(k) {
   const chs = i => (sayPages[i].ch ??= chunksOf(sayPages[i].t));
   let i = sayI, c = sayC + k;
   /* 声を途中から鳴らせない配信（Range に応えないサーバー）では、切れではなく文ごとに送る（字幕と声をずらさない） */
-  const noSeek = VOICE[sayPages[i].t] && voiceActive() && !(AU.seekable?.length && AU.seekable.end(0) > 0);
+  const noSeek = VOICE[sayPages[i].t] && voiceActive() && AU.dataset.f === VOICE[sayPages[i].t].f && AU.readyState >= 1 && !(AU.seekable?.length && AU.seekable.end(0) > 0);
   if (noSeek) { i += k; c = 0; if (i < 0 || i > n - 1) return false; }
   else if (c >= chs(i).length) { i++; c = 0; } else if (c < 0) { i--; if (i < 0) return false; c = chs(i).length - 1; }
   if (i > n - 1) return false;
