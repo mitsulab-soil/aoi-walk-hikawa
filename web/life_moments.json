@@ -4,60 +4,8 @@
   "src": "iNaturalist API（captive=false・研究等級／同定待ち・位置をぼかされた記録は除く）",
   "photo": "CC0・CC BY・CC BY-SA のみ。ref=true は同じ種の参考写真（この記録の写真ではない）。desc は日本語版 Wikipedia の冒頭の一文（CC BY-SA 4.0）"
  },
- "ni": [
-  {
-   "ja": "ニホンカナヘビ",
-   "sci": "Takydromus tachydromoides",
-   "kind": "Reptilia",
-   "rank": "species",
-   "date": "2020-11-14",
-   "ll": [
-    139.632233,
-    35.909812
-   ],
-   "url": "https://www.inaturalist.org/observations/64925597",
-   "acc": 28,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 219,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/25305/square.jpg",
-   "attr": "(c) Y.K.Tarabagani, some rights reserved (CC BY-SA)",
-   "credit": "写真：Y.K.Tarabagani（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/25305",
-   "desc": "ニホンカナヘビは、カナヘビ科カナヘビ属に分類されるトカゲの一種である。",
-   "desc_src": "Wikipedia「ニホンカナヘビ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%9B%E3%83%B3%E3%82%AB%E3%83%8A%E3%83%98%E3%83%93",
-   "radius_m": 250
-  }
- ],
+ "ni": [],
  "ne": [
-  {
-   "ja": "ベッコウタケ",
-   "sci": "Vanderbylia fraxinea",
-   "kind": "Fungi",
-   "rank": "species",
-   "date": "2025-04-30",
-   "ll": [
-    139.630767,
-    35.912553
-   ],
-   "url": "https://www.inaturalist.org/observations/276922945",
-   "acc": 18,
-   "grade": "needs_id",
-   "note": "",
-   "ref": true,
-   "m": 23,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/404101620/square.jpg",
-   "attr": "(c) Atsushi Nakajima, some rights reserved (CC BY), uploaded by Atsushi Nakajima",
-   "credit": "写真：Atsushi Nakajima（CC BY 4.0）・iNaturalist",
-   "lic": "cc-by",
-   "lic_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/404101620",
-   "radius_m": 80
-  },
   {
    "ja": "ヤマザクラ",
    "sci": "Prunus jamasakura",
@@ -80,38 +28,12 @@
    "lic": "cc-by-sa",
    "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
    "photo_page": "https://www.inaturalist.org/photos/1689626",
-   "radius_m": 80
+   "radius_m": 80,
+   "voice": false
   }
  ],
  "san": [],
  "ike": [
-  {
-   "ja": "タイサンボク",
-   "sci": "Magnolia grandiflora",
-   "kind": "Plantae",
-   "rank": "species",
-   "date": "2024-11-17",
-   "ll": [
-    139.630333,
-    35.91593
-   ],
-   "url": "https://www.inaturalist.org/observations/260772830",
-   "acc": 2,
-   "grade": "needs_id",
-   "note": "植栽の可能性",
-   "ref": true,
-   "m": 18,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/557171383/square.jpg",
-   "attr": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
-   "credit": "写真：Douglas Goldman（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/557171383",
-   "desc": "タイサンボクは、モクレン科モクレン属に属する常緑高木の1種である。",
-   "desc_src": "Wikipedia「タイサンボク」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%BF%E3%82%A4%E3%82%B5%E3%83%B3%E3%83%9C%E3%82%AF",
-   "radius_m": 80
-  },
   {
    "ja": "カルガモ",
    "sci": "Anas zonorhyncha",
@@ -137,167 +59,39 @@
    "desc": "カルガモは、鳥綱カモ目カモ科マガモ属に分類される鳥類。",
    "desc_src": "Wikipedia「カルガモ」（CC BY-SA 4.0）",
    "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%AB%E3%82%AC%E3%83%A2",
-   "radius_m": 80
+   "radius_m": 80,
+   "voice": true
   },
   {
-   "ja": "ツワブキ(広義)",
-   "sci": "Farfugium japonicum",
+   "ja": "タイサンボク",
+   "sci": "Magnolia grandiflora",
    "kind": "Plantae",
    "rank": "species",
-   "date": "2018-11-26",
+   "date": "2024-11-17",
    "ll": [
-    139.631288,
-    35.916873
+    139.630333,
+    35.91593
    ],
-   "url": "https://www.inaturalist.org/observations/18644600",
-   "acc": 10,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 152,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/55522551/square.jpeg",
-   "attr": "no rights reserved, uploaded by 葉子",
-   "credit": "写真：no rights reserved, uploaded by 葉子（CC0）・iNaturalist",
-   "lic": "cc0",
-   "lic_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/55522551",
-   "radius_m": 250
-  },
-  {
-   "ja": "カイツブリ",
-   "sci": "Tachybaptus ruficollis",
-   "kind": "Aves",
-   "rank": "species",
-   "date": "2021-02-12",
-   "ll": [
-    139.630897,
-    35.917332
-   ],
-   "url": "https://www.inaturalist.org/observations/69452903",
-   "acc": 197,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 181,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/189572311/square.jpg",
-   "attr": "(c) Zinogre, some rights reserved (CC BY-SA), uploaded by Zinogre",
-   "credit": "写真：Zinogre（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/189572311",
-   "desc": "カイツブリは、カイツブリ目カイツブリ科カイツブリ属に分類される鳥類の1種。",
-   "desc_src": "Wikipedia「カイツブリ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%AB%E3%82%A4%E3%83%84%E3%83%96%E3%83%AA",
-   "radius_m": 250
-  }
- ],
- "ichi": [
-  {
-   "ja": "スズメ",
-   "sci": "Passer montanus",
-   "kind": "Aves",
-   "rank": "species",
-   "date": "2023-07-06",
-   "ll": [
-    139.631002,
-    35.896086
-   ],
-   "url": "https://www.inaturalist.org/observations/171379620",
-   "acc": 287,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 189,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/341117755/square.jpg",
-   "attr": "(c) Yiwenyiwen, some rights reserved (CC BY-SA)",
-   "credit": "写真：Yiwenyiwen（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/341117755",
-   "desc": "スズメは、スズメ目スズメ科スズメ属に分類される鳥類の1種。",
-   "desc_src": "Wikipedia「スズメ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%B9%E3%82%BA%E3%83%A1",
-   "radius_m": 250
-  },
-  {
-   "ja": "キチジョウソウ",
-   "sci": "Reineckea carnea",
-   "kind": "Plantae",
-   "rank": "species",
-   "date": "2023-11-24",
-   "ll": [
-    139.630554,
-    35.896162
-   ],
-   "url": "https://www.inaturalist.org/observations/191906097",
-   "acc": 3,
-   "grade": "needs_id",
-   "note": "",
-   "ref": true,
-   "m": 193,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/1476301/square.jpg",
-   "attr": "(c) scott.zona, some rights reserved (CC BY)",
-   "credit": "写真：scott.zona（CC BY 4.0）・iNaturalist",
-   "lic": "cc-by",
-   "lic_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/1476301",
-   "desc": "キチジョウソウはスズラン亜科の常緑多年草。",
-   "desc_src": "Wikipedia「キチジョウソウ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%AD%E3%83%81%E3%82%B8%E3%83%A7%E3%82%A6%E3%82%BD%E3%82%A6",
-   "radius_m": 250
-  },
-  {
-   "ja": "アオスジアゲハ",
-   "sci": "Graphium sarpedon nipponum",
-   "kind": "Insecta",
-   "rank": "subspecies",
-   "date": "2023-04-25",
-   "ll": [
-    139.629904,
-    35.895928
-   ],
-   "url": "https://www.inaturalist.org/observations/156527410",
-   "acc": 5,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 244,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/2082289/square.jpg",
-   "attr": "(c) Alpsdake, some rights reserved (CC BY-SA)",
-   "credit": "写真：Alpsdake（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/2082289",
-   "radius_m": 250
-  },
-  {
-   "ja": "セイヨウタンポポ",
-   "sci": "Taraxacum officinale",
-   "kind": "Plantae",
-   "rank": "species",
-   "date": "2026-04-03",
-   "ll": [
-    139.632858,
-    35.895855
-   ],
-   "url": "https://www.inaturalist.org/observations/346888488",
+   "url": "https://www.inaturalist.org/observations/260772830",
    "acc": 2,
    "grade": "needs_id",
-   "note": "",
+   "note": "植栽の可能性",
    "ref": true,
-   "m": 248,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/127729932/square.jpeg",
-   "attr": "(c) Jason Grant, some rights reserved (CC BY), uploaded by Jason Grant",
-   "credit": "写真：Jason Grant（CC BY 4.0）・iNaturalist",
-   "lic": "cc-by",
-   "lic_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/127729932",
-   "desc": "セイヨウタンポポは、キク科タンポポ属の多年草である。",
-   "desc_src": "Wikipedia「セイヨウタンポポ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%BB%E3%82%A4%E3%83%A8%E3%82%A6%E3%82%BF%E3%83%B3%E3%83%9D%E3%83%9D",
-   "radius_m": 250
+   "m": 18,
+   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/557171383/square.jpg",
+   "attr": "(c) Douglas Goldman, some rights reserved (CC BY-SA), uploaded by Douglas Goldman",
+   "credit": "写真：Douglas Goldman（CC BY-SA 4.0）・iNaturalist",
+   "lic": "cc-by-sa",
+   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
+   "photo_page": "https://www.inaturalist.org/photos/557171383",
+   "desc": "タイサンボクは、モクレン科モクレン属に属する常緑高木の1種である。",
+   "desc_src": "Wikipedia「タイサンボク」（CC BY-SA 4.0）",
+   "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%BF%E3%82%A4%E3%82%B5%E3%83%B3%E3%83%9C%E3%82%AF",
+   "radius_m": 80,
+   "voice": false
   }
  ],
+ "ichi": [],
  "hiro": [
   {
    "ja": "カワラタケ",
@@ -324,34 +118,8 @@
    "desc": "カワラタケは、タマチョレイタケ科シロアミタケ属の小型から大型になるキノコ（菌類）で、白色腐朽菌である。",
    "desc_src": "Wikipedia「カワラタケ」（CC BY-SA 4.0）",
    "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%AF%E3%83%A9%E3%82%BF%E3%82%B1",
-   "radius_m": 150
-  },
-  {
-   "ja": "ニホンカナヘビ",
-   "sci": "Takydromus tachydromoides",
-   "kind": "Reptilia",
-   "rank": "species",
-   "date": "2020-11-14",
-   "ll": [
-    139.632233,
-    35.909812
-   ],
-   "url": "https://www.inaturalist.org/observations/64925597",
-   "acc": 28,
-   "grade": "research",
-   "note": "",
-   "ref": true,
-   "m": 163,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/25305/square.jpg",
-   "attr": "(c) Y.K.Tarabagani, some rights reserved (CC BY-SA)",
-   "credit": "写真：Y.K.Tarabagani（CC BY-SA 4.0）・iNaturalist",
-   "lic": "cc-by-sa",
-   "lic_url": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/25305",
-   "desc": "ニホンカナヘビは、カナヘビ科カナヘビ属に分類されるトカゲの一種である。",
-   "desc_src": "Wikipedia「ニホンカナヘビ」（CC BY-SA 4.0）",
-   "desc_url": "https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%9B%E3%83%B3%E3%82%AB%E3%83%8A%E3%83%98%E3%83%93",
-   "radius_m": 250
+   "radius_m": 120,
+   "voice": false
   }
  ],
  "_all": [
@@ -404,28 +172,6 @@
    "desc": "カワラタケは、タマチョレイタケ科シロアミタケ属の小型から大型になるキノコ（菌類）で、白色腐朽菌である。",
    "desc_src": "Wikipedia「カワラタケ」（CC BY-SA 4.0）",
    "desc_url": "https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%AF%E3%83%A9%E3%82%BF%E3%82%B1"
-  },
-  {
-   "ja": "ベッコウタケ",
-   "sci": "Vanderbylia fraxinea",
-   "kind": "Fungi",
-   "rank": "species",
-   "date": "2025-04-30",
-   "ll": [
-    139.630767,
-    35.912553
-   ],
-   "url": "https://www.inaturalist.org/observations/276922945",
-   "acc": 18,
-   "grade": "needs_id",
-   "note": "",
-   "ref": true,
-   "photo": "https://inaturalist-open-data.s3.amazonaws.com/photos/404101620/square.jpg",
-   "attr": "(c) Atsushi Nakajima, some rights reserved (CC BY), uploaded by Atsushi Nakajima",
-   "credit": "写真：Atsushi Nakajima（CC BY 4.0）・iNaturalist",
-   "lic": "cc-by",
-   "lic_url": "https://creativecommons.org/licenses/by/4.0/deed.ja",
-   "photo_page": "https://www.inaturalist.org/photos/404101620"
   },
   {
    "ja": "ヤマザクラ",
