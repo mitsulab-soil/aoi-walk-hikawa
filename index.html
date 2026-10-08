@@ -3,7 +3,7 @@
 <link rel="icon" href="data:,">
 <meta name="description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-8bf4f628ee">
+<meta name="aoiwalk-build" content="r9-00e2769aef">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -314,6 +314,7 @@
   @media (prefers-reduced-motion: reduce) { #fade, #poster, #subT, #slipFade { transition:none; } .mk3 .dot { animation:none !important; } }
 </style>
 <script>window.__nearHold = true; window.__photoHold = true;   /* 近景の樹皮（約 1.3 MB）とデスクトップの空中写真（約 3.1 MB）は「はじめる」を押してから */</script>
+<meta name="tdm-reservation" content="1">
 <script>window.__DEMO_NOTE = {"text": "碧は、確かめた事実を根拠に話します。", "credit": "地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）・昔の空中写真（1945〜50 年ごろ・1961〜69 年ごろ）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工／道・木・鳥居の位置：© OpenStreetMap contributors（ODbL）／生きものの記録と写真：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）・種のひとこと：日本語版 Wikipedia（CC BY-SA 4.0）／素材：Poly Haven・ambientCG（CC0）／声：VOICEVOX:冥鳴ひまり（AI の合成音声）"};</script>
 </head><body>
 <div id="v" aria-label="氷川参道のまわりの 3D（実寸）"></div>
@@ -4551,6 +4552,8 @@ function menuHTML() {
   <h2>この作品について</h2><p>${esc(W.about_txt ?? "")}</p><p><small>${esc(W.aoi_note)}</small></p>
   <p><small>${esc(W.time_note ?? "")}</small></p>
   <p><small>つくった人：mitsulab（<a href="https://mitsulab.jp" target="_blank" rel="noopener">mitsulab.jp</a>）。お問い合わせ：<a href="mailto:official@mitsulab.jp">official@mitsulab.jp</a></small></p>
+  <p lang="ja"><small>© 2026 mitsulab. All rights reserved. この作品の文章・画像・音声・3D・プログラムの著作権は、別に示した他者の素材を除き mitsulab にあります。無断の複製・転載・改変と、AI の学習・生成への利用はお断りします（テキスト・データマイニングの権利を留保します）。 <a href="https://mitsulab.jp/terms/#ai" target="_blank" rel="noopener">利用規約</a></small></p>
+  <p lang="en"><small>© 2026 mitsulab. All rights reserved. Copyright in the text, images, audio, 3D and software of this work belongs to mitsulab, except third-party materials credited separately. Copying, reposting or modifying them without permission, and using them for AI training or generation, are not permitted. Text and data mining rights are reserved. <a href="https://mitsulab.jp/terms/#ai-en" target="_blank" rel="noopener">Terms</a></small></p>
   <h2>出典・クレジット</h2><p><small>${esc(CREDIT)}</small></p>
   <p><small>音楽：${esc(W.music?.credit ?? "")}</small></p>
   <p><small>碧の話の根拠（事実はここで確かめられます）：</small></p><ul>${ev.map(s => `<li><small>${esc(s)}</small></li>`).join("")}</ul>

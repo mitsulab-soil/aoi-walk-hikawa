@@ -32,4 +32,10 @@ mitsulab の作品《氷川道中》（Aoi Walk: Hikawa）です。シリーズ�
 - 碧の声：VOICEVOX:冥鳴ひまり（AI の合成音声。[VOICEVOX](https://voicevox.hiroshiba.jp/)・[冥鳴ひまりの利用規約](https://www.meimeihimari.com/terms-of-use)）。前もって一行ずつ作った音（`web/voice/`）を鳴らしています
 - 木の配置・樹種の割合、根・石・下草の形と並びは模式です（一本ずつの位置と樹種ではありません）。
 
-作品と文章の権利は mitsulab に帰属します。 © mitsulab（https://mitsulab.jp）
+## 著作権 ／ Copyright
+
+© 2026 mitsulab. All rights reserved. この作品の文章・画像・音声・3D・プログラムの著作権は、別に示した他者の素材を除き mitsulab にあります。無断の複製・転載・改変と、AI の学習・生成への利用はお断りします（テキスト・データマイニングの権利を留保します）。 [利用規約](https://mitsulab.jp/terms/#ai)
+
+© 2026 mitsulab. All rights reserved. Copyright in the text, images, audio, 3D and software of this work belongs to mitsulab, except third-party materials credited separately. Copying, reposting or modifying them without permission, and using them for AI training or generation, are not permitted. Text and data mining rights are reserved. [Terms](https://mitsulab.jp/terms/#ai-en)
+
+他者の素材（CC BY・ODbL・CC0・VOICEVOX など）は、それぞれの条件に従います。
