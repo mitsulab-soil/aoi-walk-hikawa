@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-072784e244">
+<meta name="aoiwalk-build" content="r9-490aaa6759">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -4694,7 +4694,17 @@ function aoiTarget() {   /* 道の座標での目標：見る人の、歩く向�
   if (o) { const ph = innerWidth <= 820, od = o.d - d, dd = Math.abs(od) > 3 ? Math.sign(od) : dir, tdd = d + dd * (ph ? clamp(Math.abs(od) * .5, 2.0, 2.5) : Math.min(1.9, Math.max(1.4, Math.abs(od) * .5)));
     const ls = Math.abs(od) > 2 ? U.s + (o.s - U.s) * clamp((tdd - d) / od, 0, 1) : U.s; td = tdd; ts = ls + (A.side || 1) * (ph ? .8 : 1.3); A.lookO = true; } else A.lookO = false;
   /* 第17回（本人「話すあいだ碧は歩く」）：画面で歩く人が止まって聞いているあいだも、碧はその前と横を、ゆっくり行き来しながら話す（真顔で立ちつくさない） */
-  if (FREE() && speaking && speaking.id !== "_closing" && !MV.goal && Math.abs(MV.v) < .05) { const tt = performance.now() / 1000 * Math.max(1, TS); td += dir * (.6 + .9 * Math.sin(tt * .42)); ts += (A.side || 1) * .7 * Math.sin(tt * .27 + 1); A.stroll = true; } else A.stroll = false;
+  /* 2026-10-09 本人「立ち止まって説明するときは、歩き回らず自然に振る舞う」→ 第17回の行き来はやめた。止まって話すときは、その場に立って、
+     体の向き・手・目線・小さな重心の移りで話す（aoiPose）。「歩きながら話す」は、見る人が歩いているあいだだけ */
+  A.stroll = false;
+  /* 止まって話すとき（画面で歩く）：話しはじめに一度だけ、見ている向きの前（2.4 m 先・少し脇）に立つ場所を決め、話のあいだはそこに立つ。
+     見る人が歩き出すか、話が終わったら解く。見回しで少し向きが変わっても追いかけない（画面の外へ大きく外れたときだけ決め直す） */
+  if (FREE() && speaking && speaking.id !== "_closing" && !MV.goal && Math.abs(MV.v) < .05 && C.camera) {
+    const cp = C.camera.position, yw = camYaw ?? C.yaw, fx = -Math.sin(yw), fz = -Math.cos(yw), sd = A.side || 1, ph = innerWidth <= 820;
+    const vis = (() => { if (!A.standP) return false; const w = toWorld(A.standP.d, A.standP.s), dx = w.x - cp.x, dz = w.z - cp.z, fwd = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx); return fwd > 1 && lat / fwd < (ph ? .32 : .55); })();
+    if (!A.standP || A.standSeg !== speaking.id || !vis) { const L = ph ? .32 : .62, gx = cp.x + fx * 2.6 - fz * sd * L, gz = cp.z + fz * 2.6 + fx * sd * L, pr = project(gx, gz); A.standP = { d: pr.d, s: pr.s }; A.standSeg = speaking.id; }
+    td = A.standP.d; ts = A.standP.s; A.standing = true;
+  } else { A.standP = null; A.standing = false; }
   const [b0, b1] = bandNear(td, 10, aoiBand), [u0, u1] = bandNear(td, 10, userBand);
   const lo = Math.max(b0, u0) + .45, hi = Math.min(b1, u1) - .45;   /* 植え込みの縁に立たない（帯の中へ 0.45 m） */
   if (o && lo <= hi && (ts < lo || ts > hi)) { const alt = ts - (A.side || 1) * 2.6; if (alt >= lo && alt <= hi) { ts = alt; } }   /* 脇が帯の外なら、反対の脇へ */
@@ -4719,6 +4729,16 @@ function settleSprings() {
 /* 確かめ用：裾の骨の、休みの向きからの開き（度）の最大 */
 function skirtSpread() { let m = 0; for (const j of WD.skirt) { const q0 = j._initialLocalRotation, q = j.bone?.quaternion; if (!q0 || !q) continue; const dt = Math.abs(q0.dot(q)); m = Math.max(m, 2 * Math.acos(Math.min(1, dt)) * 180 / Math.PI); } return +m.toFixed(1); }
 const _hv = { v: null };
+/* 2026-10-09 本人「かけらを並べるとき碧が浮いている」：参道の北の端（神橋のたもと）は、地形の高さ（DEM）が池のくぼみに引かれていて、
+   碧が石畳の端の外に浮いたり、たもとの踊り場に沈んだりしていた。橋と踊り場の上では、その面の高さに立つ（光線を下へ一本） */
+const STAND = { objs: null, rc: null, o: null, dn: null };
+function standOn(x, z) {
+  if (!STAND.objs) { STAND.objs = []; for (const q of C.STRUCTS ?? []) if (/橋/.test(q.it?.name ?? "")) STAND.objs.push({ obj: q.obj, x: q.obj.position.x, z: q.obj.position.z }); }
+  const near = STAND.objs.filter(q => Math.hypot(q.x - x, q.z - z) < 22); if (!near.length) return null;
+  const rc = STAND.rc ||= new THREE.Raycaster(), o = STAND.o ||= new THREE.Vector3(), dn = STAND.dn ||= new THREE.Vector3(0, -1, 0);
+  o.set(x, 40, z); rc.set(o, dn); rc.far = 60; const h = rc.intersectObjects(near.map(q => q.obj), true).find(h => h.face && h.face.normal.y > .3 || !h.face);
+  return h ? h.point.y : null;
+}
 function aoiTick(dt) {
   if (!vrm) return;
   const want = !NO3D && (C.treesOk ?? C.ready)() && A.compiled && gpsReady();
@@ -4757,7 +4777,7 @@ function aoiTick(dt) {
   { const ddp = A.pd - _pd0, dsp = A.ps - _ps0, m = Math.hypot(ddp, dsp), lim = 3.3 * dt * Math.max(1, TS);   /* 押し出しを足しても、こまあたり毎秒 3.3 m まで（跳ばない） */
     if (m > lim && m < 8) { const k = lim / m; A.pd = _pd0 + ddp * k; A.ps = _ps0 + dsp * k; } }
   const wp = toWorld(A.pd, A.ps);
-  if (A.gy == null || ++A.gyN % 3 === 0) { const gy = C.groundY(wp.x, wp.z); if (gy != null) A.gy = A.gy == null || Math.abs(A.gy - gy) > 2 ? gy : A.gy + (gy - A.gy) * .5; else if (A.gy == null) A.gy = C.camera.position.y - 1.6; }
+  if (A.gy == null || ++A.gyN % 3 === 0) { let gy = C.groundY(wp.x, wp.z); { const sb = standOn(wp.x, wp.z); if (sb != null && (gy == null || sb > gy - .05)) gy = sb; } if (gy != null) A.gy = A.gy == null || Math.abs(A.gy - gy) > 2 ? gy : A.gy + (gy - A.gy) * .5; else if (A.gy == null) A.gy = C.camera.position.y - 1.6; }
   const sp = Math.hypot(A.vd, A.vs); A.sp += (sp - A.sp) * ease(dt, 5);
   // 体の向き：歩くあいだは進む向きへ（速さの向き）。止まっているときは、話す相手・対象へ
   const cam = C.camera.position, toCam = Math.atan2(cam.x - wp.x, cam.z - wp.z);
@@ -4904,7 +4924,7 @@ function aoiPose(dt, sp, seg = null) {
   if (live) { A.ws -= dt; if (A.ws <= 0) { A.wsTo = -A.wsTo || .5; A.ws = 4 + Math.random() * 3; } A.wsv += ((A.wsTo ?? 0) - A.wsv) * ease(dt, 1.5);
     A.tl -= dt; if (A.tl <= 0 && k < .4 && Math.random() < dt * .25) { A.tl = 20 + Math.random() * 10; A.tlT = 0; A.tlS = Math.random() < .5 ? 1 : -1; }
     if (A.tlT != null) { A.tlT += dt; if (A.tlT > 2.2) A.tlT = null; } }
-  const ws = (1 - k) * A.wsv, tilt = A.tlT != null ? Math.sin(Math.min(1, A.tlT / 2.2) * Math.PI) * .14 * A.tlS : 0;
+  const ws = (1 - k) * A.wsv * (1 + .5 * tk), tilt = A.tlT != null ? Math.sin(Math.min(1, A.tlT / 2.2) * Math.PI) * .14 * A.tlS : 0;
   const ly = B.lyaw, lp = B.lpitch;   /* 見る先（体の前から）。胸 0.2・上胸 0.15・首 0.25・頭 0.35 に分ける */
   const hips = vrm.humanoid.getNormalizedBoneNode("hips");
   let hop = 0; if (A.hopT != null) { A.hopT += dt; const u = A.hopT / .9; if (u >= 1) A.hopT = null; else hop = .03 * Math.abs(Math.sin(u * Math.PI * 2)) * k; }
@@ -4921,14 +4941,17 @@ function aoiPose(dt, sp, seg = null) {
   S("leftLowerLeg", lk); S("rightLowerLeg", rk);
   S("leftFoot", -(lt + lk) * .75); S("rightFoot", -(rt + rk) * .75);
   // 腕：体の横に下ろし、脚と逆に振る。ひじは前へ少し曲げる。話すときは右手を少し前へ。指すときは近いほうの手で
-  const gst = tk * (1 - ptE) * (1 - k * .6), gw = live ? Math.sin(t * 2 * Math.PI * .33) : 0;
-  const lUA = [.26 * s1 * k - .05 * (1 - k), 0, -1.28 + .04 * br * (1 - k)], lLA = [0, -(.26 + .14 * k + .12 * Math.max(0, -s1) * k), 0];
+  /* 2026-10-09：止まって話すときは、行ごとに手を替える（右・左・両手を軽く）。重心は話のあいだ少し大きく、ゆっくり移す（上の ws） */
+  if (A.ghL !== A.lineT0) { A.ghL = A.lineT0; const r = Math.random(); A.gh = r < .5 ? 1 : r < .8 ? -1 : 0; }
+  const g0 = tk * (1 - ptE) * (1 - k * .6), gw = live ? Math.sin(t * 2 * Math.PI * .33) : 0, gwl = live ? Math.sin(t * 2 * Math.PI * .29 + 1.7) : 0;
+  const gst = g0 * (A.gh === -1 ? .15 : A.gh === 0 ? .6 : 1), gsl = g0 * (A.gh === -1 ? 1 : A.gh === 0 ? .6 : 0) * (useL ? 0 : 1);
+  const lUA = [.26 * s1 * k - .05 * (1 - k) - .28 * gsl, 0, -1.28 + .04 * br * (1 - k) + .14 * gsl], lLA = [0, -(.26 + .14 * k + .12 * Math.max(0, -s1) * k) - (.5 + .12 * gwl) * gsl, 0];
   const rUA = [-.26 * s1 * k - .05 * (1 - k) - .28 * gst, 0, 1.28 - .04 * br * (1 - k) - .14 * gst], rLA = [0, .26 + .14 * k + .12 * Math.max(0, s1) * k + (.5 + .12 * gw) * gst, 0];
   const pR = [-.15, 1.15 + aim * .6, .55], pRL = [0, .1, 0], pL = [-.15, -(1.15 - aim * .6), -.55], pLL = [0, -.1, 0];
   const mix = (a, b, w) => a.map((v, i) => v + (b[i] - v) * w);
   S("leftUpperArm", ...(useL ? mix(lUA, pL, ptE) : lUA)); S("leftLowerArm", ...(useL ? mix(lLA, pLL, ptE) : lLA));
   S("rightUpperArm", ...(!useL ? mix(rUA, pR, ptE) : rUA)); S("rightLowerArm", ...(!useL ? mix(rLA, pRL, ptE) : rLA));
-  S("leftHand", .05, 0, .12 - (useL ? .12 * ptE : 0)); S("rightHand", .05 + .1 * gst * gw, 0, -.12 + (!useL ? .12 * ptE : 0));
+  S("leftHand", .05 + .1 * gsl * gwl, 0, .12 - (useL ? .12 * ptE : 0)); S("rightHand", .05 + .1 * gst * gw, 0, -.12 + (!useL ? .12 * ptE : 0));
   const cu = .34 + .06 * k + (live ? .04 * Math.sin(t * .4) : 0);
   for (const [f, m] of [["Index", .8], ["Middle", 1], ["Ring", 1.1], ["Little", 1.25]]) {
     const cl = cu * m, pL2 = useL ? ptE : 0, pR2 = useL ? 0 : ptE;
