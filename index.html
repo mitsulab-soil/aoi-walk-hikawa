@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-748b7415e2">
+<meta name="aoiwalk-build" content="r9-c59a857e11">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -181,6 +181,23 @@
   .cards span { display:block; font-size:12.5px; color:var(--sub); line-height:1.5; }
   @media (min-width: 560px) { .cards { grid-template-columns:1fr 1fr; } }
   #st2 { position:relative; }
+  /* 2026-10-09 本人「冒頭の『どこを歩くか』を、氷川参道の 3D データの俯瞰から選べるように」：参道全体の 3D の上に、始まりの三つ（大きい印）と立ち止まる所（小さい印）。押すとそこから */
+  .ovOpen { display:block; width:100%; margin:6px 0 2px; min-height:44px; border:1px dashed var(--aoi); border-radius:12px; background:none; color:var(--aoi); font:inherit; font-size:15px; cursor:pointer; }
+  #ovPick { position:fixed; inset:0; z-index:9; pointer-events:none; }
+  #ovPick[hidden] { display:none; }
+  body.ovOn #minimap, body.ovOn #mapBig, body.ovOn .lbl, body.ovOn #marks, body.ovOn #kkBox, body.ovOn #menuBtn, body.ovOn .brand { visibility:hidden !important; }
+  #ovPick .ovH { pointer-events:auto; position:absolute; left:12px; right:12px; top:calc(env(safe-area-inset-top,0px) + 10px); background:rgba(250,250,246,.94); border-radius:14px; padding:10px 52px 10px 14px; color:#1d2a27; box-shadow:0 2px 10px rgba(0,0,0,.15); }
+  #ovPick .ovH b { display:block; font-size:17px; } #ovPick .ovH small { font-size:14px; color:#4a5a56; }
+  #ovPick #ovX { position:absolute; right:6px; top:6px; }
+  #ovPins { position:absolute; inset:0; }
+  .ovP { pointer-events:auto; position:absolute; left:0; top:0; transform:translate(-50%,-50%); border:0; background:none; padding:6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .ovP i { display:block; width:14px; height:14px; border-radius:50%; background:#8ff6e0; border:2px solid #0b4d4d; box-shadow:0 0 0 4px rgba(143,246,224,.35); }
+  .ovP span { font-size:14px; line-height:1.3; color:#10201d; background:rgba(250,250,246,.92); border-radius:8px; padding:1px 7px; white-space:nowrap; }
+  .ovP.s i { width:10px; height:10px; box-shadow:none; background:#fffbe6; }
+  .ovP.s span { display:none; } .ovP.s:hover span, .ovP.s:focus-visible span, .ovP.on span { display:block; }
+  .ovP.on i { background:#ffd54a; transform:scale(1.4); }
+  #ovPick .ovF { pointer-events:auto; position:absolute; left:12px; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 12px); background:rgba(250,250,246,.96); border-radius:14px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; color:#1d2a27; font-size:15px; }
+  #ovPick .ovF[hidden] { display:none; }
   #st2 .back { position:absolute; left:-6px; top:-8px; width:44px; height:44px; border:0; background:none; font-size:26px; color:var(--sub); cursor:pointer; }
   .world { padding:6px 4px 4px 34px; font-family:var(--title); font-size:15px; line-height:1.9; letter-spacing:.03em; }
   .world p { margin:0 0 6px; color:var(--ink); }
@@ -3204,6 +3221,7 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
     <div class="world" id="worldT"></div>
     <div class="opt">
       <div class="modes" role="group" aria-label="どこから歩くか"><button id="from1" aria-pressed="true">一の鳥居から</button><button id="from2" aria-pressed="false">二の鳥居から</button><button id="from3" aria-pressed="false" aria-label="神社から南へ">神社から</button></div>
+      <button class="ovOpen" id="ovBtn" type="button">参道の全体から、歩きはじめる所を選ぶ</button>
       <div class="modes" role="group" aria-label="歩き方"><button id="mSim" aria-pressed="true">画面で歩く</button><button id="mGps" aria-pressed="false" hidden>現地で歩く</button></div>
       <div class="modes" role="group" aria-label="画面で歩く歩き方" id="simHow"><button id="hSelf" aria-pressed="true">自分で動かす</button><button id="hAuto" aria-pressed="false">自動で歩く</button></div>
       <p class="stNote" id="stNote"></p>
@@ -3213,6 +3231,7 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
     <button class="go2" id="goMute">音を出さずにはじめる</button>
   </div>
 </section>
+<div id="ovPick" hidden role="dialog" aria-label="参道の全体から、歩きはじめる所を選ぶ"><div class="ovH"><b>どこから歩きますか</b><small>参道の全体（実寸の 3D）。印を押すと、そこから歩きはじめます。</small><button class="ib" id="ovX" aria-label="閉じる">×</button></div><div id="ovPins"></div><div class="ovF" id="ovF" hidden><span id="ovSel"></span><button class="go" id="ovGo">ここから、はじめる</button></div></div>
 <div id="sub" class="rest" role="status" aria-live="polite">
   <div class="hd"><span class="who">碧</span><button class="ctl" id="replayBtn" aria-label="いまの話をもう一度聞く" hidden>↻</button></div>
   <p id="subT" class="idle"></p>
@@ -4152,7 +4171,7 @@ function setMode(m) {
   walkLbl();
 }
 /* 第10回（検証・歩く人・観光客・家族）：はじめる前に、聞き方・読み込みの大きさ・横断で黙ること・駅からの道。現地では、始まりの場所は位置で決まる（ボタンを隠す） */
-function stNote() { const n = $("stNote"), fr = $("from1")?.parentElement; if (fr) fr.hidden = mode === "gps"; if ($("simHow")) $("simHow").hidden = mode !== "sim" || SEQ0();
+function stNote() { const n = $("stNote"), fr = $("from1")?.parentElement; if (fr) fr.hidden = mode === "gps"; if ($("simHow")) $("simHow").hidden = mode !== "sim" || SEQ0(); if ($("ovBtn")) $("ovBtn").hidden = mode !== "sim" || SEQ0();
   if (n && mode === "sim" && AUTO) { n.textContent = "碧と一緒に、参道を自動で歩きます。話せる物の前で立ち止まり、話が済むと、また歩き出します。止めたいときは左上の ❚❚。画面をなぞると見回せます。読み込みは はじめに約 30 MB。参道は約 2 km、自動で約 30 分。"; return; }
   if (n) n.textContent = mode === "gps" ? "参道のどこからでも始まります（大宮駅から東へ 550 m ほど）。イヤホンで聞くのがおすすめです。横断歩道とその前後では、碧は話しません。読み込みは はじめに約 30 MB、声は歩いた分だけ少しずつ。"
     : "地面を押すとそこへ歩き、画面をなぞると向きが変わります。近くに碧の話せるものがあると、その足もとに碧の灯りがともります。家で下見をしておくと、現地で見つけやすくなります。読み込みは はじめに約 30 MB、声は歩いた分だけ少しずつ。" + (W.time_note ? " " + W.time_note : ""); }
@@ -4188,6 +4207,42 @@ $("goBtn").onclick = () => begin(true);
 const FROM = [["from1", W.start_d, 1], ["from2", W.start_d2, 1], ["from3", W.start_d3, -1]];
 for (const [id, dd, dr] of FROM) $(id).onclick = () => { for (const [j] of FROM) $(j).setAttribute("aria-pressed", String(j === id)); setSimDir(dr); faceT = id === "from3" ? { d: D_MAX } : null; placeAt(dd); aoiJump(); };
 $("goMute").onclick = () => begin(false);
+/* 2026-10-09 参道の全体（俯瞰）から、歩きはじめる所を選ぶ。3D の本体の俯瞰（orbit）で参道を真上寄りから写し、印を画面に重ねる */
+const OV = { open: false, sel: null, raf: 0, pins: [] };
+function ovChoices() {
+  const L = [{ id: "from1", nm: "一の鳥居から", dd: W.start_d, dr: 1, big: true }, { id: "from2", nm: "二の鳥居から", dd: W.start_d2, dr: 1, big: true }, { id: "from3", nm: "神社から（南へ）", dd: W.start_d3, dr: -1, big: true }];
+  for (const id of (R11.stops || [])) { const sg = SEGID.get(id); if (!sg?.at) continue; const nm0 = (sg.tag || sg.title || "").replace(/（.*?）/g, "") + "から"; if (L.some(x => x.nm.startsWith(nm0.replace(/から$/, "")))) continue; L.push({ id, nm: (sg.tag || sg.title || "").replace(/（.*?）/g, "") + "から", dd: clamp(sg.at.d - 8, D_MIN, D_MAX), dr: 1, big: false }); }
+  return L;
+}
+function ovOpen(on) {
+  if (NO3D || !C.view) return; OV.open = on; $("ovPick").hidden = !on; $("start").hidden = on; window.__freezeEye = on; document.body.classList.toggle("ovOn", on);
+  if (on) {
+    const a = C.pointAt(0), b = C.pointAt(D_MAX), cx = (a[0] + b[0]) / 2, cz = (a[2] + b[2]) / 2, ph = innerWidth < innerHeight;
+    const L = Math.hypot(b[0] - a[0], b[2] - a[2]), top = ($("ovPick").querySelector(".ovH").getBoundingClientRect().bottom || 90) + 28, bot = innerHeight - 160, v = new THREE.Vector3();
+    /* 参道の両はしが、上の見出しと下の札のあいだに収まるまで、カメラを引く */
+    for (let k = .7; k < 4; k *= 1.12) { C.view([cx + L * .06 * k, L * k, cz + L * .3 * k], [cx, 12, cz]); C.camera.updateMatrixWorld(); C.camera.updateProjectionMatrix?.();
+      const ys = [a, b].map(q => (1 - v.set(q[0], q[1], q[2]).project(C.camera).y) / 2 * innerHeight); if (Math.min(...ys) > top && Math.max(...ys) < bot) break; }
+    if (C.controls) { C.controls.enableRotate = false; }
+    A.hideOv = true;
+    const box = $("ovPins"); box.innerHTML = ""; OV.pins = ovChoices().map(c => { const el = document.createElement("button"); el.type = "button"; el.className = "ovP" + (c.big ? "" : " s"); el.innerHTML = `<i></i><span>${esc(c.nm)}</span>`; el.setAttribute("aria-label", c.nm);
+      el.onclick = e => { e.stopPropagation(); ovPick(c, el); }; box.appendChild(el); const w = C.pointAt(c.big ? c.dd : c.dd + 8); return { c, el, w }; });
+    const tick = () => { if (!OV.open) return; const v = new THREE.Vector3(); for (const q of OV.pins) { v.set(q.w[0], q.w[1] + 2, q.w[2]).project(C.camera); const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; q.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`; q.el.hidden = v.z > 1; } OV.raf = requestAnimationFrame(tick); };
+    tick();
+  } else {
+    cancelAnimationFrame(OV.raf); A.hideOv = false; if (C.controls) C.controls.enableRotate = true;
+    try { C.onD(d); } catch {} placeAt(d); aoiJump();
+  }
+}
+function ovPick(c, el) {
+  OV.sel = c; for (const q of OV.pins) q.el.classList.toggle("on", q.el === el);
+  $("ovSel").textContent = c.nm.replace(/から.*$/, "") + "から、歩きはじめます。"; $("ovF").hidden = false;
+  for (const [j] of FROM) $(j).setAttribute("aria-pressed", String(j === c.id));
+  setSimDir(c.dr); faceT = c.id === "from3" ? { d: D_MAX } : null; d = clamp(c.dd, D_MIN, D_MAX);
+  $("ovBtn").textContent = `始まり：${c.nm}（参道の全体から選びなおす）`;
+}
+$("ovBtn").onclick = () => ovOpen(true);
+$("ovX").onclick = () => ovOpen(false);
+$("ovGo").onclick = () => { ovOpen(false); begin(true); };
 function releaseHold() { setTimeout(() => (window.requestIdleCallback ?? (f => setTimeout(f, 0)))(() => { try { window.__nearPre?.(); } catch {} }), 6000); if (window.__nearHold) window.__nearHold = false; if (window.__photoHold) { window.__photoHold = false; try { window.__photoUp?.(); } catch {} } }
 
 // ---- 上の小さな地図：参道の全体。縦は道のり d を、北の端を広げて写す。押すと、いちばん近い印へ（0.4 秒の暗転で）移る。現地では、吸着した位置にいつも合わせる
@@ -4807,7 +4862,7 @@ function aoiTick(dt) {
   const turnMax = 1.0 * dt;   /* 第9回：毎秒 57°（1/60 秒で 1° より小さく） */   /* 第6回：1.0→1.8（反転で向き直るのを早く） */   /* 第4回：向きの変化は毎秒 57° まで（1/60 秒で 1° 以下。反転でもぐるっとは回らない） */
   if (!A.dbg?.lockYaw) A.yaw += clamp(wrapA(fy - A.yaw) * ease(dt, 4), -turnMax, turnMax);
   aoi.position.set(wp.x, A.gy, wp.z); aoi.rotation.set(0, A.yaw, 0);
-  if (A.hide > 0) { A.hide -= dt; aoi.visible = false; } else aoi.visible = true;
+  if (A.hide > 0) { A.hide -= dt; aoi.visible = false; } else aoi.visible = !A.hideOv;
   // 確かめ用：1 こまの動きの大きさ（跳びが無いか）
   if (aoi.visible && A.prevW && dt > 0) { const k60 = 1 / (dt * 60) / Math.max(1, TS), st = Math.hypot(wp.x - A.prevW.x, wp.z - A.prevW.z) * k60;   /* 1/60 秒あたりに直す（こまの遅い端末でも同じ物差し） */
     if (st > A.stat.maxStep) { A.stat.maxStep = st; A.stat.atStep = [+A.pd.toFixed(1), +A.ps.toFixed(2), +dt.toFixed(3), +A.prevW.x.toFixed(2), +A.prevW.z.toFixed(2), +wp.x.toFixed(2), +wp.z.toFixed(2), +d.toFixed(1), mode, +_pd0.toFixed(2), +_ps0.toFixed(2), A.hide.toFixed(2)]; }
