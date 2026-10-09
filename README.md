@@ -21,6 +21,7 @@ mitsulab の作品《氷川道中》（Hikawa Dochu）です。シリーズ「�
 
 - 樹木の話：さいたま市・氷川の杜まちづくり協議会『[氷川参道の樹木調査](https://www.city.saitama.lg.jp/001/010/015/004/004/p014020.html)』（令和 4 年 3 月改訂）、環境省 [巨樹・巨木林データベース](https://kyoju.biodic.go.jp/) の観察コースガイド「武蔵一宮氷川神社・大宮公園」、樹種の一般的な事実は日本語版 Wikipedia（CC BY-SA 4.0）。数値と事実を出典つきで話しています（図や表は写していません）
 - 地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）を mitsulab が加工して作成（[地理院タイル一覧](https://maps.gsi.go.jp/development/ichiran.html)）
+- 写真（かけらを近くで見る）：「Hikawa Jinja Ninotorii 110221」Umako（[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)）／[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Hikawa_Jinja_Ninotorii_110221.jpg)
 - 建物：国土交通省 [PLATEAU](https://www.mlit.go.jp/plateau/) さいたま市 2022（CC BY 4.0）を加工。屋根・外壁は模式
 - 道・木・鳥居・お店の位置と名前：© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors（ODbL）
 - 生きものの観察記録：[iNaturalist](https://www.inaturalist.org/) の投稿者のみなさん（前もって受け取った記録の、種の名前だけを碧が言います。記録へのリンクはメニューの「出典・クレジット」に）
