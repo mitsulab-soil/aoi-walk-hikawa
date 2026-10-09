@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-490aaa6759">
+<meta name="aoiwalk-build" content="r9-748b7415e2">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -3205,6 +3205,7 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
     <div class="opt">
       <div class="modes" role="group" aria-label="どこから歩くか"><button id="from1" aria-pressed="true">一の鳥居から</button><button id="from2" aria-pressed="false">二の鳥居から</button><button id="from3" aria-pressed="false" aria-label="神社から南へ">神社から</button></div>
       <div class="modes" role="group" aria-label="歩き方"><button id="mSim" aria-pressed="true">画面で歩く</button><button id="mGps" aria-pressed="false" hidden>現地で歩く</button></div>
+      <div class="modes" role="group" aria-label="画面で歩く歩き方" id="simHow"><button id="hSelf" aria-pressed="true">自分で動かす</button><button id="hAuto" aria-pressed="false">自動で歩く</button></div>
       <p class="stNote" id="stNote"></p>
       <div class="ear" id="earRow" hidden>イヤホン<span class="chips"><button id="earY" aria-pressed="true">あり</button><button id="earN" aria-pressed="false">なし</button></span></div>
     </div>
@@ -3944,7 +3945,12 @@ function walkStep(now) {
 /* 第15回（2026-10-07 本人「碧がさきに歩いてそれについていくという体験はやめましょう。（現在地と、自分で操作する）２つに」）：
    画面で歩く（第16回で名を改めた）＝見る人が自分で動く。第16回から：地面を押すとそこへ歩く・なぞると向きを変える（キーは ↑↓ W S で進む／下がる、←→ A D で向きを変える）。
    進む向きは、いま向いている向きを道の上に写したもの（道の帯の中なら斜めにも歩ける）。碧は、見る人の向いているほうの少し前に付き添い、近くに話せるものがあると話す */
-const FREE = () => mode === "sim";
+/* 2026-10-09 本人「画面で歩くに、自動で歩くモードと操作するモードの二つ」：自分で動かす（押した所へ歩く・第16回）／自動で歩く（参道を一定の速さで進み、話せる物の前で立ち止まり、話が済むと歩き出す。❚❚ で止まる）。
+   座ったまま巡る（?mode=suwari）は、立ち止まる所から所へ移る別の自動（スイッチ一つで操作する人のため）で、こちらは歩く景色を途切れずに見たい人のため */
+let AUTO = store.get("ftw-hikawa-auto", false) === true;
+const SEQ0 = () => /[?&]mode=(oto|suwari)\b/.test(location.search);
+if (SEQ0()) AUTO = false;
+const FREE = () => mode === "sim" && !AUTO;
 const MV = { f: 0, t: 0, keys: new Set(), hold0: 0, v: 0, goal: null, gv: 0 };
 const FR = { yaw: null, pitch: null, turnTo: null };
 function freeIn() { const k = MV.keys; const f = (k.has("f") || k.has("kf") ? 1 : 0) - (k.has("b") || k.has("kb") ? 1 : 0), t = (k.has("l") || k.has("kl") ? 1 : 0) - (k.has("r") || k.has("kr") ? 1 : 0); return { f: f || MV.f, t: t || MV.t }; }
@@ -4146,10 +4152,16 @@ function setMode(m) {
   walkLbl();
 }
 /* 第10回（検証・歩く人・観光客・家族）：はじめる前に、聞き方・読み込みの大きさ・横断で黙ること・駅からの道。現地では、始まりの場所は位置で決まる（ボタンを隠す） */
-function stNote() { const n = $("stNote"), fr = $("from1")?.parentElement; if (fr) fr.hidden = mode === "gps";
+function stNote() { const n = $("stNote"), fr = $("from1")?.parentElement; if (fr) fr.hidden = mode === "gps"; if ($("simHow")) $("simHow").hidden = mode !== "sim" || SEQ0();
+  if (n && mode === "sim" && AUTO) { n.textContent = "碧と一緒に、参道を自動で歩きます。話せる物の前で立ち止まり、話が済むと、また歩き出します。止めたいときは左上の ❚❚。画面をなぞると見回せます。読み込みは はじめに約 30 MB。参道は約 2 km、自動で約 30 分。"; return; }
   if (n) n.textContent = mode === "gps" ? "参道のどこからでも始まります（大宮駅から東へ 550 m ほど）。イヤホンで聞くのがおすすめです。横断歩道とその前後では、碧は話しません。読み込みは はじめに約 30 MB、声は歩いた分だけ少しずつ。"
     : "地面を押すとそこへ歩き、画面をなぞると向きが変わります。近くに碧の話せるものがあると、その足もとに碧の灯りがともります。家で下見をしておくと、現地で見つけやすくなります。読み込みは はじめに約 30 MB、声は歩いた分だけ少しずつ。" + (W.time_note ? " " + W.time_note : ""); }
 stNote();
+function setHow(a) { if (AUTO === a) return; AUTO = a; store.set("ftw-hikawa-auto", a);
+  for (const b of document.querySelectorAll("#hSelf,[data-how=self]")) b.setAttribute("aria-pressed", String(!a)); for (const b of document.querySelectorAll("#hAuto,[data-how=auto]")) b.setAttribute("aria-pressed", String(a));
+  stNote(); MV.goal = null; if (mode === "sim" && started) { simS = U.s; placeAt(d); walking = a && introDone && !userPaused; } walkLbl(); }
+$("hSelf").onclick = () => setHow(false); $("hAuto").onclick = () => setHow(true);
+$("hSelf").setAttribute("aria-pressed", String(!AUTO)); $("hAuto").setAttribute("aria-pressed", String(AUTO));
 $("mSim").onclick = () => setMode("sim");
 $("mGps").onclick = () => setMode("gps");
 $("earY").onclick = () => { earphones = true; $("earY").setAttribute("aria-pressed", "true"); $("earN").setAttribute("aria-pressed", "false"); };
@@ -4570,6 +4582,7 @@ function menuHTML() {
   return `<div class="mh"><b>設定</b><button class="ib" id="menuX" aria-label="閉じる">×</button></div>
   ${ONE ? "" : `<h2>聞く層（一つ）</h2><div class="chips" id="chipsM" role="radiogroup" aria-label="聞く層（一つ）"></div><small class="lnote" id="chipNoteM" aria-live="polite"></small>`}
   <h2>体験のしかた</h2><div class="modes"><button data-mode="sim" aria-pressed="${mode === "sim"}">画面で歩く</button>${GPS_OK ? `<button data-mode="gps" aria-pressed="${mode === "gps"}">現地で歩く</button>` : ""}</div>
+  ${mode === "sim" && !SEQ0() ? `<div class="modes"><button data-how="self" aria-pressed="${!AUTO}">自分で動かす</button><button data-how="auto" aria-pressed="${AUTO}">自動で歩く</button></div>` : ""}
   ${mode === "sim" ? `<p><small>地面を押すと、そこへ歩きます（行き先に小さな輪）。画面をなぞると、向きが変わります。近くに碧の話せるものがあると、その足もとに碧の灯りがともります。灯りを押すと、碧が話します。画面の外にあるときは、端に小さな灯りの印が出ます（押すと、そちらを向きます）。キーボードでは ↑↓（W S）で進む・下がる、←→（A D）で向きを変えます。</small></p>` : ""}
   ${mode === "gps" ? `<div class="row2">画面を暗くして聞く<button class="sw" id="dimSw" aria-pressed="${!$("dim").hidden}">${$("dim").hidden ? "しない" : "する"}</button></div>` : ""}
   <h2>音と文字</h2>
@@ -4596,6 +4609,7 @@ function openMenu(on) {
   m.innerHTML = menuHTML(); drawChips();
   $("menuX").onclick = () => openMenu(false);
   m.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { setMode(b.dataset.mode); openMenu(true); });
+  m.querySelectorAll("[data-how]").forEach(b => b.onclick = () => { setHow(b.dataset.how === "auto"); openMenu(true); });
   m.querySelectorAll("[data-dir]").forEach(b => b.onclick = () => { setSimDir(+b.dataset.dir); if (!walking && started) { walking = true; userPaused = false; walkLbl(); } openMenu(true); });
   $("bigBtn").onclick = () => { toggleBig(); openMenu(true); };
   $("sndSw").onclick = () => { toggleSound(); openMenu(true); };
