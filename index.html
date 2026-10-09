@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Aoi Walk: Hikawa）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-c59a857e11">
+<meta name="aoiwalk-build" content="r9-6a73e12649">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -5458,6 +5458,7 @@ const ZCOL = { wood: [0x6b5640, 0x7a634a, 0x5e4a38, 0x86705a], plaster: [0xcfc6b
   /* p2：遠目にも人の姿と読めるよう、藍・茶・鼠・生成りの幅を広げた（暗い柱に見えないように） */
   cloth: { edo: [0x3d5276, 0x5d7290, 0x7a5a40, 0x8f826a, 0x6e6a4a, 0xa89f8a, 0x4f5f58], meiji: [0x3d5276, 0x5d7290, 0x7a5a40, 0x8f826a, 0x4a4a4c, 0xa89f8a, 0x6b5f50], showa: [0x3d5276, 0x4a4a4c, 0x6d6a64, 0x8f826a, 0x7a6450, 0xb0a894, 0x4c5466] } };
 const zRnd = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(20261006);
+const pRnd = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(20261009);   /* 2026-10-09：人のばらつき用（家並み・木の並びの乱数の順を変えない） */
 function zMat(uW, flat = true) { const m = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: flat }); zPatch(m, "in", uW); return m; }
 function zInst(geo, mat, list, colors) {
   const im = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length)); const c = new THREE.Color();
@@ -5525,10 +5526,27 @@ function zPeopleGeo() {
   T.showa_c = zMerge([[zLathe([[0, .78], [.18, .78], [.18, 1.28], [.07, 1.41], [0, 1.41]], 12), 0], [leg(-.08, .065, .06, .05, .86), 0, 1], [leg(.08, .065, .06, .05, .86), 0, -1], [foot(-.08), 5, 1], [foot(.08), 5, -1],
     [arm(-.2, .055, .5), 0, 2], [arm(.2, .055, .5), 0, -2], [hand(-.22), 2, 2], [hand(.22), 2, -2], [neck(), 2], [head(), 2], ...hairShort().map(g => [g, 3]),
     [zT(new THREE.CylinderGeometry(.115, .115, .07, 12), 0, 1.64, 0), 0], [zT(zS(new THREE.CylinderGeometry(.08, .08, .012, 10), 1, 1, 1.4), 0, 1.61, .06), 5]]);
+  /* 2026-10-09 本人「通行人をもっとリアルに（体つき・服・歩き方・速さのばらつき・影。現代と時代ごとの姿）」：いまの人（上着とズボン・コートとスカート／パンツ・子どものリュック）。顔は描かない */
+  const pack = (y = 1.1, w = .3, h = .38) => zT(new THREE.BoxGeometry(w, h, .14), 0, y, -.2);
+  T.now_m = suit([]);
+  T.now_mb = suit([pack()]);
+  const bob = () => [zT(zS(new THREE.SphereGeometry(.118, 12, 8, 0, Math.PI * 2, 0, Math.PI * .62), 1.05, 1.05, 1.08), 0, 1.54, -.012)];
+  T.now_f = zMerge([[zLathe([[0, .42], [.21, .42], [.19, .72], [.16, .98], [.18, 1.26], [.07, 1.4], [0, 1.4]], 12), 0], [leg(-.06, .045, .04, .05, .46), 2, 1], [leg(.06, .045, .04, .05, .46), 2, -1], [foot(-.06), 5, 1], [foot(.06), 5, -1],
+    [arm(-.18, .05, .48), 0, 2], [arm(.18, .05, .48), 0, -2], [hand(-.2), 2, 2], [hand(.2), 2, -2], [neck(), 2], [head(), 2], ...bob().map(g => [g, 3]), [zT(new THREE.BoxGeometry(.06, .26, .22), .25, .82, 0), 4, -2]]);
+  T.now_fp = zMerge([[zLathe([[0, .8], [.17, .8], [.16, 1.0], [.18, 1.28], [.07, 1.4], [0, 1.4]], 12), 0], [leg(-.075, .06, .055, .05, .86), 1, 1], [leg(.075, .06, .055, .05, .86), 1, -1], [foot(-.075), 5, 1], [foot(.075), 5, -1],
+    [arm(-.19, .05, .48), 0, 2], [arm(.19, .05, .48), 0, -2], [hand(-.21), 2, 2], [hand(.21), 2, -2], [neck(), 2], [head(), 2], ...hairBun().map(g => [g, 3])]);
+  T.now_c = zMerge([[zLathe([[0, .78], [.18, .78], [.18, 1.28], [.07, 1.41], [0, 1.41]], 12), 0], [leg(-.08, .065, .06, .05, .86), 1, 1], [leg(.08, .065, .06, .05, .86), 1, -1], [foot(-.08), 5, 1], [foot(.08), 5, -1],
+    [arm(-.2, .055, .5), 0, 2], [arm(.2, .055, .5), 0, -2], [hand(-.22), 2, 2], [hand(.22), 2, -2], [neck(), 2], [head(), 2], ...hairShort().map(g => [g, 3]), [pack(1.08, .28, .34), 4]]);
   return T;
 }
+/* 人の足もとの影（やわらかい楕円）。光の向きによらない、接地の影の模式 */
+function zShadowGeo() { const g = new THREE.PlaneGeometry(.62, .42); g.rotateX(-Math.PI / 2); g.translate(0, .02, 0); return g; }
+function zShadowMat(mode, uW) {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 64; const x = cv.getContext("2d"), gr = x.createRadialGradient(32, 32, 2, 32, 32, 31);
+  gr.addColorStop(0, "rgba(0,0,0,.42)"); gr.addColorStop(.55, "rgba(0,0,0,.2)"); gr.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const m = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }); zPatch(m, mode, uW); return m; }
 /* 人の材質：部位の色（帯・着物などはひとりずつ）と、脚と腕の振り（ひとりずつの位相）。「in」の溶け方（その時代の輪の内側だけ）を重ねる */
-function zPeopleMat(uW, uT) {
+function zPeopleMat(uW, uT, mode = "in") {
   const m = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
   m.onBeforeCompile = sh => {
     sh.uniforms.uPT = uT;
@@ -5540,12 +5558,13 @@ function zPeopleMat(uW, uT) {
       .replace("#include <color_vertex>", `#include <color_vertex>
   vColor.rgb = aSlot < .5 ? iCa : aSlot < 1.5 ? iCb : aSlot < 2.5 ? vec3(.78, .6, .48) : aSlot < 3.5 ? vec3(.06, .05, .05) : aSlot < 4.5 ? iCc : vec3(.16, .12, .1);`);
   };
-  zPatch(m, "in", uW); return m;
+  zPatch(m, mode, uW); return m;
 }
 /* 時代ごとの服の色（藍・茶・鼠・生成り・墨・柿渋など、染めの色の模式）と、人の型の割合（子どもは背丈の倍率で） */
 const ZWEAR = {
   edo: { types: [["edo_m", .38], ["edo_f", .36], ["edo_tabi", .26]], a: [0x2e3f5c, 0x4b5f7a, 0x6b4a33, 0x7c6f5a, 0x5a5547, 0x8a7b62, 0x3f4a44, 0x6e5a3e], b: [0x2a2a2e, 0x7a2e2a, 0x9a7a3a, 0x3d4a5e, 0x5e3a2e, 0x1f2a3a], c: [0xb79b62, 0xa88d58] },
   meiji: { types: [["edo_f", .34], ["meiji_k", .3], ["meiji_h", .14], ["meiji_w", .22]], a: [0x2a2a2e, 0x3d4250, 0x4b5f7a, 0x6b4a33, 0x5a5547, 0x8a7b62, 0x3a3532], b: [0x3d3a36, 0x7a2e2a, 0x2a2e3a, 0x6e6658, 0x4a4a52], c: [0x1d1d20, 0x2b2622] },
+  now: { types: [["now_m", .26], ["now_mb", .16], ["now_f", .2], ["now_fp", .24], ["now_c", .14]], a: [0x2f3b55, 0x6b6e73, 0xb8a98c, 0xd9d6cf, 0x5d6148, 0x2a2a2c, 0x4d6380, 0x8a3a3a, 0xa8b4bc, 0x7a5a48], b: [0x2a2d35, 0x4d6380, 0x7a6f60, 0x3a3a3e, 0x5a5a60], c: [0x2a2a2c, 0x6a5a48, 0x8a3a3a, 0x3d5276, 0xc8bfae] },
   showa: { types: [["showa_w", .34], ["edo_f", .3], ["showa_f", .16], ["meiji_k", .1], ["showa_c", .1]], a: [0x2b2d33, 0x3a3f4a, 0x4a4842, 0x55504a, 0x6b4a33, 0x4b5f7a, 0x7a6a5a, 0x8a3a34], b: [0x2b2d33, 0x3a3832, 0x7a2e2a, 0x4a4a52, 0x9a7a3a], c: [0x2b2622, 0x4a4036, 0x6a5a48, 0x3a3a3e] },
 };
 /* 第17回（本人「人通りが黒っぽいものの影のように見える」）：服の色を、染めの色の幅のまま少し明るく（墨・藍も、遠目で黒い影にならない明るさまで） */
@@ -5631,7 +5650,7 @@ function zBuild(key) {
   const pg = ZN.pg ||= zPeopleGeo(), wear = ZWEAR[sc.people] ?? ZWEAR.edo, uT = { value: 0 };
   const P = []; for (let i = 0; i < 22; i++) { let r = zRnd(), ty = wear.types[wear.types.length - 1][0]; for (const [t, p] of wear.types) { if (r < p) { ty = t; break; } r -= p; }
     const child = ty === "showa_c" || (ty !== "edo_tabi" && ty !== "meiji_w" && ty !== "showa_w" && zRnd() < .14);
-    P.push({ ty, d0: (zRnd() - .5) * 150, v: (zRnd() < .5 ? -1 : 1) * (child ? 1.0 + zRnd() * .3 : .8 + zRnd() * .45), s: (zRnd() - .5) * 2, h: child ? .6 + zRnd() * .1 : (/_f$/.test(ty) ? .9 : .94) + zRnd() * .08, ph: zRnd() * 6.28,
+    P.push({ ty, d0: (zRnd() - .5) * 150, v: (zRnd(), zRnd(), zSpeed(child)), s: (zRnd() - .5) * 2, h: child ? .6 + zRnd() * .1 : (/_f$/.test(ty) ? .9 : .94) + zRnd() * .08, wx: .9 + pRnd() * .22, ph: zRnd() * 6.28,
       ca: wear.a[Math.floor(zRnd() * wear.a.length)], cb: wear.b[Math.floor(zRnd() * wear.b.length)], cc: wear.c[Math.floor(zRnd() * wear.c.length)] }); }
   const pm = zPeopleMat(uW, uT); mats.push(pm); const PI = {}, cl = new THREE.Color();
   for (const ty of Object.keys(pg)) { const L = P.filter(p => p.ty === ty); if (!L.length) continue;
@@ -5639,7 +5658,8 @@ function zBuild(key) {
     geo.setAttribute("iCa", A3("ca")); geo.setAttribute("iCb", A3("cb")); geo.setAttribute("iCc", A3("cc")); geo.setAttribute("iPh", new THREE.InstancedBufferAttribute(new Float32Array(L.flatMap(p => [p.ph, Math.abs(p.v) / .9])), 2));
     const im = new THREE.InstancedMesh(geo, pm, n); im.count = n; im.frustumCulled = false; im.castShadow = false; im.receiveShadow = true; im.userData.slSkip = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(im); PI[ty] = { im, L }; }
   const heads = null;
-  const G = { key, g, uW, uT, mats, P, PI, heads, z, t: 0, compiled: false };
+  const shd = new THREE.InstancedMesh(zShadowGeo(), zShadowMat("in", uW), P.length); shd.frustumCulled = false; shd.userData.slSkip = true; shd.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(shd); mats.push(shd.material);
+  const G = { key, g, uW, uT, mats, P, PI, heads, z, t: 0, compiled: false, shd };
   C.scene.add(g); ZN.grp[key] = G;
   g.visible = true; Promise.resolve(C.renderer.compileAsync?.(g, C.camera, C.scene)).catch(() => {}).finally(() => { G.compiled = true; g.visible = uW.value > .003; });
   return G;
@@ -5647,7 +5667,7 @@ function zBuild(key) {
 function zDispose(key) { const G = ZN.grp[key]; if (!G) return; C.scene.remove(G.g); G.g.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.dispose?.(); } }); for (const m of G.mats) m.dispose(); delete ZN.grp[key]; }
 const _zm = { m: null, q: null };
 function zPeople(G, dt) {   /* 参道の上を、ゾーンの中心の前後 75 m で行き来する。碧と見る人のすぐそば（2.2 m）には出さない */
-  G.t += dt; if (G.uT) G.uT.value = G.t; const m4 = _zm.m ||= new THREE.Matrix4(), q = _zm.q ||= new THREE.Quaternion(), ax = new THREE.Vector3(0, 1, 0), cp = C.camera.position, ap = aoi?.position;
+  G.t += dt; G.si = 0; if (G.uT) G.uT.value = G.t; const m4 = _zm.m ||= new THREE.Matrix4(), q = _zm.q ||= new THREE.Quaternion(), ax = new THREE.Vector3(0, 1, 0), cp = C.camera.position, ap = aoi?.position;
   const pos = new THREE.Vector3(), sc = new THREE.Vector3(); let hi = 0;
   for (const ty in G.PI) { const { im, L } = G.PI[ty]; L.forEach((p, i) => {
       let dd = G.z.dd + ((p.d0 + p.v * G.t + 75) % 150 + 150) % 150 - 75; const b = bandAt(dd); let s = clamp(p.s * (b[3] - b[2]) / 2 + (b[3] + b[2]) / 2, b[2] + .6, b[3] - .6);
@@ -5656,9 +5676,49 @@ function zPeople(G, dt) {   /* 参道の上を、ゾーンの中心の前後 75 
       const w = toWorld(dd, s), y = C.groundY(w.x, w.z) ?? 0;
       const kc = clamp((Math.hypot(w.x - cp.x, w.z - cp.z) - 3.2) / 2, 0, 1), ka = ap ? clamp((Math.hypot(w.x - ap.x, w.z - ap.z) - 1.4) / 1, 0, 1) : 1;
       const bob = Math.abs(Math.sin(G.t * 6 * Math.abs(p.v) / .9 + p.ph)) * .018, near = Math.min(kc, ka) < .02;
-      pos.set(w.x, y + bob, w.z); q.setFromAxisAngle(ax, Math.atan2(w.fx * Math.sign(p.v), w.fz * Math.sign(p.v)) + Math.sin(G.t * 2.8 + p.ph) * .04); sc.setScalar(near ? 0 : p.h * Math.min(kc, ka));
-      m4.compose(pos, q, sc); im.setMatrixAt(i, m4); });
+      const kk = near ? 0 : Math.min(kc, ka), sv = Math.sign(p.v) || (p.ph > 3.14 ? 1 : -1);
+      pos.set(w.x, y + (p.v ? bob : 0), w.z); q.setFromAxisAngle(ax, Math.atan2(w.fx * sv, w.fz * sv) + (p.v ? Math.sin(G.t * 2.8 + p.ph) * .04 : Math.PI / 2 * .6 * sv + Math.sin(G.t * .3 + p.ph) * .25)); sc.set(p.h * (p.wx ?? 1) * kk, p.h * kk, p.h * (p.wx ?? 1) * kk);
+      m4.compose(pos, q, sc); im.setMatrixAt(i, m4);
+      if (G.shd) { pos.y = y; sc.set(kk * (p.wx ?? 1), kk, kk); m4.compose(pos, q, sc); G.shd.setMatrixAt(G.si++, m4); } });
     im.instanceMatrix.needsUpdate = true; }
+  if (G.shd) G.shd.instanceMatrix.needsUpdate = true;
+}
+/* 歩く速さのばらつき：立ち止まる人（1 割）・ゆっくり（散歩）・ふつう・早足。子どもは少し速い */
+function zSpeed(child) { const r = pRnd(), sg = pRnd() < .5 ? -1 : 1; if (r < .1) return 0;
+  const v = r < .32 ? .5 + pRnd() * .25 : r < .82 ? .85 + pRnd() * .35 : 1.3 + pRnd() * .25; return sg * v * (child ? 1.12 : 1); }
+/* ---- いまの人（2026-10-09）：参道の全体に、いまの服の人を置く（時の層で景色がさかのぼると、いまの景色と一緒に溶ける）。見る人の前後 120 m の人だけを動かす */
+const NOW = { G: null, t: 0 };
+function nowBuild() {
+  if (NOW.G || NO3D || !ZN.ready) return; const pg = ZN.pg ||= zPeopleGeo(), wear = ZWEAR.now, uT = { value: 0 }, g = new THREE.Group(); g.name = "now_people"; g.userData.slSkip = true;
+  const P = [], span = D_MAX - D_MIN, n = 96;
+  for (let i = 0; i < n; i++) { let r = pRnd(), ty = wear.types[wear.types.length - 1][0]; for (const [t, p] of wear.types) { if (r < p) { ty = t; break; } r -= p; }
+    const child = ty === "now_c"; P.push({ ty, d0: D_MIN + span * (i + pRnd() * .8) / n, v: zSpeed(child), s: (pRnd() - .5) * 2, h: child ? .62 + pRnd() * .12 : (/_f/.test(ty) ? .9 : .95) + pRnd() * .09, wx: .9 + pRnd() * .22, ph: pRnd() * 6.28,
+      ca: wear.a[Math.floor(pRnd() * wear.a.length)], cb: wear.b[Math.floor(pRnd() * wear.b.length)], cc: wear.c[Math.floor(pRnd() * wear.c.length)], look: pRnd() < .5 ? 1 : -1 }); }
+  const pm = zPeopleMat(null, uT, "out"), PI = {}, cl = new THREE.Color();
+  for (const ty of Object.keys(pg)) { const L = P.filter(p => p.ty === ty); if (!L.length) continue;
+    const geo = pg[ty].clone(), A3 = k => new THREE.InstancedBufferAttribute(new Float32Array(L.flatMap(p => cl.setHex(p[k]).toArray())), 3);
+    geo.setAttribute("iCa", A3("ca")); geo.setAttribute("iCb", A3("cb")); geo.setAttribute("iCc", A3("cc")); geo.setAttribute("iPh", new THREE.InstancedBufferAttribute(new Float32Array(L.flatMap(p => [p.ph, Math.abs(p.v) / .9])), 2));
+    const im = new THREE.InstancedMesh(geo, pm, L.length); im.frustumCulled = false; im.receiveShadow = true; im.userData.slSkip = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(im); PI[ty] = { im, L }; }
+  const shd = new THREE.InstancedMesh(zShadowGeo(), zShadowMat("out", null), n); shd.frustumCulled = false; shd.userData.slSkip = true; shd.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(shd);
+  C.scene.add(g); NOW.G = { g, uT, P, PI, shd, t: 0 };
+}
+function nowTick(dt) {
+  if (NO3D || !started) return; if (!NOW.G) { nowBuild(); return; } const G = NOW.G; G.t += dt; G.uT.value = G.t;
+  const m4 = _zm.m ||= new THREE.Matrix4(), q = _zm.q ||= new THREE.Quaternion(), ax = new THREE.Vector3(0, 1, 0), cp = C.camera.position, ap = aoi?.position, pos = new THREE.Vector3(), sc = new THREE.Vector3(), span = D_MAX - D_MIN;
+  let si = 0;
+  for (const ty in G.PI) { const { im, L } = G.PI[ty]; L.forEach((p, i) => {
+      let dd = D_MIN + (((p.d0 - D_MIN + p.v * G.t) % span) + span) % span;
+      if (Math.abs(dd - d) > 120) { m4.makeScale(0, 0, 0); im.setMatrixAt(i, m4); G.shd.setMatrixAt(si++, m4); return; }
+      const b = bandAt(dd); let s = clamp(p.s * (b[3] - b[2]) / 2 + (b[3] + b[2]) / 2, b[2] + .6, b[3] - .6);
+      { const near9 = clamp(1 - (Math.abs(dd - d) - 5) / 4, 0, 1); if (near9 > 0 && p.v !== 0) { const far = U.s > (b[2] + b[3]) / 2 ? b[2] + .6 : b[3] - .6; s += (far - s) * near9; } }
+      const w = toWorld(dd, s); if (p.gk !== Math.round(dd)) { p.gk = Math.round(dd); p.gy = C.groundY(w.x, w.z) ?? p.gy ?? 0; }
+      const kc = clamp((Math.hypot(w.x - cp.x, w.z - cp.z) - 3.2) / 2, 0, 1), ka = ap ? clamp((Math.hypot(w.x - ap.x, w.z - ap.z) - 1.4) / 1, 0, 1) : 1, k = Math.min(kc, ka);
+      const mv = p.v !== 0, bob = mv ? Math.abs(Math.sin(G.t * 6 * Math.abs(p.v) / .9 + p.ph)) * .022 : 0;
+      const yaw = mv ? Math.atan2(w.fx * Math.sign(p.v), w.fz * Math.sign(p.v)) + Math.sin(G.t * 2.8 * Math.abs(p.v) + p.ph) * .045 : Math.atan2(w.fx * p.look, w.fz * p.look) + Math.PI / 2 * p.look * .6 + Math.sin(G.t * .3 + p.ph) * .25;
+      pos.set(w.x, p.gy + bob, w.z); q.setFromAxisAngle(ax, yaw); sc.set(p.h * p.wx * k, p.h * k, p.h * p.wx * k); m4.compose(pos, q, sc); im.setMatrixAt(i, m4);
+      pos.y = p.gy; sc.set(k * p.wx, k, k); m4.compose(pos, q, sc); G.shd.setMatrixAt(si++, m4); });
+    im.instanceMatrix.needsUpdate = true; }
+  G.shd.instanceMatrix.needsUpdate = true;
 }
 function zElig(e, i) { return !ZN.said.has(e) && !!R8.slips[e]?.lines?.length && (i === 0 || (ZN.kmax ?? 0) >= .85); }
 /* 道の端（標石のゾーンの中）に着いたとき、場面の言葉がまだなら、締めのことばはそのあと */
@@ -5731,7 +5791,7 @@ function zTick(dt) {
 }
 function r8Tick(dt) {
   if (NO3D || !C.scene) return;
-  groundTick(dt); himoTick(dt); zTick(dt); try { actTick(dt); } catch (e) { console.warn("act", e); } tsujiTalk(); gpsEnd();
+  groundTick(dt); himoTick(dt); zTick(dt); try { nowTick(dt); } catch (e) { console.warn("now", e); } try { actTick(dt); } catch (e) { console.warn("act", e); } tsujiTalk(); gpsEnd();
 }
 /* ---- 第17回（2026-10-07 本人「いろいろなオブジェクトでアクション…アクションができるものは薄いオーラ…近づくと、タイムスリップ」）：
    典拠のある昔の姿を持つ物だけ（無いものは作らない）：標石（享保 7 年）・社号碑（明治 32 年）・嘉永の燈籠（嘉永 6 年）・二の鳥居の場所（明治 30 年の木の鳥居＝神社の由緒）・三の鳥居（昭和 9 年・杉並木）。
