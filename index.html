@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-3dac021da0">
+<meta name="aoiwalk-build" content="r9-720919c629">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -1611,7 +1611,7 @@ const fmt = (n, d = 1) => Number(n).toFixed(d);
 $("meta").textContent = `実寸 ・ 東西 ${D.size_m[0]} m × 南北 ${D.size_m[1]} m ・ 標高 ${D.elev_range_m[0]}〜${D.elev_range_m[1]} m ・ 参道 ${(D.sando_len_m / 1000).toFixed(2)} km`;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, logarithmicDepthBuffer: QS.has("logz") });
-const PR_MAX = Math.min(devicePixelRatio, LITE ? 1.5 : 2); renderer.setPixelRatio(PR_MAX);   /* 2026-10-05 第7回：スマホは 1.5 まで（下の自動の解像度で、重いときだけ下げる） */ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; $("v").appendChild(renderer.domElement);
+const PR_MAX = Math.min(devicePixelRatio, LITE ? 1.5 : 2); renderer.setPixelRatio(PR_MAX);   /* 2026-10-05 第7回：スマホは 1.5 まで（下の自動の解像度で、重いときだけ下げる） */ if (QS.get("tm") === "aces") { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; } else { renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = .86; } $("v").appendChild(renderer.domElement);
 renderer.shadowMap.enabled = !LITE; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const labels = new CSS2DRenderer(); labels.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none"; $("v").appendChild(labels.domElement);
 const scene = new THREE.Scene();
@@ -1828,6 +1828,264 @@ for (const [k, m] of Object.entries(ROAD_MATS)) {
   };
   roadMat[k] = mat;
 }
+// ======================================================================== 2026-10-13 木と舗装のリアリティ（build_walk.py の 10 が 3D の本体へ差し込む）
+// 本人「氷川道中の木々や舗装などのよりリアリティを上げてください」。形・位置・樹種の割合（模式）は変えず、見え方を写実へ寄せる。
+//   木：樹種ごとの樹皮（ケヤキ＝灰色の肌がうろこ状にはがれて橙褐色の斑／スギ・ヒノキ＝赤褐色の縦の繊維／サクラ＝暗い紫褐色に横の皮目／
+//       エノキ＝明るい灰でなめらか／スダジイ＝黒っぽく縦の裂け目／クスノキ＝褐色に細かい縦の裂け目／シラカシ＝灰でなめらか／アカマツ＝上は赤褐色・下は亀甲）、
+//       幹の北側の下に地衣類と苔、根もとの土はね。葉は風でゆれ（高さに比例・木ごとに位相をずらす）、日を透かし（逆光で明るく）、季節（開いた日付から）で色を変える。
+//       接地の影（木の足もとの暗み）と、近くの並木の根張り（地表に出た根）。
+//   舗装：材ごとに、色むら・御影石の粒・アスファルトの補修跡とひび・白線のかすれ・目地の汚れ・石の苔・並木敷きの落ち葉（CC0 の写真）・木陰の湿り（暗くなるだけ・照りは出さない）。
+//   写真は新しく取り込んでいない（落ち葉＝Poly Haven dry_decay_leaves・樹皮＝Poly Haven japanese_zelkova_bark。どちらも CC0・台帳に記録済みのもの）。
+//   ?season=11-25 で日付を指定して季節を見られる（確かめ用）。動きを減らす設定では風を止める。
+const RL = (() => {
+  const QS2 = new URLSearchParams(location.search);
+  const RMo = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // ---- 季節（開いた日付。大宮の平年のおよその時期。木ごとに ±8 日ずらす）
+  //   ケヤキ：黄葉・紅葉は 10 月下旬から、見ごろ 11 月下旬、12 月中旬までに散る。芽吹きは 4 月はじめ（とされる）
+  //   ソメイヨシノの葉：9 月下旬から色づき、11 月下旬までに散る。エノキ：11 月に黄葉。どれも幅のある目安（模式）
+  const doyOf = (m, d) => Math.round((Date.UTC(2026, m - 1, d) - Date.UTC(2026, 0, 0)) / 864e5);
+  let DAY; { const q = QS2.get("season"), now = new Date(); const m = q && q.match(/^(\d{1,2})-(\d{1,2})$/);
+    DAY = m ? doyOf(+m[1], +m[2]) : doyOf(now.getMonth() + 1, now.getDate()); }
+  //       色づき始め・見ごろ・散り始め・散り終わり（日）／芽吹き・若葉の終わり（日）。常緑樹は 0
+  const PH = { keyaki: [doyOf(10, 20), doyOf(11, 25), doyOf(12, 3), doyOf(12, 22), doyOf(4, 3), doyOf(5, 8)],
+               sakura: [doyOf(10, 5), doyOf(11, 5), doyOf(11, 8), doyOf(11, 30), doyOf(4, 8), doyOf(5, 10)],
+               enoki: [doyOf(10, 25), doyOf(11, 20), doyOf(11, 28), doyOf(12, 18), doyOf(4, 8), doyOf(5, 10)] };
+  const SP = { keyaki: 0, shii: 1, kusu: 2, kashi: 3, sugi: 4, sakura: 5, enoki: 6, hinoki: 7, matsu: 8 };
+  const spOf = type => SP[String(type).replace(/_s\d+$/, "")] ?? 0;
+  const ph = new Array(9).fill(0).map(() => new THREE.Vector4()), sp2 = new Array(9).fill(0).map(() => new THREE.Vector2(-999, -998));
+  for (const [k, v] of Object.entries(PH)) { ph[SP[k]].set(v[0], v[1], v[2], v[3]); sp2[SP[k]].set(v[4], v[5]); }
+  const U = { rlT: { value: 0 }, rlWind: { value: RMo ? 0 : 1 }, rlSun: { value: SUN_DIR }, rlSunC: { value: sun.color.clone().multiplyScalar(sun.intensity / 2.6) },
+    rlDay: { value: DAY }, rlPh: { value: ph }, rlSpr: { value: sp2 }, rlLitter: { value: 0 } };
+  { // 並木敷きの落ち葉の量（秋は多く）：ケヤキの散り方から
+    const k = PH.keyaki, d = DAY, s = (a, b, x) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+    U.rlLitter.value = .35 + .4 * s(k[1], k[3], d) * (1 - s(k[3] + 40, k[3] + 110, d)) + .25 * (d < k[4] || d > k[3] ? 1 : 0); }
+  const tick = () => { U.rlT.value = performance.now() / 1000; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
+
+  const NOISE = `
+  float rlH3(vec3 p){ p = fract(p * .1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+  float rlN3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+    return mix(mix(mix(rlH3(i), rlH3(i + vec3(1,0,0)), f.x), mix(rlH3(i + vec3(0,1,0)), rlH3(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(rlH3(i + vec3(0,0,1)), rlH3(i + vec3(1,0,1)), f.x), mix(rlH3(i + vec3(0,1,1)), rlH3(i + vec3(1,1,1)), f.x), f.y), f.z); }
+  float rlF3(vec3 p){ return rlN3(p) * .55 + rlN3(p * 2.03 + 7.1) * .3 + rlN3(p * 4.1 + 3.3) * .15; }`;
+  // 木の頂点：風（高さに比例し、木ごとに位相をずらす。世界の向きでゆらすので、どの木も同じ風を受ける）・樹種・局所の位置・世界の法線
+  const VS_HEAD = `attribute float aRlSp; uniform float rlT, rlWind; varying float vRlSp, vRlH; varying vec3 vRlP, vRlN;`;
+  const vsBody = leaf => `
+    vRlSp = aRlSp; vRlP = position; vRlH = .5; vRlN = normalize(objectNormal);
+    #ifdef USE_INSTANCING
+    { vec3 ip = instanceMatrix[3].xyz; vRlH = fract(sin(dot(ip.xz, vec2(12.99, 78.23))) * 43758.55);
+      mat3 im3 = mat3(instanceMatrix); vRlN = normalize(im3 * objectNormal);
+      float ph = dot(ip.xz, vec2(.37, .61)), h = max(0.0, position.y - 2.5);
+      float g = .75 + .25 * sin(rlT * .21 + ip.x * .013);
+      vec3 sw = vec3(sin(rlT * .83 + ph) * .7 + sin(rlT * 2.1 + ph * 1.7) * .22, 0.0, cos(rlT * .67 + ph * 1.3) * .45) * (rlWind * g * h * h * .0004);
+      ${leaf ? `{ vec3 c = floor(position * 1.7); float q = fract(sin(dot(c, vec3(12.9, 78.2, 37.7))) * 4375.5);
+        sw += vec3(sin(rlT * 4.3 + q * 6.28), sin(rlT * 3.1 + q * 9.1) * .6, cos(rlT * 3.7 + q * 5.0)) * (rlWind * .028 * smoothstep(2.0, 6.0, position.y)); }` : ""}
+      transformed += transpose(im3) * sw / max(dot(im3[0], im3[0]), 1e-4); }
+    #endif`;
+  // 樹皮：樹種ごとの色と模様（局所の位置で。写真の明暗の細部は残す）。幹の北側の下に地衣類と苔、根もとに土はね
+  const BARK_FS = `
+    { int sp = int(vRlSp + .5); vec3 c = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2));   /* 色は見た目の明るさ（sRGB）で組み、最後に戻す */
+      float L = dot(c, vec3(.2126, .7152, .0722));
+      float mx = max(c.r, max(c.g, c.b)), sat = (mx - min(c.r, min(c.g, c.b))) / max(mx, 1e-3);
+      vec3 p = vRlP; float det = clamp(L / .42, .72, 1.3); vec3 o = c; float dv = length(vViewPosition);
+      if (dv > 90.0) {                     /* 遠い幹：模様は描かず、樹種の色だけ（軽くする） */
+        o = (sp == 0 ? vec3(.46, .43, .39) : sp == 4 || sp == 7 ? vec3(.43, .3, .23) : sp == 5 ? vec3(.36, .31, .3) : sp == 6 ? vec3(.5, .48, .44)
+           : sp == 1 ? vec3(.36, .34, .32) : sp == 2 ? vec3(.47, .42, .36) : sp == 3 ? vec3(.42, .41, .39) : vec3(.5, .36, .28)) * det;
+      } else if (sp == 0) {                       /* ケヤキ：灰〜灰褐色の肌。古い皮がうろこ状にはがれ、下の橙褐色の新しい肌が斑に見える */
+        float n = rlF3(p * vec3(11.0, 4.5, 11.0) + vRlH * 17.0), fl = smoothstep(.62, .7, n);
+        vec3 base = vec3(.5, .49, .46) * mix(1.0, det, .7);   /* 灰〜灰白の肌（写真の橙の斑は使わない） */
+        float fd = 1.0 - smoothstep(10.0, 45.0, length(vViewPosition)) * .55;   /* 遠くでは斑が平均されて橙に寄るので弱める */
+        o = mix(base, vec3(.62, .52, .4) * clamp(det, .9, 1.1), fl * .45 * fd);   /* はがれた跡：小さな鱗片状・淡い黄褐色・縁の線なし */
+      } else if (sp == 4 || sp == 7) {      /* スギ・ヒノキ：赤褐色の樹皮が縦に細長くはがれる。古い表面は灰色がかる */
+        float n = rlF3(vec3(p.x * 16.0, p.y * .5, p.z * 16.0) + vRlH * 9.0), st = smoothstep(.5, .72, n), gr = rlN3(vec3(p.x * 40.0, p.y * 1.2, p.z * 40.0));
+        o = mix(vec3(.38, .29, .24), vec3(.48, .45, .42), st * .6) * det * (.9 + .2 * gr) * (sp == 7 ? vec3(1.04, 1.0, .97) : vec3(1.0));
+      } else if (sp == 5) {                 /* ソメイヨシノ：暗い紫褐色でつやがある。横に長い皮目が並ぶ */
+        float n = rlN3(vec3(p.x * 4.0, p.y * 30.0, p.z * 4.0) + vRlH * 5.0), le = smoothstep(.8, .87, n);
+        o = mix(vec3(.36, .31, .3), vec3(.5, .45, .41), le * .7) * det;
+      } else if (sp == 6) {                 /* エノキ（ムクノキ）：灰色でなめらか。小さないぼ */
+        float n = rlN3(p * 24.0 + vRlH * 3.0); o = vec3(.5, .48, .44) * mix(1.0, det, .5) * (1.0 - smoothstep(.84, .9, n) * .12);
+      } else if (sp == 1) {                 /* スダジイ：黒っぽい灰褐色。縦に長い深い裂け目 */
+        float n = rlF3(vec3(p.x * 10.0, p.y * .8, p.z * 10.0) + vRlH * 4.0), fi = smoothstep(.6, .68, n);
+        o = vec3(.36, .34, .32) * det * (1.0 - fi * .35);
+      } else if (sp == 2) {                 /* クスノキ：褐色がかった灰。細かい縦の裂け目（短冊状） */
+        float n = rlF3(vec3(p.x * 14.0, p.y * 2.4, p.z * 14.0) + vRlH * 6.0), fi = smoothstep(.56, .63, n);
+        o = vec3(.47, .42, .36) * det * (1.0 - fi * .3);
+      } else if (sp == 3) {                 /* シラカシ：灰黒色でなめらか。小さな皮目 */
+        float n = rlN3(p * 20.0 + vRlH * 2.0); o = vec3(.42, .41, .39) * mix(1.0, det, .55) * (1.0 + smoothstep(.86, .92, n) * .12);
+      } else if (sp == 8) {                 /* アカマツ：上は赤褐色の薄い皮、下は灰褐色の亀甲状の厚い皮 */
+        float n = rlF3(vec3(p.x * 7.0, p.y * 2.0, p.z * 7.0) + vRlH * 8.0), pl = smoothstep(.5, .56, n), up = smoothstep(5.0, 9.0, p.y);
+        o = mix(vec3(.42, .35, .3) * (1.0 - pl * .3), vec3(.6, .38, .27), up) * det;
+      }
+      float north = smoothstep(.1, .8, -vRlN.z) * (1.0 - abs(vRlN.y)) * (1.0 - step(60.0, dv)), low = 1.0 - smoothstep(.8, 3.5, p.y);
+      float li = north * low > .01 ? smoothstep(.62, .72, rlN3(p * 9.0 + 11.0 + vRlH * 7.0) * .65 + rlN3(p * 23.0) * .35) * north * low * (sp == 4 || sp == 7 ? .4 : 1.0) : 0.0;            /* 地衣類：北の面に、うすい灰緑の小さな斑 */
+      o = mix(o, vec3(.56, .59, .52) * clamp(det, .92, 1.1), li * .35);
+      float mo = p.y < .55 ? smoothstep(.5, .64, rlN3(p * 6.0 + 3.0)) * north * (1.0 - smoothstep(.05, .55, p.y)) : 0.0; /* 苔：根もとの北側 */
+      o = mix(o, vec3(.3, .35, .2), mo * .6);
+      float sp1 = 1.0 - smoothstep(.0, .4, p.y); o *= mix(1.0, .82, sp1) * mix(vec3(1.0), vec3(1.0, .96, .9), sp1);   /* 根もとの土はね */
+      diffuseColor.rgb = pow(o, vec3(2.2)); }`;
+  // 葉：季節の色（木ごとに色づきの早さと色が違う）・散った葉を抜く・若葉
+  const LEAF_FS = `
+    { int sp = int(vRlSp + .5); vec4 q = rlPh[sp];
+      diffuseColor.rgb *= vec3(.95, 1.0, 1.05);                        /* 色の処理を Neutral にしたので、葉の黄みを少し戻す */
+      if (q.x > 0.0) {
+        float d = rlDay + (vRlH - .5) * 16.0, h2 = fract(vRlH * 7.31);
+        float ac = smoothstep(q.x, q.y, d), fa = smoothstep(q.z, q.w, d), sp0 = rlSpr[sp].x, sp1 = rlSpr[sp].y;
+        float bare = max(fa, 1.0 - smoothstep(sp0 - 6.0, sp0 + 4.0, d));
+        float young = smoothstep(sp0 - 6.0, sp0 + 4.0, d) * (1.0 - smoothstep(sp0 + 8.0, sp1, d));
+        vec3 cs = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2)); float L = dot(cs, vec3(.2126, .7152, .0722));
+        vec3 pal = sp == 0 ? (h2 < .45 ? vec3(.8, .64, .28) : h2 < .82 ? vec3(.8, .5, .24) : vec3(.66, .34, .2))   /* ケヤキ：黄・橙・赤褐色（木ごとに違う） */
+                 : sp == 5 ? (h2 < .5 ? vec3(.82, .38, .24) : vec3(.86, .6, .28)) : vec3(.8, .72, .32);          /* サクラ：赤〜橙／エノキ：黄 */
+        float vary = rlN3(vRlP * .9 + vRlH * 13.0);                    /* 一本の中でも、色づいた所とまだ緑の所 */
+        cs = mix(cs, pal * clamp(L / .36, .7, 1.3), clamp(ac * (.45 + .7 * vary), 0.0, 1.0) * .9);
+        cs = mix(cs, vec3(.58, .72, .32) * (L / .38), young * .5);
+        diffuseColor.rgb = pow(cs, vec3(2.2));
+        if (bare > .001 && rlH3(floor(vRlP * 1.4) + vRlH * 31.0) < bare * .985) discard;   /* 散った葉（冬は枯れ葉がわずかに残るだけ） */
+      } }`;
+  const LEAF_EM = `
+    { vec3 Ls = normalize((viewMatrix * vec4(rlSun, 0.0)).xyz); float bk = pow(max(0.0, dot(normalize(-vViewPosition), Ls)), 3.0);
+      float outer = smoothstep(1.0, 5.0, length(vRlP.xz)) * .5 + smoothstep(4.0, 14.0, vRlP.y) * .5;
+      totalEmissiveRadiance += diffuseColor.rgb * rlSunC * bk * (.1 + .18 * outer) * diffuseColor.a * diffuseColor.a; }`;   /* 葉の透け（逆光で、薄い葉が日を通す） */
+  const FS_HEAD = `uniform float rlT, rlDay; uniform vec3 rlSun, rlSunC; uniform vec4 rlPh[9]; uniform vec2 rlSpr[9]; varying float vRlSp, vRlH; varying vec3 vRlP, vRlN;` + NOISE;
+  function treeMat(mat, leaf) {
+    if (mat.userData.rl) return; mat.userData.rl = true;
+    chainOBC(mat, sh => {
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\n" + VS_HEAD).replace("#include <begin_vertex>", "#include <begin_vertex>\n" + vsBody(leaf));
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + FS_HEAD).replace("#include <color_fragment>", "#include <color_fragment>\n" + (leaf ? LEAF_FS : BARK_FS));
+      if (leaf) sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n" + LEAF_EM);
+    }, leaf ? "rl:leaf" : "rl:bark");
+  }
+
+  // ---- 接地の影（木の足もとの暗み）と根張り：近くの木だけ（0.5 秒ごとの並べ直しのときに）
+  const GY = new Map(); const gyOf = (i, t) => { let y = GY.get(i); if (y === undefined) { y = groundY(t.p[0], t.p[2]); if (y != null) GY.set(i, y); } return y ?? t.p[1]; };
+  let aoIM = null, rootIM = [], ready = false;
+  function aoTexture() {
+    const N = 128, cv = document.createElement("canvas"); cv.width = cv.height = N; const g = cv.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, N, N);
+    const gr = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+    gr.addColorStop(0, "rgb(150,146,140)"); gr.addColorStop(.22, "rgb(170,166,160)"); gr.addColorStop(.5, "rgb(214,211,206)"); gr.addColorStop(1, "rgb(255,255,255)");
+    g.fillStyle = gr; g.fillRect(0, 0, N, N);
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  function makeAO() {
+    const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+    const m = new THREE.MeshBasicMaterial({ map: aoTexture(), blending: THREE.MultiplyBlending, transparent: true, premultipliedAlpha: true, depthWrite: false, fog: false, toneMapped: false,
+      polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vRlD;").replace("#include <fog_vertex>", "#include <fog_vertex>\nvRlD = -mvPosition.z;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vRlD;").replace("#include <opaque_fragment>", "#include <opaque_fragment>\ngl_FragColor.rgb = mix(vec3(1.0), gl_FragColor.rgb, 1.0 - smoothstep(35.0, 90.0, vRlD));"); };
+    m.customProgramCacheKey = () => "rl:ao";
+    aoIM = new THREE.InstancedMesh(geo, m, 900); aoIM.count = 0; aoIM.frustumCulled = false; aoIM.renderOrder = 2; aoIM.name = "rl_ao"; aoIM.userData.slSkip = true; trees.add(aoIM);
+  }
+  // 根張り：幹の半径を 1 とした形。幹のまわりに 5〜7 本、地表をはって土へもぐる（型を 3 つ・木ごとに向きと大きさを変える）
+  function rootGeo(seed) {
+    const R = (() => { let s = seed * 9973 + 7; return () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; })(), parts = [];
+    const n = 4 + Math.floor(R() * 3), a0 = R() * 6.283;
+    for (let k = 0; k < n; k++) { const a = a0 + k / n * 6.283 + (R() - .5) * .7, L = 1.3 + R() * 1.4, wob = (R() - .5) * .8, pts = [];
+      for (let j = 0; j <= 6; j++) { const t = j / 6, r = .7 + L * t, aa = a + wob * t * t;
+        pts.push(new THREE.Vector3(Math.cos(aa) * r, .15 * Math.pow(1 - t, 2.2) - .06 * t, Math.sin(aa) * r)); }
+      const c = new THREE.CatmullRomCurve3(pts), g = new THREE.TubeGeometry(c, 10, 1, 7, false), p = g.attributes.position, q = new THREE.Vector3(), v = new THREE.Vector3(), uv = g.attributes.uv;
+      for (let i = 0; i < p.count; i++) { const t = uv.getX(i); c.getPointAt(t, q); const rr = (.36 * Math.pow(1 - t, 1.2) + .04) * (.8 + .4 * (k % 2)); v.set(p.getX(i), p.getY(i), p.getZ(i)).sub(q);
+        v.y *= .5; p.setXYZ(i, q.x + v.x * rr, q.y + v.y * rr, q.z + v.z * rr); uv.setXY(i, uv.getY(i) * .5, t * L * .6); }
+      g.computeVertexNormals(); parts.push(g.toNonIndexed()); }
+    const out = new THREE.BufferGeometry();
+    for (const [k, n] of [["position", 3], ["normal", 3], ["uv", 2]]) { const a = new Float32Array(parts.reduce((s, g) => s + g.attributes[k].array.length, 0)); let o = 0;
+      for (const g of parts) { a.set(g.attributes[k].array, o); o += g.attributes[k].array.length; } out.setAttribute(k, new THREE.BufferAttribute(a, n)); }
+    out.computeBoundingSphere(); return out;
+  }
+  function makeRoots() {
+    const bm = (typeof trunkMat === "function" && trunkMat("keyaki")) || null;
+    const mat = new THREE.MeshStandardMaterial({ map: bm?.map ?? null, normalMap: bm?.normalMap ?? null, roughness: 1, metalness: 0, color: 0xffffff });
+    if (mat.map) { mat.map = mat.map.clone(); mat.map.repeat.set(1, 1); mat.map.offset.set(0, 0); mat.map.wrapS = mat.map.wrapT = THREE.RepeatWrapping; mat.map.needsUpdate = true; }
+    if (mat.normalMap) { mat.normalMap = mat.normalMap.clone(); mat.normalMap.repeat.set(1, 1); mat.normalMap.offset.set(0, 0); mat.normalMap.wrapS = mat.normalMap.wrapT = THREE.RepeatWrapping; mat.normalMap.needsUpdate = true; }
+    chainOBC(mat, sh => { lightMod(sh, { ao: true });   /* 根の色：樹皮の写真の明暗に、樹種の色（置き方ごとの色＝instanceColor が後で掛かる） */
+      sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+        { float L = dot(pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2)), vec3(.2126, .7152, .0722)); diffuseColor.rgb = pow(vec3(.33, .3, .26) * clamp(L / .42, .7, 1.25), vec3(2.2)); }`); }, "rl:roots");
+    const NR = LITE ? 50 : 160;
+    for (let s = 0; s < 3; s++) { const g = rootGeo(s + 3), im = new THREE.InstancedMesh(g, mat, NR); for (let i = 0; i < NR; i++) im.setColorAt(i, cc.setRGB(1, 1, 1));
+      im.count = 0; im.frustumCulled = false; im.castShadow = false; im.receiveShadow = true; im.name = "rl_roots"; trees.add(im); rootIM.push(im); }
+  }
+  const ROOT_C = { 0: [1, 1, 1], 1: [.78, .76, .74], 2: [1.02, .92, .84], 3: [.92, .92, .9], 4: [1.0, .78, .66], 5: [.78, .7, .7], 6: [1.18, 1.16, 1.1], 7: [1.0, .8, .7], 8: [1.0, .85, .75] };
+  const m4 = new THREE.Matrix4(), q4 = new THREE.Quaternion(), s4 = new THREE.Vector3(), p4 = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), cc = new THREE.Color();
+  function lod(c) {
+    if (!ready || !aoIM) return;
+    const nearOn = (() => { try { return [...NEAR_ON.values()].map(o => o.site); } catch { return []; } })();
+    let na = 0; const nr = [0, 0, 0], RA = LITE ? 70 : 110, RR = LITE ? 30 : 55;
+    for (let i = 0; i < INST.length; i++) { const t = INST[i], dx = t.p[0] - c.x, dz = t.p[2] - c.z, d = Math.hypot(dx, dz); if (d > RA) continue;
+      const rb = (typeof trunkR === "function" ? trunkR(t.type) : .35) * t.xf.s[0], y = gyOf(i, t);
+      if (na < aoIM.instanceMatrix.count) { const s = rb * (i < N_SANDO ? 7.0 : 6.0); m4.compose(p4.set(t.p[0], y + .015, t.p[2]), q4.identity(), s4.set(s, 1, s)); aoIM.setMatrixAt(na++, m4); }
+      if (!rootIM.length || i >= N_SANDO || d > RR) continue;
+      if (nearOn.some(s => Math.hypot(t.p[0] - s.c[0], t.p[2] - s.c[1]) < s.r + 2)) continue;   /* 近景の地点では、近景の根張りがある */
+      const v = Math.floor(((i * 2654435761) >>> 0) % 3), im = rootIM[v]; if (i % 5 === 2) continue;   /* 根の見えない木もある */ if (nr[v] >= im.instanceMatrix.count) continue;
+      q4.setFromAxisAngle(Y, t.xf.r[1] + i * .7); const s = rb, sy = rb * (.75 + .3 * ((i * 7919) % 11) / 11);
+      m4.compose(p4.set(t.p[0], y - .02, t.p[2]), q4, s4.set(s, sy, s)); im.setMatrixAt(nr[v], m4);
+      const k = ROOT_C[spOf(t.type)] ?? ROOT_C[0]; im.setColorAt(nr[v]++, cc.setRGB(...k)); }
+    aoIM.count = na; aoIM.instanceMatrix.needsUpdate = true;
+    rootIM.forEach((im, v) => { im.count = nr[v]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; });
+  }
+  // ---- 木が組めたとき：樹種の目印を形に足し、材質に風・季節・樹皮を
+  function treesInit() {
+    for (const [type, T] of Object.entries(TYPES)) { const code = spOf(type);
+      for (const im of [...T.near, ...T.far]) { const g = im.geometry, n = g.attributes.position.count;
+        g.setAttribute("aRlSp", new THREE.BufferAttribute(new Float32Array(n).fill(code), 1));
+        treeMat(im.material, !!im.material.userData.leaf); } }
+    const go = () => { if (!(terrain && roadReady)) return setTimeout(go, 300); makeAO(); ready = true; splitLOD(); };   /* 根張り（makeRoots）は 11 人の点検で「置いた板に見える」とされたので出さない（2026-10-13）。足もとの暗みだけ */
+    go();
+  }
+
+  // ---- 舗装と地面：材ごとの写実の細部（近くだけ。遠くは空中写真の色へなじむまま）
+  const KIND = { asphalt_dark: 1, asphalt_light: 2, sidewalk: 3, granite_light: 4, granite_plaza: 5, granite_black: 6, washed: 7, granite_band: 8, stone: 9, sand: 10, roots: 11, bed: 12, lawn: 13, gravel: 14, concrete: 15, paint: 16 };
+  let leafTex = null;
+  function roadInit(roadMat) {
+    try { leafTex = TL.load(imgURL("@web/tex_ground_leaves_diff.jpg", "image/jpeg")); leafTex.wrapS = leafTex.wrapT = THREE.RepeatWrapping; leafTex.colorSpace = THREE.SRGBColorSpace; leafTex.anisotropy = 8; } catch { leafTex = null; }
+    for (const [k, mat] of Object.entries(roadMat)) { const kd = KIND[k] ?? 0; if (!kd) continue;
+      chainOBC(mat, sh => {
+        sh.uniforms.rlKind = { value: kd }; sh.uniforms.rlLeaf = { value: leafTex }; sh.uniforms.rlLitter = U.rlLitter;
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float rlKind, rlLitter; uniform sampler2D rlLeaf;" + NOISE)
+          .replace("#include <color_fragment>", `#include <color_fragment>
+          { float dist = distance(vW, cameraPosition), nf = (1.0 - smoothstep(28.0, 95.0, dist)), ff = 1.0 - smoothstep(6.0, 16.0, dist);
+            if (nf > 0.0) {
+            int K = int(rlKind + .5); vec3 c = diffuseColor.rgb; float L = dot(c, vec3(.2126, .7152, .0722));
+            float can = texture2D(canopyMap, canUV(vW.xz)).r;
+            float mot = ln2(vW.xz * .13) * .6 + ln2(vW.xz * .55 + 3.1) * .4;                       /* 大きな色むら */
+            c *= mix(1.0, .9 + .2 * mot, nf * (K <= 2 ? .8 : .55));
+            if (K == 1 || K == 2) {                                                             /* アスファルト：補修の跡・細いひび・骨材の粒 */
+              vec2 cl = floor(vW.xz / vec2(2.6, 3.8)), fr = fract(vW.xz / vec2(2.6, 3.8)); float h = lh2(cl + 41.0);
+              if (h > .9) { float e = min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y)); c *= mix(1.0, mix(.86, .8, step(.95, h)), smoothstep(.0, .03, e) * nf); c *= mix(1.0, .72, (1.0 - smoothstep(.0, .012, e)) * nf); }
+              float cr = 1.0 - smoothstep(.0, .01, abs(rlF3(vec3(vW.xz * vec2(.35, .9), 1.0)) - .5)); cr *= smoothstep(.74, .8, ln2(vW.xz * .05 + 9.0));   /* ひびは所々に数本だけ */
+              c *= mix(1.0, .74, cr * nf);
+              c *= mix(1.0, .82 + .36 * rlH3(floor(vec3(vW.xz * 90.0, 1.0))), ff * .35);
+            } else if (K == 16) {                                                               /* 白線：タイヤが通る所ほどかすれる */
+              float w = smoothstep(.45, .75, rlF3(vec3(vW.xz * 2.2, 3.0))); c = mix(c, vec3(L * .32), w * .45 * nf);
+            } else if (K == 4 || K == 5 || K == 6 || K == 8) {                                  /* 御影石：石英・長石・黒雲母の粒 */
+              float g1 = rlH3(floor(vec3(vW.xz * 110.0, 2.0))), g2 = rlH3(floor(vec3(vW.xz * 55.0, 5.0)));
+              float dk = step(.9, g1) * (K == 6 ? .0 : .42), lt = step(.93, g2) * (K == 6 ? .9 : .18);
+              c *= mix(1.0, (1.0 - dk) * (1.0 + lt) * (.95 + .1 * g2), ff * .6);
+            } else if (K == 3) {                                                                /* 歩道の平板：目地の汚れと、木陰の目地の苔 */
+              float j = 1.0 - smoothstep(.16, .3, L / max(.05, mot * .3 + .35));
+              c = mix(c, c * vec3(.62, .66, .55), j * nf * (.35 + .5 * can));
+            } else if (K == 9) {                                                                /* 割石：上の面と割れ目に苔、灰白の地衣類 */
+              float mo = smoothstep(.48, .66, rlF3(vec3(vW.xz * 1.6, vW.y * 2.0))) * (.4 + .6 * can) * (1.0 - smoothstep(.12, .3, L));
+              float li = smoothstep(.66, .72, rlF3(vec3(vW.xz * 3.1, vW.y * 3.0) + 5.0));
+              c = mix(c, vec3(.17, .23, .09), mo * .8 * nf); c = mix(c, vec3(.62, .63, .56) * (L * 2.2), li * .35 * nf);
+            } else if (K == 11 || K == 12) {                                                    /* 並木敷き：落ち葉（CC0 の写真）と苔 */
+              vec3 lf = texture2D(rlLeaf, vW.xz / 1.7).rgb; lf = mix(vec3(dot(lf, vec3(.2126, .7152, .0722))), lf, .42) * vec3(.74, .68, .6);
+              float w = smoothstep(.5, .78, ln2(vW.xz * .42 + 1.7) * .65 + can * .35 + (rlLitter - .5) * .5) * (K == 11 ? .6 : 1.0);
+              c = mix(c, lf, w * .7 * nf);
+            } else if (K == 15) {                                                               /* 縁石：雨だれの汚れと、木陰で苔 */
+              c *= mix(1.0, .8 + .2 * rlF3(vec3(vW.xz * 1.3, vW.y * 6.0)), nf);
+              c = mix(c, c * vec3(.7, .8, .6), smoothstep(.55, .75, rlF3(vec3(vW.xz * 2.0, 1.0))) * can * nf * .6);
+            } else if (K == 10 || K == 14) {                                                    /* 砂・玉砂利：粒 */
+              c *= mix(1.0, .84 + .32 * rlH3(floor(vec3(vW.xz * (K == 14 ? 34.0 : 60.0), 4.0))), ff * .55);
+            }
+            if (K == 3 || K == 7 || K == 9 || K == 10 || K == 11 || K == 12 || K == 14 || K == 15)  /* 木陰の湿り：暗くなるだけ（照りは出さない） */
+              c *= 1.0 - .09 * can * smoothstep(.35, .7, ln2(vW.xz * .21 + 5.0)) * nf;
+            diffuseColor.rgb = c; } }`);
+      }, "rl:road");   /* どの材も同じ式（材の違いは uniform の rlKind）＝プログラムは一つ。材ごとに組むと 16 回組むことになり、開くのが遅くなった */
+    }
+  }
+  return { treeMat, treesInit, roadInit, lod, U, spOf, get day() { return DAY; } };
+})();
+
+RL.roadInit(roadMat);
 const road = new THREE.Group(); road.name = "road"; world.add(road);
 let roadReady = false;
 getBuf("road").then(b => loader.parse(b, "", g => { g.scene.traverse(o => { if (o.isMesh) { const k = (o.material?.name || o.name || "").split("|")[0]; if (roadMat[k]) o.material = roadMat[k]; o.receiveShadow = true; o.geometry.computeBoundsTree(); } }); road.add(g.scene); try { roadSort(g.scene); } catch (e) { console.warn("roadSort", e); } roadReady = true; }));
@@ -2223,7 +2481,7 @@ function leafAlpha(mat) {
       { float r = vLf.x - .5, up = smoothstep(4.0, 15.0, vLf.y) * .6 + smoothstep(1.5, 6.0, vLf.z) * .4;
         diffuseColor.rgb *= (1.0 + r * .12) * vec3(1.0 + r * .1, 1.0 + r * .04, 1.0 - r * .1) * mix(.9, 1.08, up); }   /* 一本ずつの葉の色・樹冠の上と外ほど明るく（walk.html） */
       diffuseColor.a = clamp((diffuseColor.a - alphaTest) / max(fwidth(diffuseColor.a), 1e-4) + .5, 0.0, 1.0);
-      if (diffuseColor.a < .02) discard; }
+      if (diffuseColor.a < .3) discard; }
     totalEmissiveRadiance += diffuseColor.rgb * vec3(.24, .27, .1);   /* 葉の透け（walk.html だけ） */`); };
   mat.needsUpdate = true;
 }
@@ -2275,6 +2533,7 @@ function splitLOD(RS = LOD.R, R2 = LOD.R2, RF = LITE ? 28 : 44) {
   if (rockIM) { let k = 0; const lim = LITE ? 140 : 600;           /* 岸の石も、遠くは描かない */
     for (const m of rockMs) { const e = m.elements; if (Math.hypot(e[12] - c.x, e[14] - c.z) < lim) rockIM.setMatrixAt(k++, m); }
     rockIM.count = k; rockIM.instanceMatrix.needsUpdate = true; }
+  RL.lod(c);
 }
 function treeSet(parts, n, shadow) { return parts.map(({ geo, mat }) => { const g = geo.clone(); g.setAttribute("lodK", new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, n)), 1));   /* 第7回：近景と遠景の溶かしの値（0＝そのまま。近景は 1−f、遠景は −f） */
   const im = new THREE.InstancedMesh(g, mat, Math.max(1, n)); im.count = 0; im.frustumCulled = false; im.castShadow = shadow; im.receiveShadow = true; trees.add(im); LODMATS.add(mat); return im; }); }
@@ -2313,7 +2572,7 @@ Promise.all([parseGlb("keyaki"), parseGlb("keyaki_lod1"), B64.forest ? parseGlb(
     if (rockPart) placeRocks(rockPart.geo, rockPart.mat.map);
   }
   for (const m of LODMATS) lodDither(m);
-  treesReady = true; buildCanopy(); splitLOD();
+  treesReady = true; buildCanopy(); RL.treesInit(); splitLOD();
 });
 /* 樹冠の地図（2 m/px）：R＝すべての木、G＝社叢・公園・林の木（林床の下草と落ち葉の地面に使う）。木の位置と大きさは模式なので、地図も模式 */
 let CANOPY = null;
