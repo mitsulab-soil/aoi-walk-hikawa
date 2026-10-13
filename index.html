@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-49f1249c05">
+<meta name="aoiwalk-build" content="r9-a7f009421f">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -369,7 +369,7 @@
 </style>
 <script>window.__nearHold = true; window.__photoHold = true;   /* 近景の樹皮（約 1.3 MB）とデスクトップの空中写真（約 3.1 MB）は「はじめる」を押してから */</script>
 <meta name="tdm-reservation" content="1">
-<script>window.__DEMO_NOTE = {"text": "碧は、確かめた事実を根拠に話します。", "credit": "地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）・昔の空中写真（1945〜50 年ごろ・1961〜69 年ごろ）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工／道・木・鳥居の位置：© OpenStreetMap contributors（ODbL）／生きものの記録と写真：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）・種のひとこと：日本語版 Wikipedia（CC BY-SA 4.0）／素材：Poly Haven・ambientCG（CC0）／声：VOICEVOX:冥鳴ひまり（AI の合成音声）"};</script>
+<script>window.__DEMO_NOTE = {"text": "碧は、確かめた事実を根拠に話します。", "credit": "地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）・昔の空中写真（1945〜50 年ごろ・1961〜69 年ごろ）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工／道・木・鳥居の位置：© OpenStreetMap contributors（ODbL）／生きものの記録と写真：iNaturalist の投稿者（写真は CC0・CC BY・CC BY-SA のみ）・種のひとこと：日本語版 Wikipedia（CC BY-SA 4.0）／素材：Poly Haven・ambientCG（CC0）／碧の動きの一部：CMU Graphics Lab Motion Capture Database（mocap.cs.cmu.edu・NSF EIA-0196217）／声：VOICEVOX:冥鳴ひまり（AI の合成音声）"};</script>
 </head><body>
 <div id="v" aria-label="氷川参道のまわりの 3D（実寸）"></div>
 <div class="bar">
@@ -2527,6 +2527,8 @@ const LOD = LITE ? { R: 32, R2: 120, max: 380, keep: 25, liteAll: true, fade: 6 
    ・画面（PC）は近景の型を 120→64 m まで（溶かすので、替わり目は見えない）。影を落とす近い木は 70 m まで
    ・目の高さでは、霞（fog）が地面を消しきる距離（約 620 m）より先の木は描かない（描いても霞の色だけ） */
 if (QS.get("nearR")) LOD.R = +QS.get("nearR");
+const REFL_R = +(QS.get("reflR") || 110), REFLN = new Map(), REFL_EVERY = Math.max(1, +(QS.get("reflEvery") || 2));   /* 映り込みに入れる木の範囲（m）と、その数（並べた組ごと） */
+function reflTrees(on) { for (const T of Object.values(TYPES)) for (const set of [T.near, T.far]) set.forEach(im => { if (on) { im.userData._n = im.count; im.count = Math.min(im.count, REFLN.get(set) ?? 0); } else if (im.userData._n != null) { im.count = im.userData._n; im.userData._n = null; } }); }
 let lodYaw = null; const lodPos = new THREE.Vector3(1e9, 0, 0);
 const _fw = new THREE.Vector3();
 function splitLOD(RS = LOD.R, R2 = LOD.R2, RF = LITE ? 28 : 44) {
@@ -2537,8 +2539,10 @@ function splitLOD(RS = LOD.R, R2 = LOD.R2, RF = LITE ? 28 : 44) {
   const hf = 2 * Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect), cone = Math.cos(Math.min(Math.PI, hf / 2 + .62));
   const cnt = new Map(); const put = (set, m, f = 0) => { const k = cnt.get(set) ?? 0; set.forEach(im => { im.setMatrixAt(k, m); im.geometry.attributes.lodK.array[k] = f; }); cnt.set(set, k + 1); };
   const fogMax = eye && scene.fog ? scene.fog.far + 25 : Infinity, FD = LOD.fade;
-  INST.forEach(t => { const T = TYPES[t.type]; if (!T) return;
+  const _ord = (window.__lodOrd ||= INST.slice()); _ord.forEach(t => { t._d = Math.hypot(t.p[0] - c.x, t.p[2] - c.z); }); _ord.sort((a, b) => a._d - b._d); REFLN.clear(); let _rf = false;
+  _ord.forEach(t => { const T = TYPES[t.type]; if (!T) return;
     const dx = t.p[0] - c.x, dz = t.p[2] - c.z, d = Math.hypot(dx, dz);
+    if (!_rf && d >= REFL_R) { _rf = true; for (const [s, k] of cnt) REFLN.set(s, k); }
     if (d > LOD.max || d > fogMax) return;
     if (eye && d > LOD.keep && (dx * fx + dz * fz) / d < cone) return;
     tm.position.set(t.p[0], t.p[1] - .05, t.p[2]); tm.rotation.set(t.xf.r[0], t.xf.r[1], t.xf.r[2], "XZY"); tm.scale.set(...t.xf.s); tm.updateMatrix();
@@ -2546,6 +2550,7 @@ function splitLOD(RS = LOD.R, R2 = LOD.R2, RF = LITE ? 28 : 44) {
     const farSet = d > R2 && lite && TYPES[lite] ? TYPES[lite].far : T.far;
     const R = t.fo ? RF : RS;   /* 第7回：社叢・公園の木（参道の外）は近景の型を手前だけに（スマホ 28 m・PC 44 m） */
     if (d < R - FD) put(T.near, tm.matrix); else if (d < R) { const f = (R - d) / FD; put(T.near, tm.matrix, 1 - f); put(farSet, tm.matrix, -f); } else put(farSet, tm.matrix); });
+  if (!_rf) for (const [s, k] of cnt) REFLN.set(s, k);
   for (const T of Object.values(TYPES)) for (const set of [T.near, T.far]) { const n = cnt.get(set) ?? 0; set.forEach(im => { im.count = n; im.instanceMatrix.needsUpdate = true; im.geometry.attributes.lodK.needsUpdate = true; }); }
   if (rockIM) { let k = 0; const lim = LITE ? 140 : 600;           /* 岸の石も、遠くは描かない */
     for (const m of rockMs) { const e = m.elements; if (Math.hypot(e[12] - c.x, e[14] - c.z) < lim) rockIM.setMatrixAt(k++, m); }
@@ -2665,7 +2670,11 @@ for (const p of PONDS) {
     const lite = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: WATER_DEEP, roughness: .07, metalness: 0, envMapIntensity: 1.2 }));
     lite.rotation.x = -Math.PI / 2; lite.position.y = p.level; lite.receiveShadow = true; lite.userData.pond = p.name; lite.visible = false; ponds.add(lite);
     let cx = 0, cz = 0; const n = p.v.length / 2; for (let i = 0; i < n; i++) { cx += p.v[2 * i]; cz += p.v[2 * i + 1]; }
-    PONDLOD.push({ refl: m, lite, c: [cx / n, cz / n] }); }
+    PONDLOD.push({ refl: m, lite, c: [cx / n, cz / n] });
+    if (!QS.has("reflAll")) { const ob = m.onBeforeRender, pc = [cx / n, cz / n]; let rk = 0, pr = 0; for (let i = 0; i < n; i++) pr = Math.max(pr, Math.hypot(p.v[2 * i] - pc[0], p.v[2 * i + 1] - pc[1]));
+      /* 碧が池から離れているときは、映り込みに碧を描かない（池の上か岸にいないと、水面に映る道すじがない。VRM は描画 40 回ほど） */
+      m.onBeforeRender = function (...a) { if (rk++ % REFL_EVERY) return; const ag = window.__aoi?.aoi, ah = ag && ag.visible && Math.hypot(ag.position.x - pc[0], ag.position.z - pc[1]) > pr + 6; if (ah) ag.visible = false;
+        reflTrees(true); try { ob.apply(this, a); } finally { reflTrees(false); if (ah) ag.visible = true; } }; } }
 }
 let rockIM = null; const rockMs = [];
 // 岸の石（輪郭に沿って 0.9 m ごと・大きさと並びは模式）。材は参道の割石と同じ実写（japanese_stone_wall・CC0）
@@ -5001,7 +5010,7 @@ if (store.get("ftw-hikawa-font", false)) document.body.classList.add("big");
 //      位置は道の座標（道のり pd・横 ps）で持ち、臨界減衰のばねで寄せる（歩く向きが反転しても跳ばない。横の側は追い越してから替える）
 //      振る舞い：歩いて先導／ときどき振り返る（20〜45 秒に一度）／きょろきょろ（8〜20 秒に一度、並木や印のほうを見上げる）／話す対象を見る（体・首・目の順）／止まって話すときは見る人へ
 const AOI_URL = "web/aoi.vrm", AOI_H = 1.67, VRM_LIB = "@pixiv/three-vrm";
-let aoi = null, vrm = null, aoiLoading = null, aoiFail = false;
+let aoi = null, vrm = null, aoiLoading = null, aoiFail = false, AM = null, LIPSYNC = null;
 const A = { pd: null, ps: 0, vd: 0, vs: 0, side: 1, sp: 0, yaw: 0, k: 0, ph: 0, tk: 0, hp: .1, ws: 3, wsTo: .5, wsv: 0, tl: 12, tlT: null, tlS: 1, gy: null, gyN: 0,
   blink: 2, bt: -1, twice: false, wan: [0, 0], wto: [0, 0], wn: 1, gaze: null, head: null, hip0: null, vWalk: 0, chunk: "", seg: null, segT: 0, lookW: null, hide: 0, lineRole: "", lineT0: 0,
   stat: { maxStep: 0, maxTurn: 0, frames: 0, off: 0 }, prevW: null, prevYaw: null };
@@ -5028,15 +5037,20 @@ function loadAoi() {
     aoi = new THREE.Group(); aoi.name = "aoi"; aoi.visible = false; aoi.add(v.scene); C.world.add(aoi); vrm = v;
     { const hp = v.humanoid.getNormalizedBoneNode("hips"); if (hp) A.hip0 = hp.position.clone(); }
     windInit(v); legColliders(v, V);
-    aoiPose(0, 0); v.update(0); v.scene.updateMatrixWorld(true);
+    v.humanoid.resetNormalizedPose(); v.update(0); v.scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(v.scene), h = box.max.y - box.min.y;
     const sc = h > .5 && Math.abs(h - AOI_H) / AOI_H > .02 ? AOI_H / h : 1; v.scene.scale.setScalar(sc); v.scene.position.y = -box.min.y * sc;
     A.h = h * sc; A.head = v.humanoid.getRawBoneNode("head");
-    A.gaze = new THREE.Object3D(); C.scene.add(A.gaze); if (v.lookAt) v.lookAt.target = A.gaze;
+    /* 2026-10-13 本人「碧の動きは共通部品の AoiMotion」：体・足・目と頭・まばたき・口・表情・礼・指す・裾の布は、共通部品（web/kit/）に任せる。
+       位置（見る人の斜め前・1.6 m より近づかない＝10-10 の大きさのゆれの直し）と、止まったときの向き・楼門での一礼の合図・横断で黙ることは、これまでどおりこのページが決める */
+    const { AoiMotion } = await import(new URL("web/kit/aoi_motion.js", document.baseURI).href);
+    AM = new AoiMotion(v, { root: aoi, reducedMotion: RM, wind: 0, groundAt: aoiGround });   /* 髪の風は、このページの windTick（めくれ上がらない調整）のまま */
+    if (AM.robe) AM.robe.wind = .25;   /* 裾の布には、そよ風だけ */
+    fetch("web/lipsync.json").then(r => r.ok ? r.json() : null).then(j => { LIPSYNC = j; }).catch(() => {});   /* 口の時刻表（無ければ声のかなから） */
     try { aoi.visible = true; const pc = C.renderer.compileAsync(aoi, C.camera, C.scene); aoi.visible = false; await pc;
       aoi.traverse(o => { for (const m of [].concat(o.material ?? [])) for (const u of Object.values(m.uniforms ?? {})) if (u?.value?.isTexture) C.renderer.initTexture(u.value); });
     } catch (e) { aoi.visible = false; }
-    A.compiled = true; aoiLoading = null; window.__aoi = { vrm, aoi, A };
+    A.compiled = true; aoiLoading = null; window.__aoi = { vrm, aoi, A, AM };
     return vrm;
   })().catch(e => { aoiFail = true; aoiLoading = null; console.warn("碧の姿を読み込めませんでした（声と字幕で進めます）：", e?.message ?? e); return null; });
 }
@@ -5104,6 +5118,7 @@ function aoiJump() {
   if (!vrm || NO3D) return;
   A.side = viewDir(); A.sideDir = null; A.pd = d; A.us = U.s; const t = aoiTarget(); A.pd = t.td; A.ps = t.ts; A.vd = 0; A.vs = 0; A.sp = 0; A.gy = null;
   A.yaw = faceYaw(); A.hide = .25; A.prevW = null; A.prevYaw = null; A.settle = true;
+  AG.clear(); if (AM) { const w = toWorld(A.pd, A.ps); AM.place(w.x, w.z, A.yaw); }
 }
 /* 第9回（検証「神社から始めた最初のこまで、裾が棘のように広がる」）：置き直したあと、ばね（髪・裾）を、新しい位置と姿勢の上で休みの形に戻し、
    風なしで 30 こま分ならしてから、風を 1 秒かけて戻す（three-vrm の reset は親の古い位置を使うので、先に体を新しい位置へ動かしてから） */
@@ -5134,10 +5149,12 @@ function aoiTick(dt) {
   if (!want) { aoi.visible = false; return; }
   if (A.show) {   /* かけらを近くで見る：物の横に立ち、見る人（カメラ）のほうを向いて、物を指し示す */
     const S = A.show, cp = C.camera.position, toCam = Math.atan2(cp.x - S.x, cp.z - S.z), T = KKS.tg;
-    A.yaw += clamp(wrapA(toCam - A.yaw) * ease(dt, 3), -1.5 * dt, 1.5 * dt); aoi.position.set(S.x, S.y, S.z); aoi.rotation.set(0, A.yaw, 0); aoi.visible = true;
-    const aim = T ? clamp(wrapA(Math.atan2(T.c.x - S.x, T.c.z - S.z) - A.yaw), -1.2, 1.2) : 0; A.dbg = { point: aim };
-    B.focusW = T ? new THREE.Vector3(T.c.x, T.gy + T.h * .5, T.c.z) : null; B.lyaw += (aim * .6 - B.lyaw) * ease(dt, 3); B.lpitch += (0 - B.lpitch) * ease(dt, 3);
-    A.sp = 0; aoiPose(dt, 0, speaking); vrmStep(dt); A.dbg = null; return; }
+    aoi.visible = true;
+    B.focusW = T ? new THREE.Vector3(T.c.x, T.gy + T.h * .5, T.c.z) : null;
+    AM.drive(S.x, S.z); AM.faceTo(toCam); AM.lookAt(B.focusW);
+    if (B.focusW && A.showPt !== S && !RM) { A.showPt = S; AM.point(B.focusW.clone(), 3.6); }
+    A.sp = 0; aoiVoice(); aoiMood(dt, !!speaking);
+    AM.update(dt, C.camera, { vrmUpdate: false }); A.yaw = AM.yaw; aoiFinish(dt); return; }
   if (A.pd == null || Math.abs(A.pd - d) > 30) aoiJump();   /* 第7回：置き直すのは、位置が 30 m 以上飛んだとき（地図で移る・GPS の大きな飛び）だけ。向きの反転では歩いて追い越す */
   A.dtL = dt; const _pd0 = A.pd, _ps0 = A.ps, wp0 = toWorld(A.pd, A.ps);
   const t = aoiTarget(), w = 3.2, n = Math.max(1, Math.ceil(dt / .02)), h = dt / n, uv = Math.abs(U.v) / Math.max(1, TS), amax = (uv > .3 ? 2.6 : 1.3) * Math.max(1, TS * TS);   /* 2026-10-10：見る人が歩いているあいだは、歩きはじめ・速めに合わせて加速も足りるように（前は遅れて近づき、大きく見えた） */   /* 加速は人の歩きはじめ程度まで（髪が振り回されない） */
@@ -5172,20 +5189,20 @@ function aoiTick(dt) {
   { const ddp = A.pd - _pd0, dsp = A.ps - _ps0, m = Math.hypot(ddp, dsp), lim = 3.3 * dt * Math.max(1, TS);   /* 押し出しを足しても、こまあたり毎秒 3.3 m まで（跳ばない） */
     if (m > lim && m < 8) { const k = lim / m; A.pd = _pd0 + ddp * k; A.ps = _ps0 + dsp * k; } }
   const wp = toWorld(A.pd, A.ps);
-  if (A.gy == null || ++A.gyN % 3 === 0) { let gy = (C.groundYs ?? C.groundY)(wp.x, wp.z); { const sb = standOn(wp.x, wp.z); if (sb != null && (gy == null || sb > gy - .05)) gy = sb; } if (gy != null) A.gy = A.gy == null || Math.abs(A.gy - gy) > 2 ? gy : A.gy + (gy - A.gy) * .5; else if (A.gy == null) A.gy = C.camera.position.y - 1.6; }
+  A.gy = aoiGround(wp.x, wp.z);
   const sp = Math.hypot(A.vd, A.vs); A.sp += (sp - A.sp) * ease(dt, 5);
   // 体の向き：歩くあいだは進む向きへ（速さの向き）。止まっているときは、話す相手・対象へ
   const cam = C.camera.position, toCam = Math.atan2(cam.x - wp.x, cam.z - wp.z);
   const moveYaw = (() => { const vx = A.vd * wp.fx - A.vs * wp.fz, vz = A.vd * wp.fz + A.vs * wp.fx; return Math.atan2(vx, vz); })();
   const seg = speaking && speaking.id !== "_closing" ? speaking : null;
   behave(dt, seg, wp);
-  /* 体の向き（研究室と同じ）：歩くあいだは進む向き。止まったら見る人のほうへ。物の話のあいだは、見る人と物のあいだ（半分）へ */
-  let fy = A.sp > .35 ? moveYaw : toCam;
-  if (A.sp <= .35 && seg && B.focusW) fy = toCam + wrapA(Math.atan2(B.focusW.x - wp.x, B.focusW.z - wp.z) - toCam) * .5;
+  /* 体の向き（研究室と同じ）：歩くあいだは進む向き（AoiMotion が足の運びから）。止まったら見る人のほうへ。物の話のあいだは、見る人と物のあいだ（半分）へ */
+  let fy = toCam;
+  if (seg && B.focusW) fy = toCam + wrapA(Math.atan2(B.focusW.x - wp.x, B.focusW.z - wp.z) - toCam) * .5;
   { const bt = A.bowT ? performance.now() - A.bowT : -1e9; if (bt > -2600 && bt < 3200) fy = Math.atan2(wp.fx, wp.fz); }   /* 第12回：一礼の前に、楼門（北・進む向き）へ向き直る */
-  const turnMax = 2.2 * dt;   /* 2026-10-10：研究室と同じ毎秒 2.2 rad まで */   /* 第9回：毎秒 57°（1/60 秒で 1° より小さく） */   /* 第6回：1.0→1.8（反転で向き直るのを早く） */   /* 第4回：向きの変化は毎秒 57° まで（1/60 秒で 1° 以下。反転でもぐるっとは回らない） */
-  if (!A.dbg?.lockYaw) A.yaw += clamp(wrapA(fy - A.yaw) * ease(dt, 4), -turnMax, turnMax);
-  aoi.position.set(wp.x, A.gy, wp.z); aoi.rotation.set(0, A.yaw, 0);
+  AM.drive(wp.x, wp.z); AM.faceTo(fy);   /* 位置はこのページが決め、足は AoiMotion が地面に着けたまま運ぶ（すべらない）。向きを変える速さも AoiMotion */
+  aoiAct(dt, seg, wp);
+  AM.update(dt, C.camera, { vrmUpdate: false }); A.yaw = AM.yaw;
   if (A.hide > 0) { A.hide -= dt; aoi.visible = false; } else aoi.visible = !A.hideOv;
   // 確かめ用：1 こまの動きの大きさ（跳びが無いか）
   if (aoi.visible && A.prevW && dt > 0) { const k60 = 1 / (dt * 60) / Math.max(1, TS), st = Math.hypot(wp.x - A.prevW.x, wp.z - A.prevW.z) * k60;   /* 1/60 秒あたりに直す（こまの遅い端末でも同じ物差し） */
@@ -5194,9 +5211,49 @@ function aoiTick(dt) {
   A.prevW = { x: wp.x, z: wp.z }; A.prevYaw = A.yaw;
   if (Math.hypot(A.vd, A.vs) * dt > 3) A.settle = true;
   windTick(dt, wp);
-  aoiPose(dt, A.dbg?.sp ?? A.sp / Math.max(1, TS), A.dbg?.seg ?? seg);   /* A.dbg：確かめ用（歩く・話す・指すの形を止めて撮る） */
+  aoiFinish(dt);
+}
+/* ---- 2026-10-13：共通部品 AoiMotion へのつなぎ ----
+   地面：路面の高さ（groundYs＝継ぎ目の穴を抜けない・10-10 の直し）と橋の上（standOn）を 0.25 m の格子で覚えて、間をなめらかにつなぐ（足ごとに引くので軽く） */
+const AG = new Map();
+function aoiGroundRaw(x, z) { let gy = (C.groundYs ?? C.groundY)(x, z); const sb = standOn(x, z); if (sb != null && (gy == null || sb > gy - .05)) gy = sb; return gy; }
+function aoiGround(x, z) {
+  if (A.show) return A.show.y;
+  const q = .25, i = Math.floor(x / q), j = Math.floor(z / q), u = x / q - i, w = z / q - j;
+  const g = (a, b) => { const k = a * 100003 + b; let y = AG.get(k); if (y === undefined) { y = aoiGroundRaw(a * q, b * q); if (y == null) y = A.gy ?? (C.camera.position.y - 1.6); if (AG.size > 8000) AG.clear(); AG.set(k, y); } return y; };
+  return (g(i, j) * (1 - u) + g(i + 1, j) * u) * (1 - w) + (g(i, j + 1) * (1 - u) + g(i + 1, j + 1) * u) * w;
+}
+/* 見る・指す・一礼・声・表情（合図はこのページ、形は AoiMotion） */
+function aoiAct(dt, seg, wp) {
+  const now = performance.now(), live = !RM, bt = A.bowT ? now - A.bowT : -1e9;
+  if (bt > -2600 && bt < 3200) AM.lookAt(A._gate ||= new THREE.Vector3()).look.target.set(wp.x + wp.fx * 12, (A.gy ?? 0) + 2.6, wp.z + wp.fz * 12);   /* 一礼の前後は、楼門を見る（見る人へ振り返らない） */
+  else AM.lookAt(B.mode === "talkObj" && B.target ? B.target : null);   /* 話している物を見る行の頭だけ、その物。ほかは見る人（歩くあいだは道の先と、ときどき見る人） */
+  const lt0 = (now - (A.lineT0 || 0)) / 1000, aim = B.mode === "talkObj" ? B.lyaw : 0;
+  if (live && seg?.at && B.focusW && A.lineRole === "see" && B.mode === "talkObj" && Math.abs(aim) < 1.25 && lt0 > .5 && lt0 < 4 && A.ptLine !== A.lineT0) { A.ptLine = A.lineT0; AM.point(B.focusW.clone(), 3.4); }
+  if (A.bowT && now >= A.bowT && A.bowDone !== A.bowT) { A.bowDone = A.bowT; if (live) AM.bow("keirei"); }   /* 第12回：楼門の前の締めの一言のあと、腰から一礼（30°） */
+  aoiVoice(); aoiMood(dt, !!seg && !!aoi?.visible);
+}
+/* 声：鳴っているあいだだけ口を動かす（横断のあいだ・音なしのときは声が鳴らないので、口も閉じたまま）。口の時刻表は声のファイルの名で引く */
+let _vbyf = null;
+function aoiVoice() {
+  const voiced = !RM && !!speaking && !AU.paused && !AU.ended && AU.currentTime > 0 && AU.readyState >= 2, f = AU.dataset.f;
+  const key = voiced && f ? tok + "|" + f : null;
+  if (key && key !== A.spk) { A.spk = key; const v = (_vbyf ||= Object.fromEntries(Object.values(VOICE).map(x => [x.f, x])))[f], id = f.split("/").pop().split(".")[0];
+    AM.speak({ timeline: LIPSYNC?.[id] ?? null, kana: v?.kana ?? "", text: A.chunk || "", dur: v?.dur ?? 3, clock: () => AU.currentTime }); }
+  else if (!key && A.spk) { A.spk = null; AM.stopSpeaking(); }
+}
+/* 表情：行ごとの気分（moodFor）を、AoiMotion の表情へ */
+const EMO_OF = { neutral: ["calm", 1], gentle: ["warm", .85], calm: ["calm", 1], joy: ["smile", .8], curious: ["curious", .9], surprise: ["surprise", .75], thoughtful: ["thinking", .8], delight: ["smile", 1] };
+function aoiMood(dt, talk) {
+  moodTick(dt, !RM, talk);
+  if (MO.cur !== A.emo) { A.emo = MO.cur; const [n, w] = EMO_OF[MO.cur] ?? ["calm", 1]; AM.express(n, w, 1e9); }
+}
+/* 口の開きは 6 割ほどに（2026-10-13 テストプレー：口の中の赤が見えすぎる） */
+const MOUTH5 = ["aa", "ih", "ou", "ee", "oh"];
+function aoiFinish(dt) {
+  const em = vrm.expressionManager; if (em) for (const k of MOUTH5) { const x = em.getValue(k); if (x) em.setValue(k, x * .62); }
   if (A.settle) { A.settle = false; settleSprings(); }
-  vrmStep(dt);
+  vrmStep(dt); AM.afterVrmUpdate(dt);
 }
 /* 第4回：ばね（髪・裾）は 1/60 秒より細かく刻んで進める。こまが遅れて dt が大きいときに、房が跳ね上がらない */
 function vrmStep(dt) {
@@ -5286,101 +5343,7 @@ function windTick(dt, wp) {
     st.dragForce = Math.min(.9, q.d0 * (1 + .8 * fast)); st.stiffness = q.s0 * (1 + 1.3 * fast);   /* 速いとき（追い越し）は、抵抗と固さを少し強める：房が振り回されて頭の上へ回らない（3,000 こまの確かめで、房の先は付け根より 0.10 m 以上下） */
   }
 }
-// ---- 体の動き：歩く速さに合わせた足どり、呼吸と重心、話しはじめの小さなうなずき、指さし、首かしげ、見る先へ（胸・首・頭の順に分ける）。
-//      腕（第3回で直した）：VRM の正規化された骨では、左の前腕は Y を負に、右の前腕は Y を正に回すと、ひじが前へ曲がる（以前は逆で、後ろへ折れていた）
-const CUR = {};
-function aoiPose(dt, sp, seg = null) {
-  /* 2026-10-10 本人「森羅研究室の碧の動作の方がいいです。氷川道中も、森羅研究室の動きを使って」：体の動きは、森羅研究室（lab.js の aoiPose）と同じ式にした。
-     歩く足どり・呼吸と重心の移り・ときどきの首かしげ・話すときは体ごと少しこちらへ向き、右手で軽く身ぶり・指すときは右手で・はじめにうなずく・まばたき。
-     前の形（ときどき弾んで歩く・12〜24 秒ごとの振り返り・見回し・行ごとに替わる手・表情に合わせた首の動き）は外した。氷川道中だけのもの（楼門の前の一礼・口の動き・表情）は残した */
-  const live = !RM, t = performance.now() / 1000, T = {};
-  const S = (n, x = 0, y = 0, z = 0) => { T[n] = [x, y, z]; };
-  const kT = clamp((sp - .15) / .8, 0, 1); A.k += (kT - A.k) * ease(dt, 2.6); const k = A.k;
-  A.ph += 2 * Math.PI * (.45 + .35 * Math.min(sp, 2)) * dt * Math.min(1, k * 1.5);
-  const s1 = Math.sin(A.ph), c1 = Math.cos(A.ph), br = live ? Math.sin(t * 2 * Math.PI / 4.2) : 0;
-  if (seg !== A.seg) { A.seg = seg; A.segT = 0; } else A.segT += dt;
-  const talk = !!seg && !!aoi?.visible;
-  A.tk += ((talk ? 1 : 0) - A.tk) * ease(dt, 3); const tk = live ? A.tk : 0;
-  const greet = live && talk && A.segT < 1.6 ? Math.sin(Math.min(1, A.segT / 1.6) * Math.PI) : 0;
-  /* 指す：地点の話の最初の行（see）で、対象が体の前にあるとき（研究室と同じく右手で）。かけらを近くで見るとき（A.dbg.point）も */
-  const lt0 = (performance.now() - (A.lineT0 || 0)) / 1000;
-  let aim = A.dbg?.point != null ? A.dbg.point : B.mode === "talkObj" ? B.lyaw : 0;
-  const ptOn = A.dbg?.point != null || (live && talk && seg?.at && A.lineRole === "see" && B.mode === "talkObj" && Math.abs(aim) < 1.25 && lt0 > .5 && lt0 < 4);
-  A.pt = (A.pt ?? 0) + ((ptOn ? 1 : 0) - (A.pt ?? 0)) * ease(dt, 3.5); const ptE = A.pt * A.pt * (3 - 2 * A.pt);
-  aim = clamp(aim, -.6, .6);
-  if (live) { A.ws -= dt; if (A.ws <= 0) { A.wsTo = -A.wsTo || .5; A.ws = 4 + Math.random() * 3; } A.wsv += (A.wsTo - A.wsv) * ease(dt, 1.5);
-    A.tl -= dt; if (A.tl <= 0 && k < .4 && Math.random() < dt * .25) { A.tl = 20 + Math.random() * 10; A.tlT = 0; A.tlS = Math.random() < .5 ? 1 : -1; }
-    if (A.tlT != null) { A.tlT += dt; if (A.tlT > 2.2) A.tlT = null; } }
-  const ws = (1 - k) * A.wsv, tilt = A.tlT != null ? Math.sin(Math.min(1, A.tlT / 2.2) * Math.PI) * .14 * A.tlS : 0;
-  /* 話すとき・あいさつのときは、体ごと少しこちら（カメラ）へ */
-  const cp = C.camera?.position, toCamL = cp && aoi ? wrapA(Math.atan2(cp.x - aoi.position.x, cp.z - aoi.position.z) - A.yaw) : 0;
-  const turn = clamp(toCamL, -.7, .7) * Math.max(greet, .45 * tk) * (1 - ptE);
-  /* 第12回（まさひろ「最後に一礼させておくれ」）：楼門の前の締めの一言のあと、碧が腰から一礼する（0.9 秒で下げ、1 秒とめ、1.3 秒で戻す） */
-  const bwS = A.bowT ? (performance.now() - A.bowT) / 1000 : -1;
-  const bw = live && bwS > 0 && bwS < 3.2 ? (bwS < .9 ? (1 - Math.cos(bwS / .9 * Math.PI)) / 2 : bwS < 1.9 ? 1 : (1 + Math.cos((bwS - 1.9) / 1.3 * Math.PI)) / 2) : 0;
-  const hips = vrm.humanoid.getNormalizedBoneNode("hips");
-  if (hips && A.hip0) hips.position.set(A.hip0.x + (.012 * s1 * k + .018 * ws), A.hip0.y + .015 * Math.cos(2 * A.ph) * k - .004 * (1 - k) * br, A.hip0.z);
-  S("hips", 0, .07 * s1 * k, (.035 * s1 * k + .04 * ws));
-  S("spine", .04 * k - .006 * br + .3 * bw, -.05 * s1 * k + turn * .15, -.02 * ws);
-  S("chest", -.012 * br + .14 * bw, -.04 * s1 * k + turn * .15 + aim * .25 * ptE, -.015 * ws);
-  S("upperChest", -.01 * br, turn * .15 + aim * .2 * ptE, 0);
-  const lt = -.36 * s1 * k, rt = .36 * s1 * k, lk = k * (.06 + .62 * Math.pow(Math.max(0, c1), 1.5)) + .05 * Math.max(0, ws), rk = k * (.06 + .62 * Math.pow(Math.max(0, -c1), 1.5)) + .05 * Math.max(0, -ws);
-  S("leftUpperLeg", lt, 0, .015 + .03 * ws); S("rightUpperLeg", rt, 0, -.015 + .03 * ws);
-  S("leftLowerLeg", lk); S("rightLowerLeg", rk);
-  S("leftFoot", -(lt + lk) * .75); S("rightFoot", -(rt + rk) * .75);
-  const gst = tk * (1 - ptE) * (1 - k * .6), gw = live ? Math.sin(t * 2 * Math.PI * .33) : 0;
-  S("leftUpperArm", .26 * s1 * k - .05 * (1 - k), 0, -1.3 + .04 * br * (1 - k));
-  S("leftLowerArm", 0, -(.28 + .14 * k + .12 * Math.max(0, -s1) * k), 0);
-  S("leftHand", .05, 0, .12);
-  const rUA = [-.26 * s1 * k - .05 * (1 - k) - .16 * gst, 0, 1.3 - .04 * br * (1 - k) - .08 * gst], rLA = [0, .28 + .14 * k + .12 * Math.max(0, s1) * k + (.38 + .1 * gw) * gst, 0];
-  const pUA = [-.15, 1.15 + aim * .6, .55], pLA = [0, .12, 0];
-  S("rightUpperArm", ...rUA.map((v, i) => v + (pUA[i] - v) * ptE)); S("rightLowerArm", ...rLA.map((v, i) => v + (pLA[i] - v) * ptE));
-  S("rightHand", .05 + .1 * gst * gw, 0, -.12 + .12 * ptE);
-  const cu = .34 + .06 * k + (live ? .04 * Math.sin(t * .4) : 0);
-  for (const [f, m] of [["Index", .8], ["Middle", 1], ["Ring", 1.1], ["Little", 1.25]]) {
-    const cl = cu * m, cr = f === "Index" ? cl * (1 - ptE) : cl + .35 * ptE;
-    S(`left${f}Proximal`, 0, 0, -cl); S(`left${f}Intermediate`, 0, 0, -cl * 1.15); S(`left${f}Distal`, 0, 0, -cl * .8);
-    S(`right${f}Proximal`, 0, 0, cr); S(`right${f}Intermediate`, 0, 0, cr * 1.15); S(`right${f}Distal`, 0, 0, cr * .8);
-  }
-  S("leftThumbProximal", 0, .3, -.08); S("leftThumbDistal", 0, .15, -.2); S("rightThumbProximal", 0, -.3, .08); S("rightThumbDistal", 0, -.15, .2);
-  const nod = live ? .12 * greet : 0;
-  S("neck", nod * .4 + .08 * bw - .02 * br, turn * .2 + aim * .2 * ptE, tilt * .4);
-  S("head", nod * .6, turn * .35 + aim * .3 * ptE, tilt * .6);
-  const r = live ? 12 : 30;
-  for (const [nme, tg] of Object.entries(T)) {
-    const b = vrm.humanoid.getNormalizedBoneNode(nme); if (!b) continue;
-    const c = CUR[nme] ||= [...tg];
-    for (let i = 0; i < 3; i++) c[i] += dt ? clamp((tg[i] - c[i]) * ease(dt, r), -.14, .14) : tg[i] - c[i];
-    b.rotation.set(c[0], c[1], c[2]);
-  }
-  const voiced = !AU.paused && !AU.ended && AU.currentTime > 0 && AU.readyState >= 2;
-  let mo = 0;
-  if (live && voiced && speaking) {
-    const c = A.chunk || "", v = VOICE[resolve(speaking.lines[Math.max(0, lineI - 1)]?.t ?? "")];
-    let gate = 1; if (v && c) { const ci = Math.floor(AU.currentTime / v.dur * c.length) % Math.max(1, c.length); if ("、。？！「」（）『』".includes(c[ci] ?? "")) gate = 0; }
-    mo = gate * Math.max(0, Math.sin(t * 2 * Math.PI * 7.8 + 1.3 * Math.sin(t * 2.1))) * (.5 + .15 * Math.sin(t * 2 * Math.PI * 1.7)) * .62;   /* 2026-10-13 テストプレー：口の中の赤が見えすぎる。開きを 6 割ほどに（口の色は碧の共通部品の担当で） */
-  }
-  A.mo = (A.mo ?? 0) + (mo - (A.mo ?? 0)) * ease(dt, 28); if (A.mo < .01) A.mo = 0;
-  const em = vrm.expressionManager;
-  if (em) {
-    if (em.getExpression?.("aa")) em.setValue("aa", A.mo); else if (em.getExpression?.("a")) em.setValue("a", A.mo);
-    /* 第8回：表情の印（moodTick）。あいさつ・振り返りは少し笑う。目を閉じる表情（happy・relaxed）は合わせて 0.6 まで */
-    const mv = moodTick(dt, live, talk), hpT = live ? Math.max(mv.happy, talk ? .3 : .12, .42 * greet, B.mode === "back" ? .36 : 0, B.mode === "talkUser" ? .3 : 0, tilt ? .28 : 0) : .1;
-    A.hp += (hpT - A.hp) * ease(dt, 4); const rl = Math.min(mv.relaxed, Math.max(0, .6 - A.hp));
-    if (em.getExpression?.("happy")) em.setValue("happy", A.hp); if (em.getExpression?.("relaxed")) em.setValue("relaxed", rl);
-    if (em.getExpression?.("surprised")) em.setValue("surprised", mv.surprised * (1 - A.hp * .6)); if (em.getExpression?.("sad")) em.setValue("sad", mv.sad);
-    A.rl = rl;
-  }
-  let bv = 0;
-  if (live) {
-    if (A.bt < 0) { A.blink -= dt; if (A.blink <= 0) { A.bt = 0; A.twice = Math.random() < .12; } }
-    else { A.bt += dt; const u = A.bt; bv = u < .08 ? u / .08 : u < .11 ? 1 : u < .24 ? 1 - (u - .11) / .13 : 0;
-      if (u >= .24) { if (A.twice) { A.twice = false; A.bt = 0; } else { A.bt = -1; A.blink = 2.8 + Math.random() * 4.2; } } }
-  }
-  em?.setValue("blink", Math.min(Math.max(0, 1 - A.hp - (A.rl ?? 0)) * .95, bv * bv * (3 - 2 * bv)));   /* 第8回：目を閉じる表情とまばたきの和は 1 まで（重ねて閉じると、まぶたが吊り上がって見える） */
-  /* 目線（研究室と同じ）：話している物を見る行の頭だけ、その物。ほかは見る人（カメラ） */
-  if (A.gaze) { if (B.mode === "talkObj" && B.target) A.gaze.position.copy(B.target); else A.gaze.position.copy(C.camera.position); }
-}
+/* 体の動き（歩く・息・重心・目と頭・まばたき・口・表情・礼・指す）は、2026-10-13 から共通部品 AoiMotion（web/kit/aoi_motion.js）。前の aoiPose は 旧ver/2026-10-13_碧の動きの前/ に */
 let lastF = performance.now();
 (function aoiLoop(now) {
   const dt = Math.min(.25, Math.max(0, ((now ?? performance.now()) - lastF) / 1000)); lastF = now ?? performance.now();   /* 第5回：歩く層（walkStep）と同じ 0.25 秒まで（こまの遅い端末で碧が遅れて近づかない） */
@@ -5436,6 +5399,7 @@ function moodTick(dt, live, talk) {
   const now = performance.now();
   let m = MO.pulse && now < MO.pulseUntil ? MO.pulse : (talk && now < MO.until ? MO.mood : null);
   if (!m) m = !started ? "gentle" : (stopFor && still.since != null ? "gentle" : "neutral");   /* 聞き手が止まったら、やわらかい顔で待つ */
+  MO.cur = m;
   const tg = MOODS[m] ?? MOODS.neutral, r = ease(dt, 3.2);
   for (const k of ["happy", "relaxed", "surprised", "sad"]) MO.v[k] += ((live ? tg[k] ?? 0 : (k === "happy" ? .1 : 0)) - MO.v[k]) * r;
   MO.tilt += ((live ? tg.tilt ?? 0 : 0) - MO.tilt) * ease(dt, 2); MO.up += ((live ? tg.up ?? 0 : 0) - MO.up) * ease(dt, 2);
