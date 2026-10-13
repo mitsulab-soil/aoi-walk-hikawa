@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-49a9706192">
+<meta name="aoiwalk-build" content="r9-b7cce7c0d1">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -5101,6 +5101,10 @@ function loadAoi() {
     aoi = new THREE.Group(); aoi.name = "aoi"; aoi.visible = false; aoi.add(v.scene); C.world.add(aoi); vrm = v;
     { const hp = v.humanoid.getNormalizedBoneNode("hips"); if (hp) A.hip0 = hp.position.clone(); }
     windInit(v); legColliders(v, V);
+    /* 2026-10-14（11 人 r4 の P1「PC の後ろ姿で、髪が真横へ吹き流しのように流れる」）：髪と裾のばねを、碧の入れ物（aoi）の座標で計算する（center）。
+       碧が歩く・向きを変える・押し出されるときの入れ物ごとの動きで、房が置いていかれて横へ流れない。風と重さは今のまま */
+    if (!new URLSearchParams(location.search).has("springWorld")) for (const j of v.springBoneManager?.joints ?? []) j.center = aoi;
+    try { v.springBoneManager?.reset(); } catch {}
     v.humanoid.resetNormalizedPose(); v.update(0); v.scene.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(v.scene), h = box.max.y - box.min.y;
     const sc = h > .5 && Math.abs(h - AOI_H) / AOI_H > .02 ? AOI_H / h : 1; v.scene.scale.setScalar(sc); v.scene.position.y = -box.min.y * sc;
@@ -7061,7 +7065,7 @@ const CULT = (() => {
         if (prev) I.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2; prev = true; }
       const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); const m = new THREE.Mesh(g, paperB); m.frustumCulled = false; m.renderOrder = 1; G.add(m); }
     /* ② ③ 年の線・丁石 */
-    const cyl = new THREE.CylinderGeometry(.045, .045, 1, 6); cyl.translate(0, .5, 0); const ink2 = new THREE.MeshBasicMaterial({ color: 0x3a3128 });
+    const cyl = new THREE.CylinderGeometry(.045, .045, 1, 6); cyl.translate(0, .5, 0); const ink2 = new THREE.MeshBasicMaterial({ color: 0xeadcbc });   /* 和紙色（幹と見分ける） */
     for (const it of ITEMS) { const p = structPt(it.id); if (!p) continue; const y0 = C.groundY(p.x, p.z) ?? p.y - 1.5;
       const h = it.yr ? 2 + (2026 - it.yr) / 100 * 2.5 : 1.6, top = Math.max(p.y + .4, y0 + h);
       const off = /torii/.test(it.id) ? 0 : .9, m = new THREE.Mesh(cyl, ink2); m.position.set(p.x + off, y0, p.z); m.scale.set(1, top - y0, 1); G.add(m); label(it.t, it.src, new THREE.Vector3(p.x, top + .05, p.z)); }
@@ -7069,7 +7073,7 @@ const CULT = (() => {
     const paper = new THREE.MeshBasicMaterial({ color: 0xe9dcc0, transparent: true, opacity: .34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, side: THREE.DoubleSide });
     for (const sd of [-1, 1]) { const P = [], I = []; let n = 0;
       for (let dd = BAND.d0; dd <= BAND.d1; dd += 4) { const b = bandAt(dd), s0 = sd > 0 ? b[3] + 1 : b[2] - 1, s1 = s0 + sd * 8;
-        for (const s of [s0, s1]) { const w = toWorld(dd, s), y = C.groundY(w.x, w.z) ?? 0; P.push(w.x, y + .05, w.z); }
+        for (const s of [s0, s1]) { const w = toWorld(dd, s), y = C.groundY(w.x, w.z) ?? 0; P.push(w.x, y + .15, w.z); }
         if (n) I.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2; }
       const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); const m = new THREE.Mesh(g, paper); m.frustumCulled = false; G.add(m); }
     { const w = toWorld((BAND.d0 + BAND.d1) / 2, bandAt((BAND.d0 + BAND.d1) / 2)[3] + 5), y = C.groundY(w.x, w.z) ?? 0; label(BAND.t, BAND.src, new THREE.Vector3(w.x, y + 1.2, w.z)); }
@@ -7079,7 +7083,9 @@ const CULT = (() => {
   function tick() {
     try { if (on && C.camera && THREE) { v.p ||= new THREE.Vector3(); const cp = C.camera.position, near = labels.map(l => [l, l.p.distanceTo(cp)]).filter(([, dd]) => dd < 90).sort((a, b) => a[1] - b[1]).slice(0, 4);
         for (const l of labels) l.el.hidden = true;
-        for (const [l] of near) { v.p.copy(l.p).project(C.camera); if (v.p.z > 1 || Math.abs(v.p.x) > 1.05 || Math.abs(v.p.y) > 1.05) continue; l.el.hidden = false; l.el.style.left = ((v.p.x + 1) / 2 * innerWidth).toFixed(0) + "px"; l.el.style.top = ((1 - v.p.y) / 2 * innerHeight).toFixed(0) + "px"; } }
+        const top = innerWidth <= 820 ? 150 : 110, avoid = ["#journeyPanel", "#mkChip", "#slipCap", "#mkCard", "#bodyNote"].map(q => document.querySelector(q)).filter(e => e && !e.hidden && e.offsetParent).map(e => e.getBoundingClientRect()), panelOpen = !!document.querySelector("#journeyPanel > details[open]");   /* 上の欄・題と重ねない／欄を開いているあいだは出さない */
+        for (const [l] of near) { if (panelOpen) break; v.p.copy(l.p).project(C.camera); if (v.p.z > 1 || Math.abs(v.p.x) > 1.05 || Math.abs(v.p.y) > 1.05 || (1 - v.p.y) / 2 * innerHeight < top) continue; l.el.hidden = false; l.el.style.left = ((v.p.x + 1) / 2 * innerWidth).toFixed(0) + "px"; l.el.style.top = ((1 - v.p.y) / 2 * innerHeight).toFixed(0) + "px";
+          const r = l.el.getBoundingClientRect(); if (avoid.some(q => r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top)) l.el.hidden = true; }   /* 欄・札と重なる札は出さない */ }
     } catch {}
     requestAnimationFrame(tick); }
   requestAnimationFrame(tick);
