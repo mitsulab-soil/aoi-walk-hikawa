@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-a7f009421f">
+<meta name="aoiwalk-build" content="r9-b48d361ba0">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -3884,6 +3884,13 @@ function toXe(dd = d, dir = curDir()) { let m = Infinity; for (const h of xh()) 
 /* 直前の横断の出口から、どれだけ進んだか（m） */
 function fromXx(dd = d, dir = curDir()) { let m = Infinity; for (const h of xh()) { const x = dir > 0 ? dd - h.d1 : h.d0 - dd; if (x >= 0 && x < m) m = x; } return m; }
 const dirKnown = () => mode !== "gps" || G.dirOK;
+/* 2026-10-13 安全（現地）：声を止める帯の手前の余白（m）。位置のゆれ（数 m）と、声を消す 0.4 秒を見込む */
+const XM = 5;
+/* 帯までの道のり：歩く向きが分かっていれば前の帯まで（帯の中は 0）。分からないときは前後どちらの帯にも近ければ近いとみなす */
+function xGuard(dd = d) { if (inX(dd)) return 0; if (dirKnown()) return toXe(dd); let m = Infinity; for (const h of xh()) m = Math.min(m, Math.abs(h.d0 - dd), Math.abs(dd - h.d1)); return m; }
+const xSp = () => Math.max(1.3, walkSp());
+/* これから渡る帯の手前の案内（まだ言っていないもの） */
+function safeAhead() { return SEG.find(q => q.kind === "safety" && talkable(q) && /^safe_X/.test(q.id) && d >= q.d0 - 25 && d < q.d1) ?? null; }
 /* 第10回：歩く向きの道の端から m 以内か */
 function atEnd(m) { const dr = mode === "sim" ? simDir : (dirKnown() ? curDir() : 0); return (dr > 0 && d >= D_MAX - m) || (dr < 0 && d <= D_MIN + m); }
 const gpsReady = () => mode !== "gps" || G.d != null;
@@ -4032,7 +4039,10 @@ function tick() {
   if (!ended && started && introDone && speaking && !speaking.cut && speaking.id[0] !== "_" && speaking.kind !== "anchor" && speaking.kind !== "safety" && atEnd(mode === "gps" ? 6 : 2)) {
     const s = speaking; s.cut = true; fadeOut(() => { s.cut = false; done(s, true); setSub(""); }); return; }
   /* 第10回：横断の 3 m 手前で、話をそっと止める（前は横断に入ってから。検証「横断の中で 4 こま鳴っていた」） */
-  if (speaking && mode === "gps" && speaking.kind !== "safety" && speaking.id[0] !== "_" && (inX(d) || (dirKnown() && toXe() < 3)) && !speaking.cut) {   /* 現地：横断に入ったら、話をそっと止める */
+  /* 2026-10-13 安全（現地）：横断と横道の口の帯の XM m 手前から帯を出るまで、声は一つも鳴らさない（安全の案内・あいさつ・締めも例外にしない）。
+     前は「安全の案内」と「_」で始まる話を止めず、横断の 3 m 手前で止めていたので、案内の言い終わりが帯の入口に 1〜3 m かかることがあった（10-13 の流しで 326〜327 m）。
+     渡る前の案内（kind safety）は、帯の手前で言い終われるときだけ始め、言い終われるよう、前の話は早めに譲る */
+  if (speaking && mode === "gps" && !speaking.cut && (xGuard() < XM || (speaking.kind !== "safety" && speaking.id !== "_closing" && safeAhead() && xGuard() < XM + estDur(safeAhead()) * xSp() + 3))) {   /* 現地：横断に入ったら、話をそっと止める */
     const s = speaking; s.cut = true; fadeOut(() => { s.cut = false; if (s.kind === "anchor" || s.kind === "serial" || s.kind === "zone") { s.xCut = s.kind === "anchor"; yieldSeg(s, lineI - 1); setSub(""); } else { done(s, true); setSub(""); } }); return; }   /* 第5回：地点の話も、横断のあとで続きの行から（打ち切らない） */
   /* 第4回：大事な地点を通り過ぎそうなのに、続きもの・区間の話の途中なら、行の途中でもそっと止めて、地点の話を先に（続きは、あとで同じ行から） */
   /* 第9回：行の途中で止めるのは、大事な物の窓か、対象がもう目の前（見るの一行が 8 m 手前で言い終わらなくなる）ときだけ。ほかは行の切れ目で譲る（同じ行を言い直さない） */
@@ -4052,7 +4062,8 @@ function tick() {
   if (ended && atEnd(30)) return;   /* 第10回：締めのことばのあとは、道の端のそば（30 m）では何も話さない */
   if (!ended && atEnd(mode === "gps" ? 6 : 2) && zPending()) return;   /* 道の端で、時の層の言葉を待つあいだは、ほかの話を始めない */
   const s = pick(); if (!s) return;
-  if (s.kind !== "safety" && !isKey(s) && !inX(d) && toXe() < 10) return;   /* 第10回：横断の 10 m 手前からは、新しい話（大事な物のほか）を始めない */
+  if (s.kind !== "safety" && !isKey(s) && !inX(d) && toXe() < 10) return;
+  if (mode === "gps" && (xGuard() < XM + 6 && s.kind !== "safety" || xGuard() - estDur(s) * xSp() < XM)) return;   /* 2026-10-13 安全（現地）：帯の手前で言い終わらない話は始めない（大事な物の話・安全の案内も） */   /* 第10回：横断の 10 m 手前からは、新しい話（大事な物のほか）を始めない */
   if (s.kind !== "safety" && !(s.kind === "anchor" && (rel(s).ahead < 14 || isKey(s))) && now - lastEnd < nextGap / TS) return;   /* 自然な間（地点の話が近いときは待たない） */
   if (s.kind === "safety" && now - lastEnd < 900 / TS) return;
   speak(s, s.kind === "anchor" && !s.xCut ? 0 : (s.resume ?? 0)); if (s.xCut) s.xCut = false;
