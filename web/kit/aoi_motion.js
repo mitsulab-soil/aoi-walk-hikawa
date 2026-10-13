@@ -1,4 +1,25 @@
-/* 碧（依代）の自然な動きと表情 ── aoi_motion.js（v3.1・2026-10-13）
+/* 碧（依代）の自然な動きと表情 ── aoi_motion.js（v5・2026-10-13）
+   v5（2026-10-13 本人「碧は全体のキモ」）：
+   - 話の中身に合う身ぶり（会話の身ぶりの研究：McNeill 1992 の四つの型＝拍子・指し示し・形をなぞる・たとえ／Kendon 1980・2004 の
+     準備→打つ→止める→戻す。打つ瞬間は、その語の頭か少し前）。アプリは一行ごとに印を渡せる：
+       speak({ kana, dur, gesture:[{ t:1.2, type:"deictic", target:v3 }, { t:2.0, type:"iconic", shape:"small-round" }] })
+       type＝beat（拍子）| deictic（指し示し。target＝世界の位置か Object3D。無ければ「ここ」＝手のひらを下へ）| iconic（shape＝small・small-round・round・large・long・tall・flat）
+             | metaphoric（shape＝contrast（二つを左右の手に置いてくらべる）・present（手のひらを上に、考えを差し出す））
+       t の代わりに word:"これ" でもよい（字幕・かなの中のその語の時刻）。hand:"left"|"right"|"both"・hold（秒）は任意。
+     印が無い行は、字幕（text）か読み（kana）から簡単な身ぶりを推して付ける（autoGesture:false で止める）：
+       これ・あれ・ここ → 指す先が分かっていれば（speak の ref か、lookAt の先）そこを指す。「ここ」で先が無ければ手のひらを下へ
+       小さい・大きい・高い・長い・丸い → 形をなぞる／でも・けれど・ではなく・くらべる → 両手でくらべる／とても・本当・大事・！ → 拍子
+     身ぶりは人の幅の中で小さく（肘は脇の近く・手は胸から腰の前）。upright（HP）は 6 割の大きさ。指すときは目が先に的へ行き、止めるあいだ的を見る。
+   - その場で向きを変える：目と頭が先に、次に胴、そのあと内側の足から踏み出す。20° ほどまでは踏みかえず、80° ほどまでは二歩、それより大きいと四歩。
+     踏み出す前に、反対の足へ体重を移す。歩幅も小さい角度ほど小さい。
+   - 画質の段（quality："auto"（既定）|"high"|"mid"|"low"）：弱い端末では、裾の布を一こまおきに・指を一こまおきに（mid）、
+     さらに髪の揺れも一こまおきに（low）。auto は端末の手がかりで始め、こまの速さを見て下げる（よくなれば戻す）。m.quality で今の段。
+   v4（2026-10-13 本人「碧の動きは全体のキモなので、８５点まで上げて。動きと表情を自然な感じに仕上げて。」「碧の表情について、不気味の谷を乗り越えてください。」）：
+   - 立ち姿の記録 4 本×左右＝8 通りをくじで選び、2.4 秒かけて入れかえる。力を抜いた手が体から離れすぎない。
+   - 歩き：歩数を速さに合わせる（秒速 0.85 m で 1 秒 1.75 歩）・かかとから着き、かかとを軸につま先を下ろす・かかとを上げるときはつま先の付け根を軸に・届かないときは腰を下げる・腕の振りは速さに合わせる。
+   - 顔：笑み・眉を左右に分けた形（左右対称すぎない）・頬の血色（addCheekTint）・目の光が黒目の半分だけ動く（softenEyeHighlight）・まばたきの速さを毎回変える・
+     見る人の両目と口元を行き来する視線・止まった顔にしない小さな気分の動き・口の開きを控え、音の頭で閉じ、次の母音へ寄せる。
+   - 裾（aoi_robe.js）：脚の表面より内へ布を入れない（鎖のあいだも）。API は v3 と同じ（足したものはすべて任意）。調べ＝../../資料/碧の自然な動き_調べ.md §9。
    v3.1（2026-10-13 本人「HPの碧はまっすぐ立っていてください。姿勢は良くしていながら、自然な仕草にしてください。」「碧左右に揺れすぎです。もう少し揺れを抑えて」）：
    - 既定の立ち姿・歩きの左右の揺れを v3 の半分以下に（重心の移し 45%・骨盤の横の傾き・体の横揺れ・記録の胴の横の傾き 35%・記録の腰の横の動き 4 割・息の肩の傾き 半分・歩くときの骨盤の傾き 半分）。
    - 新しいオプション posture:"upright"（"formal" も同じ）＝まっすぐ立つ（HP）。骨盤は水平・背を立て・肩を少し引いて水平・手は脇。仕草は息・まばたき・小さな視線・小さく首をかしげるだけ。
@@ -22,14 +43,16 @@
      m.drive(x, z)         アプリが自分で位置を決めるとき（壁の当たり判定など）。毎こま呼ぶ
      m.faceTo(yaw|null)    その向きへ足を踏みかえて向く（null＝見る人の方へ）
      m.lookAt(v3|Object3D|null)  見る先（null＝見る人）
-     m.speak({ timeline, kana, text, dur, clock, level })  話す（口・身ぶり・視線・まばたき）。clock＝声の再生位置（秒）を返す関数
+     m.speak({ timeline, kana, text, dur, clock, level, gesture, ref, autoGesture })  話す（口・身ぶり・視線・まばたき）。clock＝声の再生位置（秒）を返す関数
+                           gesture＝身ぶりの印（上の v5）・ref＝「これ・あれ」が指す物（v3|Object3D）・autoGesture＝印が無いとき推すか（既定 true）
      m.stopSpeaking()      話し終わり
      m.listen(on)          聞く（うなずき・首をかしげる・目を合わせる）
      m.point(v3, sec)      指さす（目→手→見る人の順）
      m.bow("eshaku"|"keirei")  お辞儀（会釈 15°・敬礼 30°。腰から曲げ、背は伸ばす）
      m.express(name, w, sec)   表情（calm・warm・smile・curious・thinking・concern・surprise）。ふだんは calm
    m.eyesClosed = 0..1   目を閉じたままにする（0 で戻す）
-   新しいオプション（なくても動く）：{ posture: "natural"（既定）| "upright"（まっすぐ立つ）, groundAt: (x, z) => 地面の高さ（坂・段。氷川道中のため）, mocap: "auto"（既定・隣の aoi_mocap.json を読む）| URL | 読んだ JSON | false, robe: true | false }
+   新しいオプション（なくても動く）：{ posture: "natural"（既定）| "upright"（まっすぐ立つ）, groundAt: (x, z) => 地面の高さ（坂・段。氷川道中のため）, mocap: "auto"（既定・隣の aoi_mocap.json を読む）| URL | 読んだ JSON | false, robe: true | false,
+                quality: "auto"（既定）| "high" | "mid" | "low"（v5） }
    何もしなくても：息（3.4〜4.8 秒で一回・吸う 4 割／吐く 6 割）・重心の移しかえ（片足に体重をのせ、骨盤が傾き、肩が逆に傾く）・
    小さな揺れ・まばたき（間隔は対数正規・話すと増える・視線を大きく動かすとき・二度まばたき）・目が先に動き頭が追う・
    ときどき目をそらす・腕は振り子として遅れてついてくる・表情の小さなゆらぎ。
@@ -79,14 +102,72 @@ export function timelineFromText(text, dur) {
   for (const c of text || "") { if ("、。，．！？!?…".includes(c)) s += "、"; else if (/\s/.test(c)) s += "/"; else if (KV[c] || "ンッー".includes(c)) s += c; else s += K[c.charCodeAt(0) % K.length]; }
   return timelineFromKana(s, dur);
 }
-const VIS = { a: { aa: .78, oh: .08 }, i: { ih: .66, ee: .16 }, u: { ou: .6 }, e: { ee: .7, aa: .12 }, o: { oh: .72, ou: .08 }, N: { ou: .1 }, A: { aa: .12 }, I: { ih: .1 }, U: { ou: .1 }, E: { ee: .12 }, O: { oh: .12 } };
+
+// ---------------------------------------------------------------- 話の中身に合う身ぶり（v5）
+// 型（McNeill 1992）：beat＝拍子（強める語に小さく打つ）・deictic＝指し示し・iconic＝形をなぞる・metaphoric＝たとえ（くらべる・差し出す）
+// 推し方は、字幕やかなの中の語を見る簡単な決まり（文から身ぶりを付ける決まりの先例＝Cassell ら 2001 の BEAT）。迷う語は付けない。
+const G_RULES = [
+  // [型, 形, 字幕の語, かなの語]。かなは VOICEVOX の読み（アクセントの印 ' と _ は外して見る）
+  ["deictic", "this", /これ(?!から|まで)|この|ここ(?!ろ)|こちら|こっち/, /コレ(?!カラ|マデ)|コノ|ココ(?!ロ)|コチラ|コッチ/],
+  ["deictic", "that", /あれ|あそこ|あちら|あっち|あの(?![、，…])/, /アレ(?!ル)|アソコ|アチラ|アッチ|アノ(?![、，])/],
+  // かなは句の頭（/ か 、 のあと）だけを見る（「アタタカク」の中のタカク・「ニワニ」の中のワニを拾わない）
+  ["iconic", "small", /小さ|ちいさ|ちっちゃ|細か|こまか|細い|ほそい|微小|短い|みじかい/, /(?:^|[/、])(?:チイサ|チッチャ|コマカ|ホソ[イクナ]|ミジカ)/],
+  ["iconic", "large", /大き|おおき|広い|広く|広が|(?<![ぁ-ん])ひろい|(?<![ぁ-ん])ひろが|巨大/, /(?:^|[/、])(?:オオキ|オッキ|ヒロ[イクガ]|キョダイ)/],
+  ["iconic", "tall", /高い|高く|(?<![ぁ-ん])たか[いく]|そびえ/, /(?:^|[/、])(?:タカ[イク]|ソビエ)/],
+  ["iconic", "long", /長い|長く|(?<![ぁ-ん])なが[いく]/, /(?:^|[/、])ナガ[イク]/],
+  ["iconic", "round", /丸い|丸く|(?<![ぁ-ん])まる[いく]/, /(?:^|[/、])マル[イク]/],
+  ["metaphoric", "contrast", /(?:^|[、。！？\s])(?:でも|けれど|けど|しかし)|一方|ではなく|じゃなく|逆に|違う|違い|ちがう|ちがい|比べ|くらべ|かわりに|よりも/, /(?:^|[、/])(?:デモ|ケレド|シカシ)|イッポ[オウ]|デワナ[クイ]|ジャナク|ギャクニ|チガ[ウイッ]|クラベ|カワリニ|ヨリモ/],
+  ["beat", "", /とても|すごい|すごく|本当|ほんとう|必ず|かならず|一番|いちばん|絶対|ぜったい|大事|だいじ|大切|たいせつ|まさに|全部|ぜんぶ|もっと|[！!]/, /トテモ|スゴ[イク]|ホント[オウ]|カナラズ|イチバン|ゼッタイ|ダイジ|タイセツ|マサニ|ゼンブ|モット/],
+];
+const G_PRI = { deictic: 4, iconic: 3, metaphoric: 2, beat: 1 };
+// 語の位置 → 時刻。かなは口の時刻表と同じ数え方（一拍＝一つ）、字幕は字の重み（漢字は約 1.7 拍・小さい字は 0・句読点は間）
+function _kanaClock(kana, tl, dur) {
+  const raw = (kana || "").replace(/['_]/g, ""), at = []; let n = 0;
+  for (const c of raw) { at.push(n); if (c === "/") continue; if ("、，。".includes(c)) { n++; continue; } if ("ャュョァィゥェォヮ".includes(c)) continue; if (c === "ー" || c === "ッ" || c === "ン" || KV[c]) n++; }
+  const M = tl?.m || [], d = tl?.d || dur;
+  return { s: raw, time: i => { const k = at[Math.min(i, at.length - 1)] ?? 0; if (M.length >= n && M[k]) return M[k][0]; return .05 + (d - .17) * k / Math.max(1, n); } };
+}
+function _textClock(text, tl, dur) {
+  const s = text || "", at = []; let n = 0;
+  for (const c of s) { at.push(n); n += /[、。，．！？!?…]/.test(c) ? 1.8 : /[ゃゅょぁぃぅぇぉゎ]/.test(c) ? 0 : /[一-鿿々]/.test(c) ? 1.7 : /\s/.test(c) ? .2 : /[A-Za-z0-9]/.test(c) ? .6 : 1; }
+  const d = tl?.d || dur; return { s, time: i => .05 + (d - .17) * (at[Math.min(i, at.length - 1)] ?? 0) / Math.max(1, n) };
+}
+// 字幕・かなから身ぶりを推す。返すのは speak の gesture と同じ形（{ t, type, shape, target }）。ref＝「これ・あれ」が指す物（分からなければ null）
+export function inferGestures({ text = "", kana = "", timeline = null, dur = 3, ref = null } = {}) {
+  const useKana = !!(kana && kana.replace(/[^ァ-ヴー]/g, "").length > 2), C = useKana ? _kanaClock(kana, timeline, dur) : _textClock(text, timeline, dur), cand = [];
+  for (const [type, shape, reT, reK] of G_RULES) { const re = new RegExp((useKana ? reK : reT).source, "g"); let m;
+    while ((m = re.exec(C.s))) { const lead = m[0].search(/[^、。！？\s/]/), i = m.index + Math.max(0, lead); cand.push({ t: C.time(i), type, shape, i }); if (m[0].length === 0) re.lastIndex++; } }
+  const out = []; let dei = false, con = false;
+  for (const g of cand.sort((a, b) => G_PRI[b.type] - G_PRI[a.type] || a.t - b.t)) {
+    if (g.shape === "contrast") { if (con) continue; con = true; }   // くらべる身ぶりは一行に一つ
+    if (g.type === "deictic") { if (dei) continue; if (ref) { g.target = ref; } else if (g.shape === "this" && /ここ|ココ|こちら|コチラ/.test(C.s.slice(g.i, g.i + 3))) { g.target = null; } else continue; dei = true; }   // 指す先が分からない「これ・あれ」には付けない
+    if (out.some(o => Math.abs(o.t - g.t) < (g.type === "beat" || o.type === "beat" ? .7 : 1.3))) continue;   // 近すぎる身ぶりは、強いほうだけ
+    if (out.length >= 4) break;
+    const o = { t: +g.t.toFixed(2), type: g.type }; if (g.type === "iconic" || g.type === "metaphoric") o.shape = g.shape; if (g.type === "deictic") o.target = g.target; out.push(o);
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+// アプリが渡した印をそろえる（word → 時刻・型の別名・欠けた形）
+function _normGestures(list, { text, kana, timeline, dur }) {
+  const out = []; let C = null;
+  for (const g0 of list || []) { if (!g0) continue; const g = { ...g0 }; g.type = { point: "deictic", pointing: "deictic", icon: "iconic", metaphor: "metaphoric" }[g.type] || g.type; if (!G_PRI[g.type]) continue;
+    if (g.t == null && g.word) { C ||= kana && /[ァ-ヴ]/.test(kana) && !/[ぁ-ん一-鿿]/.test(g.word) ? _kanaClock(kana, timeline, dur) : _textClock(text, timeline, dur); const i = C.s.indexOf(g.word); if (i < 0) continue; g.t = C.time(i); }
+    if (!(g.t >= 0)) continue; if (g.type === "iconic") g.shape ||= "small-round"; if (g.type === "metaphoric") g.shape ||= "present"; out.push(g); }
+  return out.sort((a, b) => a.t - b.t);
+}
+// v4：口の開きを v3 より小さく（アニメの口を大きく開けると「ゴムの口」に見える）。日本語の「う」は唇を突き出さないので ou は控えめ
+const VIS = { a: { aa: .6, oh: .08 }, i: { ih: .5, ee: .14 }, u: { ou: .42, ih: .06 }, e: { ee: .55, aa: .1 }, o: { oh: .58, ou: .1 }, N: { ou: .08 }, A: { aa: .1 }, I: { ih: .08 }, U: { ou: .08 }, E: { ee: .1 }, O: { oh: .1 } };
 const MOUTH = ["aa", "ih", "ou", "ee", "oh"];
 
 // ---------------------------------------------------------------- 表情（VRoid の顔の形から、アニメの誇張を避けた小さな動きを組む）
 // 目を閉じて笑う「happy」や、口を大きく開ける形は使わない。頬が上がり目尻が締まる（デュシェンヌ）を、下まぶたの小さな上がりで表す
 // v3：lidLow（下まぶただけ上がる）・cheek（頬が上がる）は、読み込んだときに addFaceMorphs() が顔の形から作る
-const CH = { smile: [["Fcl_MTH_Fun", 1]], squint: [["Fcl_EYE_Fun", 1]], lidLow: [["AoiLidLow", 1]], cheek: [["AoiCheek", 1]], browUp: [["Fcl_BRW_Surprised", 1]], browSad: [["Fcl_BRW_Sorrow", 1]], browJoy: [["Fcl_BRW_Fun", 1]], wide: [["Fcl_EYE_Spread", 1]], eyeSad: [["Fcl_EYE_Sorrow", 1]] };
-const CHMAX = { squint: .2, lidLow: .62, cheek: 1 };   // 目を細めるのは 0.2 まで（閉じきるとまばたきに見える）。下まぶただけなら 0.62 まで
+// v4：笑み・眉は左右に分けた形（[形, 重み, 左右＝1 左・-1 右]）。分けた形が無い顔では、もとの形（FB）を使う
+const CH = { smile: [["AoiSmileL", 1, 1], ["AoiSmileR", 1, -1]], squint: [["Fcl_EYE_Fun", 1]], lidLow: [["AoiLidLow", 1]], cheek: [["AoiCheek", 1]], browUp: [["AoiBrowUpL", 1, 1], ["AoiBrowUpR", 1, -1]], browSad: [["Fcl_BRW_Sorrow", 1]], browJoy: [["AoiBrowJoyL", 1, 1], ["AoiBrowJoyR", 1, -1]], wide: [["Fcl_EYE_Spread", 1]], eyeSad: [["Fcl_EYE_Sorrow", 1]] };
+const CH_FB = { smile: [["Fcl_MTH_Fun", 1]], browUp: [["Fcl_BRW_Surprised", 1]], browJoy: [["Fcl_BRW_Fun", 1]] };
+const CHMAX = { squint: .2, lidLow: .62, cheek: 1 };
+// v5：身ぶりの手の形（指の曲がり。0＝伸ばす）。open＝ひらく・flat＝そろえて伸ばす・cup＝丸く包む・point＝人差し指で指す・pinch＝小さなものをつまむ
+const FING = { open: { Index: .1, Middle: .12, Ring: .16, Little: .2 }, flat: { Index: .04, Middle: .04, Ring: .06, Little: .08 }, cup: { Index: .45, Middle: .5, Ring: .55, Little: .6 }, point: { Index: .02, Middle: 1.15, Ring: 1.2, Little: 1.25 }, pinch: { Index: .8, Middle: .95, Ring: 1.05, Little: 1.1 } };   // 目を細めるのは 0.2 まで（閉じきるとまばたきに見える）。下まぶただけなら 0.62 まで
 export const EMOTIONS = {
   calm:     { smile: .14, squint: .02, lidLow: .1, cheek: .12, browJoy: .10 },
   warm:     { smile: .3, squint: .05, lidLow: .3, cheek: .5, browJoy: .2 },
@@ -125,19 +206,71 @@ export function addFaceMorphs(vrm) {
     const a1 = new THREE.Float32BufferAttribute(lid, 3), a2 = new THREE.Float32BufferAttribute(ck, 3); a1.name = "AoiLidLow"; a2.name = "AoiCheek";
     MA.push(a1, a2);
     if (G.morphAttributes.normal) { const N = G.morphAttributes.normal, nf = G.morphAttributes.normal[fi]; const ln = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { const c = P.getX(i) >= 0 ? ctr.L : ctr.R, w = sst(c.y + .12 * eh, c.y - .18 * eh, P.getY(i)); if (w > 0) for (let a = 0; a < 3; a++) ln[i * 3 + a] = nf.getComponent(i, a) * w; } N.push(new THREE.Float32BufferAttribute(ln, 3), new THREE.Float32BufferAttribute(new Float32Array(P.count * 3), 3)); }
+    // v4：笑み（口）・眉を左右に分けた形（AoiSmileL/R・AoiBrowUpL/R・AoiBrowJoyL/R）。人の顔は左右で少し違う（左右対称すぎると不気味に見える）。
+    // 真ん中の 6 mm でなめらかにつなぐ。L＋R＝もとの形（両方 1 なら左右対称のまま）
+    for (const [src, dst] of [["Fcl_MTH_Fun", "AoiSmile"], ["Fcl_BRW_Surprised", "AoiBrowUp"], ["Fcl_BRW_Fun", "AoiBrowJoy"]]) {
+      const si = m.morphTargetDictionary[src]; if (si == null) continue; const S0 = MA[si], SN = G.morphAttributes.normal?.[si];
+      for (const side of [1, -1]) { const pa = new Float32Array(P.count * 3), na = SN ? new Float32Array(P.count * 3) : null;
+        for (let i = 0; i < P.count; i++) { const w = sst(-.003, .003, side * P.getX(i)); if (w <= 0) continue; for (let a = 0; a < 3; a++) { pa[i * 3 + a] = S0.getComponent(i, a) * w; if (na) na[i * 3 + a] = SN.getComponent(i, a) * w; } }
+        const at = new THREE.Float32BufferAttribute(pa, 3); at.name = dst + (side > 0 ? "L" : "R"); MA.push(at); if (G.morphAttributes.normal) G.morphAttributes.normal.push(new THREE.Float32BufferAttribute(na || new Float32Array(P.count * 3), 3)); } }
+    if (skin) G.userData.aoiCheekG = (() => { const g = new Float32Array(P.count); for (let i = 0; i < P.count; i++) g[i] = Math.hypot(ck[i * 3 + 1], ck[i * 3 + 2]) / (.103 * eh); return g; })();   // 頬の色（下の addCheekTint）に使う重み 0..1
     const keep = m.morphTargetInfluences ? [...m.morphTargetInfluences] : []; m.updateMorphTargets(); keep.forEach((v, i) => m.morphTargetInfluences[i] = v);
   }
   return true;
 }
 
+// ---------------------------------------------------------------- 目の光（v4）
+// 人の目の光（角膜に映る光）は、目が動いても黒目ほどは動かない（角膜のふくらみに映るため）。VRoid では光が黒目に貼りついて一緒に動き、
+// 目を動かすたびに光も同じだけ動く＝絵に見える・目が乾いて見える。光の頂点の重みを「目の骨 55%・頭 45%」に分け、黒目の半分ほどしか動かないようにする。
+export function softenEyeHighlight(vrm) {
+  const H = vrm.humanoid, head = H?.getRawBoneNode("head"), eyes = new Set(["leftEye", "rightEye"].map(n => H?.getRawBoneNode(n)).filter(Boolean)); if (!head || !eyes.size) return 0; let n = 0;
+  vrm.scene.traverse(o => { if (!o.isSkinnedMesh || o.userData.aoiHL || ![].concat(o.material).some(m => /highlight/i.test(m.name))) return;
+    const sk = o.skeleton, hi = sk.bones.indexOf(head), ei = new Set(sk.bones.map((b, i) => eyes.has(b) ? i : -1).filter(i => i >= 0)); if (hi < 0 || !ei.size) return;
+    const SI = o.geometry.attributes.skinIndex, SW = o.geometry.attributes.skinWeight;
+    for (let i = 0; i < SI.count; i++) { let e = -1; for (let k = 0; k < 4; k++) if (SW.getComponent(i, k) > .99 && ei.has(SI.getComponent(i, k))) e = SI.getComponent(i, k); if (e < 0) continue;
+      SI.setXYZW(i, e, hi, 0, 0); SW.setXYZW(i, .55, .45, 0, 0); n++; }
+    SI.needsUpdate = SW.needsUpdate = true; o.userData.aoiHL = true; });
+  return n;
+}
+
+// ---------------------------------------------------------------- 頬の色（v4）
+// アニメ調の陰（MToon）では、頬の形を少しふくらませても陰が変わらず、笑みが頬に出ない（第 7 回の指摘）。
+// そこで、頬のところだけ、肌の色にごく薄い暖色を「掛け合わせる」薄い面を重ねる（同じ骨・同じ顔の形で動く。光の強さに左右されない＝夜に光らない）。
+// 頬紅のように描くのではなく、笑ったときに頬の血色が少し上がる程度（最大で肌の明るさが 5% ほど下がり、少し赤みが寄る）。.vrm はさわらない。
+export function addCheekTint(vrm) {
+  let face = null; vrm.scene.traverse(o => { if (!face && o.isSkinnedMesh && o.geometry.userData.aoiCheekG) face = o; });
+  if (!face) return null;
+  const G = face.geometry, g = G.userData.aoiCheekG, idx = G.index, mats = [].concat(face.material);
+  const grp = G.groups.length ? G.groups.filter(gr => !/outline/i.test(mats[gr.materialIndex]?.name || "")) : [{ start: 0, count: idx ? idx.count : G.attributes.position.count }];
+  const tri = []; for (const gr of grp) for (let i = gr.start; i < gr.start + gr.count; i += 3) { const a = idx ? idx.getX(i) : i, b = idx ? idx.getX(i + 1) : i + 1, c = idx ? idx.getX(i + 2) : i + 2; if (g[a] > .03 || g[b] > .03 || g[c] > .03) tri.push(a, b, c); }
+  if (!tri.length) return null;
+  const G2 = new THREE.BufferGeometry(); for (const k of ["position", "normal", "uv", "skinIndex", "skinWeight"]) if (G.attributes[k]) G2.setAttribute(k, G.attributes[k]);
+  G2.setAttribute("aG", new THREE.Float32BufferAttribute(g, 1)); G2.setIndex(tri); G2.morphAttributes = G.morphAttributes; G2.morphTargetsRelative = G.morphTargetsRelative;
+  G2.boundingSphere = G.boundingSphere?.clone() || null;
+  const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, .78, .74), transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.ZeroFactor, blendDst: THREE.SrcColorFactor, fog: false, toneMapped: false });
+  mat.name = "AoiCheekTint"; const uAmt = { value: 0 };   // 濃さは自前の値で持つ（アプリの「現れ方」が材質の opacity を書きかえても影響されない）
+  mat.onBeforeCompile = sh => { sh.uniforms.uAmt = uAmt; sh.vertexShader = "attribute float aG;\nvarying float vG;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n vG = aG;");
+    sh.fragmentShader = "varying float vG;\nuniform float uAmt;\n" + sh.fragmentShader.replace("#include <dithering_fragment>", "#include <dithering_fragment>\n gl_FragColor = vec4(mix(vec3(1.0), diffuse, clamp(vG, 0.0, 1.0) * uAmt), 1.0);"); };
+  const m = new THREE.SkinnedMesh(G2, mat); m.name = "AoiCheekTint"; m.userData.aoiOverlay = true; m.frustumCulled = false; m.renderOrder = (face.renderOrder || 0) + 1; m.castShadow = m.receiveShadow = false;
+  m.morphTargetInfluences = face.morphTargetInfluences; m.morphTargetDictionary = face.morphTargetDictionary;   // 顔と同じ配列（顔が動けば頬の面も動く）
+  face.parent.add(m); m.position.copy(face.position); m.quaternion.copy(face.quaternion); m.scale.copy(face.scale); m.bind(face.skeleton, face.bindMatrix);
+  return { mesh: m, mat, face, set(v) { uAmt.value = clamp(v, 0, 1); mat.opacity = 1; m.visible = v > .004; if (m.material !== mat) m.material = mat; m.morphTargetInfluences = face.morphTargetInfluences; } };   // アプリが材質を差しかえても戻す
+}
+
 // ---------------------------------------------------------------- 本体
 // 記録（モーションキャプチャ）を、どの骨にどれだけ使うか。首と頭は視線が主なので少し、手首は話す身ぶりと合わせて半分ほど
 const MOCAP_W = { hips: .85, spine: .85, chest: .85, upperChest: .85, neck: .22, head: .15, leftShoulder: .7, rightShoulder: .7, leftUpperArm: .9, rightUpperArm: .9, leftLowerArm: .85, rightLowerArm: .85, leftHand: .55, rightHand: .55 };
+// v4：立ち姿の記録ごとの効き（腕・胴）。140 の二本は手を体の前に出しがちなので、腕は休めの形へ半分ほど寄せ、胴の前かがみも少し控える
+const IDLE_K = { "140_06": { arm: .4, torso: .7 }, "140_07": { arm: .45, torso: .75 } };
 const TALK_BONES = ["spine", "chest", "upperChest", "neck", "leftShoulder", "rightShoulder"];
 let _mocapShared = null;   // 同じページで何人分読んでも、記録は一度だけ読む
 export class AoiMotion {
-  constructor(vrm, { root = null, seed = 0, reducedMotion = false, wind = .6, faceViewer = true, startCalm = 2.2, mocap = "auto", robe = true, groundAt = null, posture = "natural" } = {}) {
+  constructor(vrm, { root = null, seed = 0, reducedMotion = false, wind = .6, faceViewer = true, startCalm = 2.2, mocap = "auto", robe = true, groundAt = null, posture = "natural", quality = "auto" } = {}) {
     this.groundAt = groundAt;
+    // 画質の段（v5）。auto＝端末の手がかり（芯の数・メモリ）で始め、こまの速さで上げ下げする
+    { const nav = typeof navigator !== "undefined" ? navigator : {}, weak = (nav.hardwareConcurrency || 8) <= 4 || (nav.deviceMemory || 8) <= 2;
+      this.q = { auto: !["high", "mid", "low"].includes(quality), tier: ["high", "mid", "low"].includes(quality) ? quality : weak ? "mid" : "high", ema: 1 / 60, slow: 0, fast: 0, n: 0, accR: 0, accS: 0 }; }
     // 姿勢の型（v3.1・2026-10-13 本人「HPの碧はまっすぐ立っていてください。姿勢は良くしていながら、自然な仕草にしてください。」「碧左右に揺れすぎです。もう少し揺れを抑えて」）
     //  natural（既定）＝これまでの立ち姿・歩き。ただし左右の揺れ（重心の移し・骨盤の傾き・体の横揺れ・記録の胴の横の傾き・息の肩の傾き）は v3 の半分以下に抑えた。
     //  upright（"formal" も同じ）＝まっすぐ立つ。骨盤は水平・背は立てる・肩は少し引いて水平・手は脇に力を抜いて。重心の移し・揺れ・記録の胴の動きをさらに小さくし、
@@ -145,7 +278,7 @@ export class AoiMotion {
     this.posture = posture === "upright" || posture === "formal" ? "upright" : "natural";
     this.pz = this.posture === "upright"
       ? { ws: .3, sway: .4, lat: .2, mT: .15, mN: .1, mA: .35, mH: .15, tilt: .45, gest: .6, away: .45, chestUp: .02, shBack: .035 }
-      : { ws: 1, sway: 1, lat: .35, mT: 1, mN: 1, mA: 1, mH: 1, tilt: 1, gest: 1, away: 1, chestUp: 0, shBack: 0 };   // (x, z) => 地面の高さ（世界）。坂・段のある場所で、足をその高さに着ける（なければ root の高さ＝平ら）
+      : { ws: 1, sway: 1, lat: .25, mT: 1, mN: 1, mA: 1, mH: 1, tilt: 1, gest: 1, away: 1, chestUp: 0, shBack: 0 };   // (x, z) => 地面の高さ（世界）。坂・段のある場所で、足をその高さに着ける（なければ root の高さ＝平ら）
     this.vrm = vrm; this.root = root || vrm.scene; this.rand = seed ? rng(seed) : Math.random;
     this.live = !reducedMotion; this.wind = wind; this.faceViewer = faceViewer; this.t = 0; this.calm = startCalm;
     const H = vrm.humanoid; this.N = n => H.getNormalizedBoneNode(n);
@@ -159,6 +292,17 @@ export class AoiMotion {
     this.rest.hip0 = B.hips.position.clone();
     this.ankleH = (this.rest.L.foot.y + this.rest.R.foot.y) / 2; this.halfW = Math.abs(this.rest.L.foot.x - this.rest.R.foot.x) / 2;
     this.legLen = this.rest.hips.y - this.ankleH; this.footLen = this.rest.L.toe ? Math.max(.06, this.rest.L.toe.z - this.rest.L.foot.z) : .12;
+    this.toeDy = this.rest.L.toe ? Math.max(0, this.rest.L.foot.y - this.rest.L.toe.y) : .05;
+    // v5：腕の静止の形（身ぶりの IK のため）。肩の位置・手の指の向きと手のひらの向き（碧の入れ物から見た向き）・肘の曲がる向き
+    { const rq = this.root.getWorldQuaternion(new THREE.Quaternion()), rqi = rq.clone().invert(); this.armRest = {};
+      for (const s of ["left", "right"]) { const ua = B[s + "UpperArm"], la = B[s + "LowerArm"], hd = B[s + "Hand"]; if (!ua || !la || !hd) continue;
+        const w = loc(hd), mid = this.N(s + "MiddleProximal"), th = this.N(s + "ThumbProximal") || this.N(s + "ThumbMetacarpal");
+        const f = (mid ? loc(mid).sub(w) : w.clone().sub(loc(la))).normalize();
+        const t = th ? loc(th).sub(w) : new THREE.Vector3(0, 0, 1); t.addScaledVector(f, -t.dot(f)).normalize();
+        const n = new THREE.Vector3().crossVectors(f, t); if (n.y > 0) n.negate();   // T の字では手のひらは下
+        const RL = rqi.clone().multiply(hd.getWorldQuaternion(new THREE.Quaternion()));
+        const fold = new THREE.Vector3(0, 0, 1).applyQuaternion(rq).applyQuaternion(ua.getWorldQuaternion(new THREE.Quaternion()).invert());   // 体の前＝肘を曲げて前腕が向かう向き（上腕の中の向き）
+        this.armRest[s] = { sh: loc(ua), f, n, b: new THREE.Vector3().crossVectors(f, n), RL, fold }; } }   // v4：足首とつま先の付け根の高さの差（かかとを上げるとき、つま先の付け根を軸にするため）
     this.scale = new THREE.Vector3(); this.root.getWorldScale(this.scale); this.sc = this.scale.x || 1; this.vs = vrm.scene.getWorldScale(new THREE.Vector3()).x || 1; this.hk = this.sc / this.vs;
     // 状態
     const r0 = this.root;
@@ -174,6 +318,7 @@ export class AoiMotion {
     // 表情
     this.face = { emo: "calm", emoW: new Spr(1, 3), hold: 0, ch: {}, mouth: Object.fromEntries(MOUTH.map(k => [k, new Spr(0, 26)])), spk: null, flash: 0 };
     try { addFaceMorphs(vrm); } catch (e) { console.warn("addFaceMorphs", e); }
+    try { softenEyeHighlight(vrm); } catch (e) { console.warn("softenEyeHighlight", e); }
     this._initFace();
     // 揺れもの
     this.springs = (vrm.springBoneManager?.joints ? [...vrm.springBoneManager.joints] : []).map(j => ({ j, g: j.settings.gravityDir.clone(), p: j.settings.gravityPower }));
@@ -205,9 +350,13 @@ export class AoiMotion {
     const em = this.vrm.expressionManager; this.morph = []; if (!em) return;
     const meshes = []; this.vrm.scene.traverse(o => { if (o.isMesh && o.morphTargetDictionary && (o.morphTargetDictionary.Fcl_MTH_A != null || o.morphTargetDictionary.Fcl_EYE_Fun != null)) meshes.push(o); });
     for (const [ch, list] of Object.entries(CH)) {
-      const binds = []; for (const [name, w] of list) for (const m of meshes) { const i = m.morphTargetDictionary?.[name]; if (i != null) binds.push([m, i, w]); }
+      const find = l => { const b = []; for (const [name, w, sd] of l) for (const m of meshes) { const i = m.morphTargetDictionary?.[name]; if (i != null) b.push([m, i, w, sd || 0]); } return b; };
+      let binds = find(list); if (!binds.length && CH_FB[ch]) binds = find(CH_FB[ch]);
       this.face.ch[ch] = { v: new Spr(0, 6), binds };
     }
+    // v4：左右の差（笑みは片側が少し強い人が多い。いつもの側＋そのたびの揺らぎ）・頬の色
+    this.face.side = (this.rand() < .5 ? 1 : -1) * (.06 + .06 * this.rand()); this.face.asym = new Spr(this.face.side, 1.5); this.face.asymT = 2 + 4 * this.rand();
+    try { this.tint = addCheekTint(this.vrm); } catch (e) { console.warn("addCheekTint", e); this.tint = null; }
   }
 
   // ---------------------------------------------------------------- 外から呼ぶ
@@ -218,9 +367,12 @@ export class AoiMotion {
   lookAt(t) { this.look.target = t || null; return this; }
   express(name, w = 1, sec = 2.5) { if (!EMOTIONS[name]) return this; this.face.emo = name; this.face.emoW.t = clamp(w, 0, 1.2); this.face.hold = sec; return this; }
   listen(on = true) { this.listening = !!on; if (on) this.express("warm", .8, 1e9); else this.express("calm", 1, 0); return this; }
-  speak({ timeline = null, kana = "", text = "", dur = 3, clock = null, level = null } = {}) {
+  speak({ timeline = null, kana = "", text = "", dur = 3, clock = null, level = null, gesture = null, ref = null, autoGesture = true } = {}) {
     const tl = timeline || (kana ? timelineFromKana(kana, dur) : timelineFromText(text, dur)); const t0 = this.t;
-    this.speaking = { tl, clock: clock || (() => this.t - t0), level, i: 0, bi: 0, nb: 0, pi: 0, dur: tl.d || dur, startAway: this.rand() < .55 };
+    // v5：身ぶりの印（無ければ字幕・かなから推す）
+    let gq = []; try { gq = gesture ? _normGestures(gesture, { text, kana, timeline: tl, dur }) : autoGesture ? inferGestures({ text, kana, timeline: tl, dur, ref: ref || this.look.target }) : []; } catch (e) { console.warn("gesture", e); }
+    this.speaking = { tl, clock: clock || (() => this.t - t0), level, i: 0, bi: 0, nb: 0, pi: 0, dur: tl.d || dur, startAway: this.rand() < .55, gq, xb: gq.filter(g => g.type === "beat").map(g => g.t + .05) };
+    this.lastGestures = gq;
     this.listening = false; this.blink.next = Math.min(this.blink.next, .25 + this.rand() * .4);
     if (this.rand() < .6) this.face.flash = .45;   // 話しはじめに眉が小さく上がる
     if (this.face.emo === "calm" || this.face.hold <= 0) this.express("warm", .9, (tl.d || dur) + 1);
@@ -233,8 +385,17 @@ export class AoiMotion {
   debug() { const f = this.feet; return `速さ ${this.speed.toFixed(2)}  足 L${f.L.swing ? "↑" : "_"} R${f.R.swing ? "↑" : "_"}  重心 ${this.s.ws.v.toFixed(2)}  ${this.speaking ? "話す" : this.listening ? "聞く" : ""}${this.bowing ? " 礼" : ""}${this.pointing ? " 指す" : ""}`; }
 
   // ---------------------------------------------------------------- 毎こま
+  get quality() { return this.q.tier; }
+  set quality(v) { if (["high", "mid", "low"].includes(v)) { this.q.tier = v; this.q.auto = false; } else if (v === "auto") this.q.auto = true; }
+  // v5：こまの速さを見て、段を上げ下げする（下げるのは 36 こま/秒を 4 秒割ったら・上げるのは 56 こま/秒を 20 秒越えたら）
+  _qTick(raw) {
+    const q = this.q; q.n++; if (!q.auto || !(raw > 0) || raw > .25) return;
+    q.ema += (raw - q.ema) * .05; const order = ["high", "mid", "low"], i = order.indexOf(q.tier);
+    if (q.ema > 1 / 36) { q.slow += raw; q.fast = 0; if (q.slow > 4 && i < 2) { q.tier = order[i + 1]; q.slow = 0; } }
+    else { q.slow = Math.max(0, q.slow - raw); if (q.ema < 1 / 56) { q.fast += raw; if (q.fast > 20 && i > 0) { q.tier = order[i - 1]; q.fast = 0; } } else q.fast = 0; }
+  }
   update(dt, camera, { vrmUpdate = true } = {}) {
-    dt = Math.min(dt, .05); if (dt <= 0) return; this.t += dt; const S = this.s;
+    this._qTick(dt); dt = Math.min(dt, .05); if (dt <= 0) return; this.t += dt; const S = this.s;
     this._locomotion(dt, camera);
     this._apply();
     const cam = camera ? camera.getWorldPosition(this._cam || (this._cam = new THREE.Vector3())) : null;
@@ -245,13 +406,20 @@ export class AoiMotion {
     this._headEyes(dt, cam);
     this._faceTick(dt);
     if (this.springs.length && this.live && this.calm <= 0 && this.wind) { const t = this.t, a = this.wind; for (const s of this.springs) { s.j.settings.gravityDir.set(s.g.x + .18 * a * Math.sin(t * .63 + s.g.y), s.g.y, s.g.z + .1 * a * Math.sin(t * .41)).normalize(); s.j.settings.gravityPower = Math.max(s.p, .05); } }
-    if (vrmUpdate) { this.vrm.update(dt); this.afterVrmUpdate(dt); }
+    if (vrmUpdate) {
+      if (this.q.tier === "low" && this.vrm.springBoneManager) {   // low：髪・揺れものは一こまおき（たまった時間で進める）
+        const v = this.vrm; this.q.accS += dt; v.humanoid.update(); v.lookAt?.update(dt); v.expressionManager?.update(); v.nodeConstraintManager?.update();
+        if (!(this.q.n & 1) || this.calm > 0) { v.springBoneManager.update(Math.min(this.q.accS, .05)); this.q.accS = 0; }
+        v.materials?.forEach(m => m.update?.(dt));
+      } else this.vrm.update(dt);
+      this.afterVrmUpdate(dt); }
     if (this.calm > 0) { this.calm -= dt; this.vrm.springBoneManager?.setInitState?.(); this.vrm.springBoneManager?.reset?.(); this._robeReset = true; }
   }
   // { vrmUpdate:false } で vrm.update をアプリが呼ぶときは、そのあとでこれを呼ぶ（裾の布）
   afterVrmUpdate(dt) {
     if (!this.robe) return;
     if (this._robeReset) { this.robe.reset(); this._robeReset = false; }   // 揺れを止めて静止の形へ（そのあと脚との当たりだけは直す）
+    if (this.q.tier !== "high") { this.q.accR += dt; if (this.q.n & 1) return; dt = Math.min(this.q.accR, .05); this.q.accR = 0; }   // v5：mid・low では裾の布を一こまおき（たまった時間で進める）
     this.robe.update(dt, { groundY: this.groundAt ? this.groundAt(this.pos.x, this.pos.z) : this.root.getWorldPosition(_v[9]).y, live: this.live });
   }
   _apply() { if (this.groundAt) { const F = this.feet, g = this.groundAt(this.pos.x, this.pos.z), gl = F ? Math.min(F.L.p.y, F.R.p.y) - this.ankleH * this.sc : g; this.pos.y = Math.min(g, gl + .02 * this.sc); }   // 坂では低いほうの足に合わせて腰を下げる（脚が伸びきらない）
@@ -278,8 +446,31 @@ export class AoiMotion {
     else if (this.pointing) want = Math.atan2(this.pointing.p.x - P.x, this.pointing.p.z - P.z) * .5 + this._toCam(camera) * .5;
     else if (this.faceViewer && camera) { const tc = this._toCam(camera); if (Math.abs(wrapA(tc - this.yaw)) > .5 || this.speaking || this.listening) want = tc; }
     const d = wrapA(want - this.yaw), rate = this.speed > .25 ? 2.6 : 1.5;
-    this.yaw += clamp(d * (1 - Math.exp(-3.2 * dt)), -rate * dt, rate * dt);
-    this.s.turnLead.t = clamp(d, -.9, .9); this.s.turnLead.step(dt);
+    // v5：止まっているときの向きかえは、目と頭→胴→足の順（Anastasopoulos ら 2009・Khobkhun ら 2022）。角度が大きいほど歩数と歩幅が増える
+    const standing = this.speed < .2 && !this.goal && !this.driven && this.k < .35;
+    let tr = this._turn;
+    if (tr && (!standing || !this.live)) tr = this._turn = null;
+    if (standing && this.live) {
+      if (tr && Math.abs(wrapA(want - tr.y1)) > .3) tr = this._turn = null;   // 向く先が大きく変わったら、いまの向きから組み直す
+      if (!tr && Math.abs(d) > .09) {
+        const A = Math.abs(d), n = A < .4 ? 0 : A < 1.4 ? 2 : 4, lead = .14 + .1 * Math.min(1, A), stepT = .42;
+        tr = this._turn = { y0: this.yaw, y1: want, t: 0, lead, T: n ? n * stepT * .92 : .35 + .55 * A, n, i: 0, dir: Math.sign(d), stepT };
+      }
+      if (tr) { tr.y1 = want; tr.t += dt; const u = sstep((tr.t - tr.lead) / tr.T); this.yaw = tr.y0 + wrapA(tr.y1 - tr.y0) * u;
+        if (tr.t > tr.lead + tr.T + .05 && !this.feet.L.swing && !this.feet.R.swing) { this.yaw = tr.y1; this._turn = null; } }
+      else this.yaw += d * (1 - Math.exp(-2 * dt));   // ごく小さな差は、そのまま寄せる
+    } else this.yaw += clamp(d * (1 - Math.exp(-3.2 * dt)), -rate * dt, rate * dt);
+    const rem = tr ? wrapA(tr.y1 - this.yaw) : d;
+    this.s.turnLead.t = clamp(rem, -.9, .9); this.s.turnLead.step(dt, tr ? 7 : 5);   // 胴は足より先に回る
+  }
+  // v5：向きかえの一歩（i 番め）。内側の足から、交互に。着く場所と向きは、その一歩が終わるころの体の向きで決める
+  _turnStep(tr) {
+    const side = (tr.i % 2 === 0 ? 1 : -1) * tr.dir, key = side > 0 ? "L" : "R", f = this.feet[key];
+    const uEnd = sstep((tr.lead + (tr.i + 1) * tr.T / tr.n - tr.lead) / tr.T), yE = tr.y0 + wrapA(tr.y1 - tr.y0) * uEnd, last = tr.i >= tr.n - 1;
+    const sx = f.side * this.halfW * this.sc * 1.05, c = Math.cos(yE), s = Math.sin(yE), x = this.pos.x + sx * c, z = this.pos.z - sx * s;
+    const to = new THREE.Vector3(x, (this.groundAt ? this.groundAt(x, z) : this.pos.y) + this.ankleH * this.sc, z);
+    f.swing = { from: f.p.clone(), fy: f.yaw, u: 0, T: tr.stepT * .74, to, fix: true, ty: yE + f.side * .1 + (side === tr.dir && !last ? tr.dir * .12 : 0) };   // 内側の足は、つま先を少し開いて踏み出す
+    this.lastStep = key; tr.i++; tr.side = f.side;
   }
   _toCam(camera) { const c = camera.getWorldPosition(_v[8]); return Math.atan2(c.x - this.pos.x, c.z - this.pos.z); }
 
@@ -292,7 +483,9 @@ export class AoiMotion {
     // 重心：数秒〜十数秒ごとに、片足へ（体重の移し）。歩くときと、指す・礼のときは真ん中へ
     // v3.1：重心を移す量は v3 の 45%（左右の揺れを抑える）。upright ではさらに 3 割
     if (L) { S.wsHold -= dt; if (S.wsHold <= 0) { const r = this.rand(); S.wsLvl = r < .15 ? 0 : (S.wsLvl > 0 ? -1 : 1) * (.55 + .45 * this.rand()) * .45; S.wsHold = 5 + 9 * this.rand(); } }
-    S.ws.t = (this.bowing || this.pointing) ? 0 : S.wsLvl * (1 - k) * this.pz.ws; S.ws.step(dt); const ws = S.ws.v;
+    S.ws.t = (this.bowing || this.pointing) ? 0 : S.wsLvl * (1 - k) * this.pz.ws;
+    { const tr = this._turn; if (tr && tr.n && tr.i < tr.n + 1) { const sw = this.feet.L.swing ? 1 : this.feet.R.swing ? -1 : tr.i < tr.n ? (tr.i % 2 === 0 ? 1 : -1) * tr.dir : 0; S.ws.t = -sw * .4; } }   // v5：向きかえで踏み出す前に、反対の足へ体重を移す
+    S.ws.step(dt, this._turn ? 4 : undefined); const ws = S.ws.v;
     const swX = L ? .45 * this.pz.sway * wob(t * .9, sp) : 0, swZ = L ? this.pz.sway * wob(t * .7, sp + 5) : 0;   // 静かに立つときの小さな揺れ（前後に数 mm・左右はその半分以下）
     // お辞儀
     let bw = 0; const bo = this.bowing; if (bo) { bo.t += dt; const a = bo.t, d1 = bo.down, d2 = d1 + bo.hold, d3 = d2 + bo.up; bw = a < d1 ? sstep(a / d1) : a < d2 ? 1 : a < d3 ? 1 - sstep((a - d2) / bo.up) : 0; if (a >= d3) this.bowing = null; }
@@ -321,13 +514,13 @@ export class AoiMotion {
     S.hipY.t = -.024 * k + .02 * k * Math.sin(Math.PI * g.u) * (1 - mw) - .006 * Math.abs(ws) * (1 - mw) - .004 * br * (1 - k) - .06 * Math.sin(bA);   /* 礼では膝を少しゆるめる */ S.hipY.step(dt);
     const L0 = this.legLen / this.sc, mp = this._mp;   // 記録の腰の揺れ（脚の長さに対する比）→ 碧の長さへ。腰が左右に寄りすぎないよう少し控える
     const mh = this.pz.mH;   // 記録の腰の横の揺れは v3 の 4 割（左右の揺れを抑える）。upright ではさらに小さく
-    this._hipOff = [(.03 * ws + .004 * swX - .02 * gs) * (1 - mw) + mp.x * L0 * .14 * mh * mw, S.hipY.v + mp.y * L0 * .6 * mw, (.005 * swZ) * (1 - mw) + mp.z * L0 * .3 * mh * mw - .07 * Math.sin(bA)];
+    this._hipOff = [(.03 * ws + .004 * swX - .02 * gs) * (1 - mw) + mp.x * L0 * .11 * mh * mw, S.hipY.v + mp.y * L0 * .6 * mw, (.005 * swZ) * (1 - mw) + mp.z * L0 * .3 * mh * mw - .07 * Math.sin(bA)];
     this._ws = ws; this._br = br; this._tk = tk; this._ls = ls; this._bw = bw;
     // 骨へ：土台（手続きの形と記録を、記録の効きで混ぜる）× 重ねる動き
     const hips = B.hips; if (hips) { const h0 = this.rest.hip0; hips.position.set(h0.x + this._hipOff[0] * this.hk, h0.y + this._hipOff[1] * this.hk, h0.z + this._hipOff[2] * this.hk); }
     for (const [n, a] of Object.entries(this._pose)) { const b = B[n]; if (!b) continue; const base = this._poseB[n];
       b.quaternion.setFromEuler(_e.set(base[0], base[1], base[2]));
-      const w = mw * (MOCAP_W[n] || 0) * this._ms(n) * (1 - .6 * bw); if (w > 1e-3 && this._mq[n]) b.quaternion.slerp(this._latQ(n, this._mq[n]), w);
+      const it = (n === "hips" || n === "spine" || n === "chest" || n === "upperChest") ? 1 + ((this._idleTorso ?? 1) - 1) * (1 - this.k) : 1, w = mw * (MOCAP_W[n] || 0) * this._ms(n) * (1 - .6 * bw) * it; if (w > 1e-3 && this._mq[n]) b.quaternion.slerp(this._latQ(n, this._mq[n]), w);
       b.quaternion.multiply(_q[5].setFromEuler(_e.set(a[0], a[1], a[2]))); }
   }
   // 記録をどれだけ効かせるか（姿勢の型ごと）：胴＝mT・首と頭＝mN・肩と腕＝mA
@@ -341,9 +534,14 @@ export class AoiMotion {
     const C = lib.clips, mi = this.mi, Q = this._mq, T = this._mt;
     // 立つ
     const durOf = id => C[id]?.sec || 1;
-    mi.t += dt * (mi.rate || 1); if (mi.prev) { mi.pt += dt * (mi.prate || 1); mi.x = Math.min(1, mi.x + dt / 1.2); if (mi.x >= 1) mi.prev = null; }
-    if (!mi.prev && mi.t > durOf(mi.cur) - 1.3) { const ids = Object.keys(C).filter(k2 => C[k2].type === "idle"); const nx = ids.length > 1 && this.rand() < .7 ? ids[(ids.indexOf(mi.cur) + 1) % ids.length] : mi.cur; mi.prev = mi.cur; mi.pt = mi.t; mi.prate = mi.rate || 1; mi.cur = nx; mi.t = this.rand() * 2; mi.x = 0; mi.rate = .82 + .3 * this.rand(); }   /* 速さと始まりを毎回すこし変える（同じ記録のくり返しに見せない） */
+    // v4：立ち姿の記録は 4 本×左右＝8 通り。次の記録は、いまと直前を除いてくじで選び、2.4 秒かけて入れかえる（入れかえの最中に、もとの記録は終わらせない）
+    const XF = 2.4;
+    mi.t += dt * (mi.rate || 1); if (mi.prev) { mi.pt += dt * (mi.prate || 1); mi.x = Math.min(1, mi.x + dt / XF); if (mi.x >= 1) mi.prev = null; }
+    if (!mi.prev && mi.t > durOf(mi.cur) - XF - .1) { const ids = Object.keys(C).filter(k2 => C[k2].type === "idle"); let pool = ids.filter(k2 => k2 !== mi.cur && k2 !== mi.last && k2.replace(/_m$/, "") !== mi.cur.replace(/_m$/, "")); if (!pool.length) pool = ids.filter(k2 => k2 !== mi.cur); if (!pool.length) pool = ids;
+      const nx = pool[Math.floor(this.rand() * pool.length)]; mi.last = mi.cur; mi.prev = mi.cur; mi.pt = mi.t; mi.prate = mi.rate || 1; mi.cur = nx; mi.t = this.rand() * Math.max(.1, durOf(nx) - XF - 3); mi.x = 0; mi.rate = .85 + .25 * this.rand(); }   /* 速さと始まりも毎回すこし変える（同じ記録のくり返しに見せない） */
     sampleClip(lib, C[mi.cur], mi.t / durOf(mi.cur), Q, this._mp);
+    { const kc = IDLE_K[C[mi.cur]?.src] || {}, kp = mi.prev ? IDLE_K[C[mi.prev]?.src] || {} : kc, x = mi.prev ? sstep(mi.x) : 1;
+      this._idleArm = (kc.arm ?? 1) * x + (kp.arm ?? 1) * (1 - x); this._idleTorso = (kc.torso ?? 1) * x + (kp.torso ?? 1) * (1 - x); }
     if (mi.prev) { const x = sstep(mi.x); sampleClip(lib, C[mi.prev], mi.pt / durOf(mi.prev), T, _v[8]); for (const n in Q) Q[n].slerp(T[n], 1 - x); this._mp.lerp(_v[8], 1 - x); }   // 前の記録→いまの記録
     // 話す：胴と首だけ（手は、この部品の話す身ぶり）
     if (tk > .01 && C.talk_a) { mi.tt = (mi.tt ?? this.rand() * 5) + dt; sampleClip(lib, C.talk_a, mi.tt / C.talk_a.sec, T); for (const n of TALK_BONES) if (T[n]) Q[n].slerp(T[n], .6 * tk); }
@@ -367,9 +565,14 @@ export class AoiMotion {
     // 踏みかえの判断
     const home = _v[0];
     // 歩く：片足を振る 0.38〜0.44 秒＋両足が着いている 0.1 秒（1 秒に 2 歩ほど・歩幅は身長の 4 割ほど）。着く足は、体より半歩先へ
-    const swingT = moving ? clamp(.38 - .05 * this.speed, .32, .36) : .5, ds = .07, landLead = moving ? .5 * (swingT + ds) : 0;
+    // v4：歩く調子（1 秒の歩数）を速さに合わせる（人は速いほど歩数も歩幅も増える。秒速 0.85 m で約 1.75 歩・歩幅 0.49 m、1.3 m で約 1.9 歩）。
+    // 一歩＝振る 8 割＋両足が着いている 2 割（歩きの一周期の 4 割が振り・1 割ずつ両足）。小さな碧に合わせ、身長の比で少し縮める
+    const cad = clamp(1.42 + .38 * this.speed / Math.max(.5, this.sc), 1.5, 2.1), Tst = 1 / cad;
+    const swingT = moving ? .78 * Tst : .5, ds = moving ? .22 * Tst : .07, landLead = moving ? .5 * Tst : 0;
     const swinging = F.L.swing || F.R.swing; this._ds = (this._ds || 0) - dt;
-    if (!swinging && this._ds <= 0) {
+    const tr = this._turn;
+    if (tr) { if (!swinging && tr.i < tr.n && tr.t >= tr.lead * .7 + tr.i * tr.T / tr.n) this._turnStep(tr); }   // v5：向きかえの最中は、決めた順に踏む（ほかの踏みかえはしない）
+    else if (!swinging && this._ds <= 0) {
       let best = null, bestE = 0;
       for (const key of ["L", "R"]) { const f = F[key]; this._home(f, home, moving ? swingT + landLead : 0); const e = Math.hypot(home.x - f.p.x, home.z - f.p.z), ye = Math.abs(wrapA(this.yaw + f.side * .1 - f.yaw)); const sc = e + ye * .25 + (key === this.lastStep ? -.04 : 0); if (sc > bestE) { bestE = sc; best = key; } }
       const th = moving ? .1 : .16;
@@ -381,13 +584,14 @@ export class AoiMotion {
       sw.u += dt / sw.T; const u = clamp(sw.u, 0, 1);
       this._home(f, home, moving ? (1 - u) * sw.T + landLead : 0);
       // 着く場所は振り出しの 7 割までに決め、横の動きは 85% で終える（下ろすあいだは横に動かさない＝着いてからすべらない）
-      if (u < .7 || !sw.to) sw.to = (sw.to || new THREE.Vector3()).copy(home);
+      if (!sw.fix && (u < .7 || !sw.to)) sw.to = (sw.to || new THREE.Vector3()).copy(home);
       const e = sstep(u / .85), to = sw.to; f.p.x = sw.from.x + (to.x - sw.from.x) * e; f.p.z = sw.from.z + (to.z - sw.from.z) * e;
-      const lift = (moving ? .05 : .03) * this.sc * Math.pow(Math.sin(Math.PI * u), .7);   // すぐ地面から離れ、着く直前に下りる
-      f.p.y = home.y + lift; f.yaw = sw.fy + wrapA(this.yaw + f.side * .1 - sw.fy) * e;
-      f.pitch = moving ? (.22 * Math.sin(Math.PI * clamp(u / .45, 0, 1)) * (1 - u) - .14 * sstep((u - .7) / .3) * (1 - sstep((u - .95) / .05))) : .12 * Math.sin(Math.PI * u);
+      const lift = (moving ? .05 : sw.fix ? .022 : .03) * this.sc * Math.pow(Math.sin(Math.PI * u), .7);   // すぐ地面から離れ、着く直前に下りる（向きかえの一歩は低く）
+      f.p.y = home.y + lift; f.yaw = sw.fy + wrapA((sw.fix ? sw.ty : this.yaw + f.side * .1) - sw.fy) * e;
+      // v4：かかとから着く。振り出しはつま先が下（けり出しの続き）→ 半ばで水平 → 着く前につま先を 10° ほど上げる。着いたあとは、かかとを軸につま先を下ろす（下の roll）
+      f.pitch = moving ? (.22 * Math.sin(Math.PI * clamp(u / .45, 0, 1)) * (1 - u) - .17 * sstep((u - .55) / .4)) : .12 * Math.sin(Math.PI * u);
       gait = { u, side: f.side, ph: f.side * (2 * u - 1) };
-      if (sw.u >= 1) { f.swing = null; f.p.x = sw.to.x; f.p.z = sw.to.z; f.p.y = home.y; f.pitch = 0; this._ds = moving ? ds : .15; }
+      if (sw.u >= 1) { f.swing = null; f.p.x = sw.to.x; f.p.z = sw.to.z; f.p.y = home.y; f.roll = moving ? f.pitch : 0; f.rollT = 0; f.pitch = 0; this._ds = moving ? ds : .15; }
     }
     this._gait = gait;
     // 歩きの位相（記録の歩きと合わせる）：0＝左が着く・0.5＝右が着く。両足が着いているあいだは、次の振り出しへ向けてゆっくり進める
@@ -395,15 +599,29 @@ export class AoiMotion {
       if (gait.side > 0) want = .5 + dS + (.5 - dS) * gait.u; else if (gait.side < 0) want = dS + (.5 - dS) * gait.u; else want = this._phi + dt * .35;
       const d = ((want - this._phi + 1.5) % 1) - .5; this._phi = (this._phi + d * (1 - Math.exp(-25 * dt)) + 1) % 1; }
     // 二関節の IK
+    const tg = this._tg ||= { L: new THREE.Vector3(), R: new THREE.Vector3() }, pit = this._pit ||= {};
     for (const key of ["L", "R"]) {
-      const f = F[key], s = key === "L" ? "left" : "right";
+      const f = F[key];
       // 後ろに残った足は、かかとから上がる（つま先を軸に）
       let heel = 0; if (!f.swing && moving) { const fw = _v[1].set(Math.sin(this.yaw), 0, Math.cos(this.yaw)); const behind = -((f.p.x - this.pos.x) * fw.x + (f.p.z - this.pos.z) * fw.z); heel = clamp((behind - .12 * this.sc) * 1.6 / this.sc, 0, .25) * k; /* 長い裾をけり上げないよう、かかとの上がりは小さめ */ }
       f.heel += (heel - f.heel) * (1 - Math.exp(-14 * dt));
-      const tgt = _v[2].copy(f.p), pitch = (f.swing ? f.pitch : 0) + f.heel;
-      if (f.heel > 1e-3) { const fl = this.footLen * this.sc, cy = Math.cos(f.yaw), sy = Math.sin(f.yaw); tgt.x += sy * fl * (1 - Math.cos(f.heel)); tgt.z += cy * fl * (1 - Math.cos(f.heel)); tgt.y += fl * Math.sin(f.heel); }
-      this._ik(s, tgt, f.yaw, pitch);
+      // v4：着いたあとの「かかとを軸につま先を下ろす」（0.12 秒）
+      if (!f.swing && f.roll) { f.rollT += dt; f.rollV = f.roll * (1 - sstep(f.rollT / .12)); if (f.rollT >= .12) { f.roll = 0; f.rollV = 0; } } else if (!f.swing) f.rollV = 0;
+      const tgt = tg[key].copy(f.p), toeUp = f.swing ? Math.min(0, f.pitch) : (f.rollV || 0), pitch = (f.swing ? f.pitch : toeUp) + f.heel;
+      const fl = this.footLen * this.sc, cy = Math.cos(f.yaw), sy = Math.sin(f.yaw);
+      if (f.heel > 1e-3) { const h = f.heel, dy = this.toeDy * this.sc, fz = fl * (1 - Math.cos(h)) + dy * Math.sin(h); tgt.x += sy * fz; tgt.z += cy * fz; tgt.y += fl * Math.sin(h) + dy * (Math.cos(h) - 1); }   // つま先の付け根を軸に回す（v4：高さの差も入れた＝つま先が後ろへずれない）
+      if (toeUp < -1e-3) { const a = -toeUp, hd = .22 * fl, ah = this.ankleH * this.sc;   // つま先を上げるときは、かかとを軸に（足首は少し上がり、少し後ろへ）
+        tgt.y += ah * (Math.cos(a) - 1) + hd * Math.sin(a); const dz = hd * (Math.cos(a) - 1) - ah * Math.sin(a); tgt.x += sy * dz; tgt.z += cy * dz; }
+      pit[key] = pitch;
     }
+    // v4：足が届かないときは腰を下げる（脚が伸びきって、着いた足が引きずられる＝すべるのを防ぐ）。両足とも届く高さまで、その場で
+    { const B = this.bones, hips = B.hips; let drop = 0;
+      for (const key of ["L", "R"]) { const s = key === "L" ? "left" : "right", up = B[s + "UpperLeg"], lo = B[s + "LowerLeg"], ft = B[s + "Foot"]; if (!up || !lo || !ft) continue;
+        const A = up.getWorldPosition(_v[3]), T = tg[key], Lm = (lo.position.length() + ft.position.length()) * this.vs * .985, h2 = (A.x - T.x) ** 2 + (A.z - T.z) ** 2;
+        const vy = A.y - T.y, need = h2 < Lm * Lm ? Math.sqrt(Lm * Lm - h2) : 0; if (vy > need) drop = Math.max(drop, vy - need); }
+      this._drop = Math.max(drop, (this._drop || 0) * Math.exp(-10 * dt));   // 下げるのはすぐ・戻すのはなめらかに（腰が跳ねない）
+      if (hips && this._drop > 1e-5) hips.position.y -= this._drop / this.vs; }   // 世界の行列は、下の IK が太ももの親（腰）から順に取り直す（全身の更新はしない＝軽い）
+    for (const key of ["L", "R"]) this._ik(key === "L" ? "left" : "right", tg[key], F[key].yaw, pit[key]);
   }
   _ik(s, T, footYaw, footPitch) {
     const up = this.bones[s + "UpperLeg"], lo = this.bones[s + "LowerLeg"], ft = this.bones[s + "Foot"]; if (!up || !lo || !ft) return;
@@ -443,7 +661,9 @@ export class AoiMotion {
     // 歩くときの腕の振り：反対の足の前後の位置から（右腕は左足と一緒に前へ）
     const fw = _v[0].set(Math.sin(this.yaw), 0, Math.cos(this.yaw)), F = this.feet;
     const fl = ((F.L.p.x - this.pos.x) * fw.x + (F.L.p.z - this.pos.z) * fw.z) / (.17 * this.sc), fr = ((F.R.p.x - this.pos.x) * fw.x + (F.R.p.z - this.pos.z) * fw.z) / (.17 * this.sc);
-    S.armL.t = -clamp(fr, -1, 1) * .45 * k; S.armR.t = -clamp(fl, -1, 1) * .45 * k;
+    // v4：振りの大きさは速さに合わせる（ゆっくりは小さく。秒速 0.85 m で前後に約 ±17°）。足の位置から決めるので、脚と必ず逆に振れる
+    const sa = (.26 + .2 * clamp((this.speed / Math.max(.5, this.sc) - .5) / .8, 0, 1)) * k;
+    S.armL.t = -clamp(fr / 1.4, -1, 1) * sa; S.armR.t = -clamp(fl / 1.4, -1, 1) * sa;   // 歩幅が v3 の 1.4 倍になったので、足の前後の位置を 1.4 で割る
     // 体の揺れ・向きの変化で、腕が少し遅れる（振り子）
     S.armLz.t = -.6 * S.turnLead.v * (1 - k) * .1 + .04 * ws; S.armRz.t = -.6 * S.turnLead.v * (1 - k) * .1 + .04 * ws;
     for (const n of ["armL", "armR"]) S[n].step(dt, 7);   // 腕は少し遅れてついてくる（振り子）
@@ -459,8 +679,11 @@ export class AoiMotion {
       while (sp.bi < b.length && b[sp.bi] < c - .35) sp.bi++;
       for (let i = Math.max(0, sp.bi - 1); i < Math.min(b.length, sp.bi + 2); i++) { const x = c - (b[i] - .06); if (x > -.18 && x < .45) beat = Math.max(beat, sp.amp[i] * (x < 0 ? sstep(1 + x / .18) : 1 - sstep(x / .45))); }
       while (sp.nb < b.length && b[sp.nb] - .06 <= c) { const a = sp.amp[sp.nb]; if (L && a > 0 && this.rand() < .4) S.nod.d += .6 + 1.1 * a * this.rand(); if (L && a > .8 && this.rand() < .3) this.face.flash = .32; sp.nb++; }
+      // v5：強める語の拍子（印・推し）は、きちんと打つ（頂点＝その語の頭。Leonard & Cummins 2011）。その前後は手を上げておく
+      let xbNear = false; for (const x0 of sp.xb || []) { const x = c - x0; if (x > -.18 && x < .45) beat = Math.max(beat, x < 0 ? sstep(1 + x / .18) : 1 - sstep(x / .45)); if (x > -.6 && x < .7) xbNear = true; }
+      sp.xbNear = xbNear;
       if (c > (sp.dur || 0) + .35) this.speaking = null; }
-    const pl = sp && L ? (sp.plan ?? 1) : 0, gon = (1 - k * .7) * (1 - this._bw) * this.pz.gest;
+    const pl = sp && L ? (sp.xbNear && !(sp.plan >= 1) ? 1 : sp.plan ?? 1) : 0, gon = (1 - k * .7) * (1 - this._bw) * this.pz.gest;
     S.gest.t = (pl === 1 || pl === 2 ? 1 : pl === 3 ? .3 : 0) * gon; S.gest.step(dt, 4.2);
     S.gestL = S.gestL || new Spr(0, 4.2); S.gestL.t = (pl === 2 || pl === 3 ? 1 : pl === 1 ? .3 : 0) * gon; S.gestL.step(dt);
     S.gVar = (S.gVar ?? .5) + ((sp?.var ?? .5) - (S.gVar ?? .5)) * (1 - Math.exp(-3 * dt)); S.gVar2 = (S.gVar2 ?? .5) + ((sp?.var2 ?? .5) - (S.gVar2 ?? .5)) * (1 - Math.exp(-3 * dt));
@@ -496,18 +719,120 @@ export class AoiMotion {
     const mw = this.mcW.v * (this.mc ? 1 : 0) * (1 - bw), qr = _q[3], qf = _q[4];
     for (const sd of ["left", "right"]) { const o = sides[sd], r0 = rests[sd], pw2 = this._pointSide === sd ? this._pointW : 0;
       for (const [bn, key] of [["UpperArm", "ua"], ["LowerArm", "la"], ["Hand", "h"]]) { const b = B[sd + bn]; if (!b) continue;
-        qf.setFromEuler(_e.set(...o[key])); const w = mw * (MOCAP_W[sd + bn] || 0) * this.pz.mA, mq = this._mq[sd + bn];
+        qf.setFromEuler(_e.set(...o[key])); const w = mw * (MOCAP_W[sd + bn] || 0) * this.pz.mA * (1 + ((this._idleArm ?? 1) - 1) * (1 - this.k) * (1 - this._tk)), mq = this._mq[sd + bn];
         if (w < 1e-3 || !mq) { b.quaternion.copy(qf); continue; }
         qr.setFromEuler(_e.set(...r0[key])); const dq = _q[0].copy(qr).invert().multiply(qf);   // 身ぶりの差（休めの形から）
-        b.quaternion.copy(qr).slerp(mq, w).multiply(dq); if (pw2 > 1e-3) b.quaternion.slerp(qf, pw2); } }
+        b.quaternion.copy(qr).slerp(mq, w).multiply(dq); if (pw2 > 1e-3) b.quaternion.slerp(qf, pw2); }
+      // v4：力を抜いた手が体から離れすぎない（記録によっては肘が横へ張り、手が腰から 20 cm 以上も離れる＝人形・構えに見える）。
+      // 手の位置（碧の向きで見た横・前）が、横 15 cm・前 12 cm を越えたら、上腕を内へ・後ろへ戻す。指す・話す身ぶり・礼のときは外す
+      const ua = B[sd + "UpperArm"], hd = B[sd + "Hand"], sg = sd === "left" ? 1 : -1, free = (1 - pw2) * (1 - (sd === "right" ? g : g2)) * (1 - this._bw) * (1 - this.k * .7);
+      if (ua && hd && free > .01) { const h = this.root.worldToLocal(hd.getWorldPosition(_v[1])), ex = sg * h.x - .15, ez = h.z - .12, Lr = .42;   /* 碧の入れ物から見た位置（大きさをそろえた体の寸法） */
+        if (ex > 0) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(0, 0, 1), -sg * Math.atan(ex / Lr) * 1.1 * free));
+        if (ez > 0) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(1, 0, 0), Math.atan(ez / Lr) * free)); }
+      // v5：話す身ぶりで、手が体の真ん中を越えて反対の腕の上に重ならない（腕を組んだように見える・腕どうしがめりこむ）。真ん中から 4 cm 手前で止める
+      if (ua && hd && pw2 < .99) { const h = this.root.worldToLocal(hd.getWorldPosition(_v[1])), ix = .03 + .05 * (this._tk || 0) - sg * h.x;   // 話しているあいだは真ん中から 8 cm 手前（ふだん手を前で軽く重ねるのはそのまま）
+        if (ix > 0 && h.z > .02) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(0, 0, 1), sg * Math.atan(ix / .42) * 1.4 * (1 - pw2))); } }
+    // v5：話の中身に合う身ぶり（手の位置を決めて、腕を IK で寄せる）
+    const GS = this._gestures(dt, sp && L ? sp : null, bt, gon * (1 - pe));
     // 指：力を抜いた曲がり（人差し指から小指へ深く）。指すときは人差し指を伸ばす
+    // v5：mid・low の段では、指は一こまおき（止まって見えるほどの差はない）
+    if (this.q.tier !== "high" && (this.q.n & 1) && !GS.on) return;
     const cu = .3 + .06 * k + (L ? .03 * wob(t * .4, this.seedPh + 2) : 0);
-    for (const [b, sd, f, j] of this.fingers) { const sg = sd === "left" ? 1 : -1;
-      if (f === "Thumb") { b.quaternion.setFromEuler(_e.set(0, sg * (j === "Metacarpal" ? .25 : j === "Proximal" ? .2 : .12), sg * -(j === "Distal" ? .18 : .06))); continue; }
+    for (const [b, sd, f, j] of this.fingers) { const sg = sd === "left" ? 1 : -1, gw = GS[sd].w, gsh = GS[sd].shape;
+      if (f === "Thumb") { const tk = gw * (gsh === "pinch" ? .35 : gsh === "point" ? .2 : 0); b.quaternion.setFromEuler(_e.set(0, sg * ((j === "Metacarpal" ? .25 : j === "Proximal" ? .2 : .12) + tk), sg * -((j === "Distal" ? .18 : .06) + tk * .8))); continue; }
       const m = { Index: .78, Middle: 1, Ring: 1.08, Little: 1.2 }[f] * (j === "Proximal" ? 1 : j === "Intermediate" ? 1.15 : .8);
       let c = cu * m; if (sd === (this._pointSide || "") && this._pointW > 0) c = f === "Index" ? c * (1 - this._pointW) : c + .5 * this._pointW;
       if (sd === "right" && g > 0) c *= 1 - .35 * g; if (sd === "left" && g2 > 0) c *= 1 - .35 * g2;   // 話すとき、手は少しひらく
+      if (gw > 1e-3) { const want = (FING[gsh] || FING.open)[f] * (j === "Proximal" ? 1 : j === "Intermediate" ? 1.1 : .8); c += (want - c) * gw; }
       b.quaternion.setFromEuler(_e.set(0, 0, -sg * c)); }
+  }
+
+  // ---------------------------------------------------------------- 話の中身に合う身ぶり（v5）
+  // 一つの身ぶり＝準備（0.45 秒）→ 打つ（その語の頭の少し前に頂点）→ 止める → 戻す（Kendon 1980 の身ぶりの句）。
+  // 次の身ぶりがすぐ来るときは、手を下ろさずにそのまま次の形へ移る（身ぶりの単位がつながる）。指すときは、目が先に的へ行き、止めるあいだ的を見る（Neggers & Bekkering 2000）
+  _gParts(g) {
+    if (g._parts) return g._parts; const a = Math.max(.3, g.t - .05), H = g.hold;   // 行の頭の語でも、準備の時間をとる
+    const P = (side, apex, hold, prep = .45) => ({ g, side, apex, hold: H ?? hold, prep });
+    const dom = g.hand === "left" ? "left" : "right", both = g.hand === "both";
+    let parts;
+    if (g.type === "deictic") parts = [P(g.hand && g.hand !== "both" ? g.hand : null, a, .55, .5)];
+    else if (g.type === "metaphoric" && g.shape === "contrast") { const a1 = Math.max(.15, a - .6); parts = [P("left", a1, a - a1 + .55), P("right", a + .2, .5)]; }   // 一つめを左の手に置き、くらべる語で右の手に二つめを置く（両手で見くらべる）
+    else if (g.type === "iconic" && (g.shape === "small" || g.shape === "tall") && !both) parts = [P(dom, a, .45)];
+    else if (g.type === "metaphoric") parts = both ? [P("left", a, .5), P("right", a, .5)] : [P(dom, a, .5)];
+    else parts = [P("left", a, .45), P("right", a, .45)];
+    return (g._parts = parts);
+  }
+  _gPose(part, sd, out) {   // その手の、碧の入れ物から見た位置・指の向き・手のひらの向き・指の形
+    const g = part.g, sg = sd === "left" ? 1 : -1, sh = this.armRest[sd].sh, y = sh.y, z = sh.z;
+    const set = (x, dy, dz, f, n, shape) => { out.p.set(x, y + dy, z + dz); out.f.set(...f); out.n.set(...n); out.shape = shape; return out; };
+    if (g.type === "deictic") {
+      if (!g.target) return set(sg * .1, -.4, .29, [0, -.5, 1], [0, -1, 0], "flat");   // 「ここ」：手のひらを下へ、体の前の低いところ
+      const tp = g.target.isObject3D ? g.target.getWorldPosition(_v[9]) : _v[9].copy(g.target), tl = this.root.worldToLocal(tp), d = _v[8].subVectors(tl, sh);
+      d.y = clamp(d.y / Math.max(.2, Math.hypot(d.x, d.z)), -.6, .3) * Math.hypot(d.x, d.z); d.normalize(); if (d.z < .2) { d.z = .2; d.normalize(); }   // 体の後ろは指さない（体を回すのは向きの仕事）
+      out.p.copy(sh).addScaledVector(d, .34); out.p.y -= .07; out.f.copy(d); out.n.set(-sg * .3, -1, 0); out.shape = "point"; return out; }
+    if (g.type === "metaphoric") {
+      if (g.shape === "contrast") return set(sg * .2, -.3, .25, [sg * .35, 0, 1], [-sg * .2, 1, 0], "open");
+      return set(sg * .12, -.3, .28, [sg * .2, .05, 1], [-sg * .2, 1, 0], "open");   // 差し出す：手のひらを上に（Müller 2004・Kendon 2004）
+    }
+    switch (g.shape) {
+      case "small": return set(sg * .07, -.27, .27, [-sg * .2, .2, 1], [-sg, .7, 0], "pinch");
+      case "round": return set(sg * .13, -.24, .27, [-sg * .3, .2, 1], [-sg, .2, 0], "cup");
+      case "large": return set(sg * .26, -.22, .21, [sg * .2, .15, 1], [-sg, .1, 0], "open");
+      case "long": return set(sg * .24, -.27, .3, [sg * .15, 0, 1], [-sg, .1, 0], "flat");
+      case "tall": return set(sg * .15, -.05, .2, [0, .3, 1], [0, -1, 0], "flat");
+      case "flat": return set(sg * .18, -.33, .27, [0, -.1, 1], [0, -1, 0], "flat");
+      default: return set(sg * .065, -.28, .27, [0, .35, 1], [-sg, .5, 0], "cup");   // small-round：両手で小さな丸
+    }
+  }
+  _gestures(dt, sp, beat, amp) {
+    const G = this._g ||= Object.fromEntries(["left", "right"].map(s => [s, { w: new Spr(0, 8), p: [0, 1, 2].map(() => new Spr(0, 9)), f: new THREE.Vector3(0, 0, 1), n: new THREE.Vector3(0, 1, 0), shape: "open", tw: 0 }]));
+    const res = this._gRes ||= { on: false, left: { w: 0, shape: "open" }, right: { w: 0, shape: "open" } };
+    if (!this.armRest.left || !this.armRest.right) { res.on = false; return res; }
+    const want = { left: null, right: null };
+    if (sp?.gq?.length) { const c = sp.clock();
+      for (const g of sp.gq) { if (g.type === "beat") continue;
+        for (const part of this._gParts(g)) { const side = part.side || (g.target ? (this.root.worldToLocal((g.target.isObject3D ? g.target.getWorldPosition(_v[9]) : _v[9].copy(g.target))).x >= 0 ? "left" : "right") : "right");
+          if (c >= part.apex - part.prep && c <= part.apex + part.hold) { want[side] = part; part.sideNow = side;
+            if (g.type === "deictic" && g.target && !part.gz && c >= part.apex - .35) { part.gz = 1; this._gz = { p: g.target, until: this.t + (part.apex + part.hold * .85 - c) }; } } } } }
+    const tmp = this._gTmp ||= { p: new THREE.Vector3(), f: new THREE.Vector3(), n: new THREE.Vector3(), shape: "open" };
+    res.on = false;
+    for (const sd of ["left", "right"]) { const S = G[sd], part = want[sd];
+      S.w.t = part ? amp : 0; S.w.step(dt);
+      if (part) { this._gPose(part, sd, tmp); const snap = S.w.v < .04; for (let i = 0; i < 3; i++) { S.p[i].t = tmp.p.getComponent(i); if (snap) S.p[i].set(S.p[i].t); S.p[i].step(dt); }
+        S.f.lerp(tmp.f.normalize(), snap ? 1 : 1 - Math.exp(-10 * dt)); S.n.lerp(tmp.n.normalize(), snap ? 1 : 1 - Math.exp(-10 * dt)); S.shape = tmp.shape; }
+      const w = S.w.v; res[sd].w = w; res[sd].shape = S.shape; if (w < 2e-3) continue; res.on = true;
+      // 拍子：止めているあいだも、強める語では手が小さく下へ打つ（2〜3 cm）。「ここ」は頂点で小さく下へ
+      const p = _v[7].set(S.p[0].v, S.p[1].v, S.p[2].v); p.y -= .026 * beat * (sd === "right" ? 1 : .7);
+      const hp = this.live ? .004 * wob(this.t * 1.3, this.seedPh + (sd === "left" ? 7 : 9)) : 0; p.x += hp; p.y += hp * .7;   // 止めているあいだの、ごく小さな揺れ（止まった手にしない）
+      this._armIK(sd, p, S.f, S.n, w); }
+    return res;
+  }
+  // 腕の二関節の IK（手首を p〈碧の入れ物から見た位置〉へ。肘は下・後ろ・少し外へ）。手の向きは指 f・手のひら n。w＝効き
+  _armIK(sd, pLocal, fL, nL, w) {
+    const B = this.bones, ua = B[sd + "UpperArm"], la = B[sd + "LowerArm"], hd = B[sd + "Hand"], R = this.armRest[sd]; if (!ua || !la || !hd || !R) return;
+    const sg = sd === "left" ? 1 : -1, rq = this.root.getWorldQuaternion(_q[5]);
+    ua.parent.updateWorldMatrix(true, false);
+    const A = ua.getWorldPosition(_v[3]), l1 = la.position.length() * this.vs, l2 = hd.position.length() * this.vs;
+    const T = this.root.localToWorld(_v[0].copy(pLocal)), AT = _v[4].subVectors(T, A); let d = AT.length(); const dir = AT.divideScalar(d || 1);
+    d = clamp(d, Math.abs(l1 - l2) + .02 * this.sc, (l1 + l2) * .97);
+    const ca = clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1), sa = Math.sqrt(1 - ca * ca);
+    const pole = _v[5].set(sg * .5, -1, -.35).applyQuaternion(rq); pole.addScaledVector(dir, -pole.dot(dir)).normalize();
+    const K = _v[6].copy(A).addScaledVector(dir, l1 * ca).addScaledVector(pole, l1 * sa), Tc = _v[1].copy(A).addScaledVector(dir, d);
+    // 上腕：肘の向き＋ねじれ（肘を曲げると前腕が体の前へ来る向きを、手の側へ合わせる）
+    const pqi = ua.parent.getWorldQuaternion(_q[0]).invert();
+    const w1 = _v[8].subVectors(K, A).normalize().applyQuaternion(pqi), q1 = _q[1].setFromUnitVectors(_v[9].copy(la.position).normalize(), w1);
+    const fw = _v[2].copy(R.fold).applyQuaternion(q1), fd = _v[7].subVectors(Tc, K).applyQuaternion(pqi);
+    fw.addScaledVector(w1, -fw.dot(w1)); fd.addScaledVector(w1, -fd.dot(w1));
+    if (fw.lengthSq() > 1e-8 && fd.lengthSq() > 1e-8) { fw.normalize(); fd.normalize(); const ang = Math.atan2(_v[4].crossVectors(fw, fd).dot(w1), fw.dot(fd)); q1.premultiply(_q[2].setFromAxisAngle(w1, ang)); }
+    ua.quaternion.slerp(q1, w); ua.updateWorldMatrix(false, false);
+    // 前腕：いまの肘から手首の的へ
+    const E = la.getWorldPosition(_v[6]), uqi = ua.getWorldQuaternion(_q[0]).invert(), w2 = _v[8].subVectors(Tc, E).normalize().applyQuaternion(uqi);
+    la.quaternion.slerp(_q[1].setFromUnitVectors(_v[9].copy(hd.position).normalize(), w2), w); la.updateWorldMatrix(false, false);
+    // 手：静止の形の（指・手のひら）を、ねらいの（指・手のひら）へ回す
+    const f = _v[2].copy(fL).normalize(), n = _v[4].copy(nL); n.addScaledVector(f, -n.dot(f)).normalize(); const b = _v[7].crossVectors(f, n);
+    const Md = _m.makeBasis(f, n, b), Mr = (this._mr ||= new THREE.Matrix4()).makeBasis(R.f, R.n, R.b).transpose();
+    const qd = _q[2].setFromRotationMatrix(Md.multiply(Mr)), qw = _q[3].copy(rq).multiply(qd).multiply(R.RL);
+    const lqi = la.getWorldQuaternion(_q[0]).invert(); hd.quaternion.slerp(lqi.multiply(qw), w * .9);
   }
 
   // ---------------------------------------------------------------- 目と頭：目が先に（サッカード）、頭は 0.1〜0.2 秒遅れてついていく。ときどき目をそらす
@@ -523,6 +848,8 @@ export class AoiMotion {
     // 歩くとき：ふだんは 5〜8 m 先の道を見て、ときどき（3〜6 秒ごとに 1 秒ほど）見る人を見る
     if (!Lk.target && !(po && po.t < po.sec - .6) && this.k > .45) { Lk.wg = (Lk.wg ?? 2) - dt; if (Lk.wg < -1.1) Lk.wg = 3 + 3 * this.rand();
       if (Lk.wg > 0) { const d = 6.5 * this.sc; tgt.set(this.pos.x + Math.sin(this.yaw) * d, 1.15 * this.sc + this.pos.y, this.pos.z + Math.cos(this.yaw) * d); } }
+    { const tr = this._turn; if (tr && !Lk.target && !po && this.faceYaw != null) { const hp = head.getWorldPosition(_v[1]); tgt.set(hp.x + Math.sin(tr.y1) * 3 * this.sc, hp.y - .1 * this.sc, hp.z + Math.cos(tr.y1) * 3 * this.sc); } }   // v5：向きかえは、目と頭が先に新しい向きへ
+    if (this._gz && this.t < this._gz.until && !po) { const g = this._gz.p; if (g.isObject3D) g.getWorldPosition(tgt); else tgt.copy(g); } else if (this._gz) this._gz = null;   // v5：話しながら指すとき、目は先に的へ行き、止めるあいだ的を見る
     if (this._bowA > .05) { const hp = head.getWorldPosition(_v[1]); tgt.set(hp.x + Math.sin(this.yaw) * 2, this.pos.y, hp.z + Math.cos(this.yaw) * 2); }   // 礼のときは足もとの少し先（目を伏せる）
     // 目をそらす：話しはじめ・考えるとき・ふだんもときどき（下や横へ。上はまれ）
     if (L) { Lk.awayT -= dt;
@@ -534,7 +861,7 @@ export class AoiMotion {
     const hpos = head.getWorldPosition(_v[2]);
     const dNew = _v[3].subVectors(tgt, hpos).normalize(), dOld = _v[4].subVectors(Lk.cur, hpos).normalize();
     const jump = dNew.angleTo(dOld);
-    if (jump > .04) { if (jump > .3 && this.rand() < .65) this.blink.next = Math.min(this.blink.next, .02); Lk.cur.copy(tgt); }
+    if (jump > .04) { if (jump > .25 && this.rand() < clamp(.35 + jump, 0, .9)) this.blink.next = Math.min(this.blink.next, .02); Lk.cur.copy(tgt); }   // v4：大きく見る先を変えるほど、まばたきしやすい（目の動きとまばたきの結びつき）
     else Lk.cur.lerp(tgt, 1 - Math.exp(-12 * dt));   // ゆっくり動くものは目で追う
     // 頭の向き：胸から見た角度の 7 割（目が残りを受け持つ）。首 4 割・頭 6 割
     const ch = (B.upperChest || B.chest || B.spine); const cq = ch.getWorldQuaternion(_q[0]).invert();
@@ -557,46 +884,66 @@ export class AoiMotion {
         const et = Math.atan2(Lk.cur.y - hpos.y, Math.hypot(Lk.cur.x - hpos.x, Lk.cur.z - hpos.z)) * .6; head.quaternion.multiply(_q[4].setFromAxisAngle(_v[7].set(1, 0, 0), -clamp(et - e, -.2, .2) * .5 * this.mcW.v)); } }
     // 目の小さな動き（固視中のマイクロサッカード：1 秒に 1〜2 回、1° 未満）
     if (L) { Lk.sacT -= dt; if (Lk.sacT <= 0) { Lk.sacT = .35 + .7 * this.rand(); const d = Lk.cur.distanceTo(hpos) * .012; Lk.sac.set((this.rand() - .5) * d, (this.rand() - .5) * d * .7, (this.rand() - .5) * d); } }
-    this.gazeObj.position.copy(Lk.cur).add(Lk.sac);
+    // v4：見る人の顔を見るときは、相手の左の目・右の目・ときどき口元へと、0.5〜1.6 秒ごとに小さく跳ぶ（ずっと一点を見つめると、目が据わって見える）
+    let scan = Lk.scan || (Lk.scan = new THREE.Vector3());
+    if (L && cam && !Lk.target && !po && Lk.away <= 0 && this.k < .3 && this._bowA < .05 && cam.distanceTo(Lk.cur) < .05) { Lk.scanT = (Lk.scanT ?? .8) - dt;
+      if (Lk.scanT <= 0) { Lk.scanT = .5 + 1.1 * this.rand(); const r = this.rand(), side = (Lk.scanSide = -(Lk.scanSide || 1)), sp2 = this.speaking ? .25 : .12, cr = _v[6].set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+        if (r < sp2) scan.set(0, -.065 * this.sc, 0); else scan.copy(cr).multiplyScalar(side * .032 * this.sc); } }
+    else scan.multiplyScalar(Math.exp(-10 * dt));
+    this.gazeObj.position.copy(Lk.cur).add(Lk.sac).add(scan);
     // 下を見るとき、上まぶたも少し下がる
-    this._lidDown = clamp(-Math.atan2(Lk.cur.y - hpos.y, Math.hypot(Lk.cur.x - hpos.x, Lk.cur.z - hpos.z)) - .12, 0, .5) * .45;
+    { const el = Math.atan2(Lk.cur.y - hpos.y, Math.hypot(Lk.cur.x - hpos.x, Lk.cur.z - hpos.z)); this._lidDown = clamp(-el - .12, 0, .5) * .45; this._lidUp = clamp(el - .1, 0, .4) * .3; }   // v4：上を見るときは上まぶたが少し上がる
   }
-  _pickAway() { const a = this.pz.away, r = this.rand(), s = this.rand() < .5 ? -1 : 1, y = this.yaw + s * (.35 + .5 * this.rand()) * a; const dn = (r < .5 ? -(.2 + .3 * this.rand()) : r < .9 ? -.04 : .15) * a;   /* upright：目をそらす幅を小さく（うつむかない） */
+  _pickAway() { const a = this.pz.away, r = this.rand(), s = this.rand() < .5 ? -1 : 1, y = this.yaw + s * (.22 + .3 * this.rand()) * a;   /* v4：目をそらす幅を 13〜30° に（大きく振り向くと唐突） */ const dn = (r < .5 ? -(.2 + .3 * this.rand()) : r < .9 ? -.04 : .15) * a;   /* upright：目をそらす幅を小さく（うつむかない） */
     this.look.awayDir.set(Math.sin(y) * 2, dn * 2, Math.cos(y) * 2); }
 
   // ---------------------------------------------------------------- まばたき・表情・口
   _faceTick(dt) {
     const em = this.vrm.expressionManager; if (!em) return; const Bk = this.blink, Fc = this.face, L = this.live, sp = this.speaking;
-    // まばたき：間隔は対数正規（ふだん中央値 3.4 秒・話すと 2.4 秒・聞くと 4 秒）。閉じる 70ms・止まる 40ms・ひらく 160ms。一割ほど二度まばたき
+    // まばたき：間隔は対数正規（ふだん中央値 3.4 秒・話すと 2.4 秒・聞くと 4 秒・考えるとき少し多い）。一割ほど二度まばたき。
+    // v4：一回ごとに速さを変える（閉じる 55〜90ms・止まる 20〜60ms・ひらく 120〜220ms）。ときどき半分だけ・ゆっくりのまばたき（考えるとき）
     Bk.next -= dt;
-    if (Bk.t < 0 && Bk.next <= 0) { Bk.t = 0; Bk.amp = this.rand() < .15 ? .75 : 1; }
-    if (Bk.t >= 0) { Bk.t += dt; const u = Bk.t; Bk.v = Bk.amp * (u < .07 ? sstep(u / .07) : u < .11 ? 1 : 1 - sstep((u - .11) / .16));
-      if (u >= .27) { Bk.t = -1; Bk.v = 0; const med = sp ? 2.4 : this.listening ? 4 : 3.4; Bk.next = this.rand() < .09 ? .12 + .1 * this.rand() : Math.max(.7, med * Math.exp(.5 * this._gauss())); } }
+    if (Bk.t < 0 && Bk.next <= 0) { Bk.t = 0; const r = this.rand(); Bk.amp = r < .12 ? .55 + .25 * this.rand() : 1; const slow = Fc.emo === "thinking" || this.rand() < .08 ? 1.5 : 1;
+      Bk.c = (.055 + .035 * this.rand()) * slow; Bk.h = .02 + .04 * this.rand(); Bk.o = (.12 + .1 * this.rand()) * slow; }
+    if (Bk.t >= 0) { Bk.t += dt; const u = Bk.t, c = Bk.c || .07, h = Bk.h || .04, o = Bk.o || .16; Bk.v = Bk.amp * (u < c ? sstep(u / c) : u < c + h ? 1 : 1 - sstep((u - c - h) / o));
+      if (u >= c + h + o) { Bk.t = -1; Bk.v = 0; const med = sp ? 2.4 : this.listening ? 4 : Fc.emo === "thinking" ? 2.8 : 3.4; Bk.next = this.rand() < .09 ? .12 + .1 * this.rand() : Math.max(.7, med * Math.exp(.5 * this._gauss())); } }
+    // まぶたは視線についていく：下を見ると上まぶたが下がり、上を見ると少し上がる（v4：上を見るときも）
     em.setValue("blink", Math.min(1, Math.max(Bk.v + (this._lidDown || 0) + .02, this.eyesClosed || 0)));   // eyesClosed（0..1）＝アプリが目を閉じさせたいとき（胡蝶の夢の「感じている」窓）
     // 表情：いまの感情へゆっくり寄せ、小さな揺らぎを足す。話すと口の笑みは半分（口の形とぶつかるので）
     if (Fc.hold > 0 && Fc.hold < 1e8) { Fc.hold -= dt; if (Fc.hold <= 0) { Fc.emo = this.listening ? "warm" : "calm"; Fc.emoW.t = 1; } }
     Fc.emoW.step(dt); const E = EMOTIONS[Fc.emo] || EMOTIONS.calm, t = this.t, sd = this.seedPh;
     if (Fc.flash > 0) Fc.flash -= dt;
     const fl = Fc.flash > 0 ? Math.sin(Math.PI * clamp(1 - Fc.flash / .45, 0, 1)) : 0;   // 眉を上げる（あいさつ・話しはじめ。約 0.2〜0.4 秒）
-    const talkMouth = sp ? .45 : 1;
+    // v4：立っているだけのときも顔を止めない。6〜14 秒ごとに、ごく小さな気分の動き（ふっと口元がゆるむ・少し考える・眉が動く）を 1.5〜3 秒
+    if (L && !sp && !this.listening && Fc.emo === "calm") { Fc.idleT = (Fc.idleT ?? 4 + 4 * this.rand()) - dt;
+      if (Fc.idleT <= 0) { Fc.idleT = 6 + 8 * this.rand(); const r = this.rand(); Fc.mic = r < .45 ? { smile: .08, cheek: .2, lidLow: .1 } : r < .7 ? { browSad: .1, lidLow: .06 } : r < .9 ? { browUp: .1 } : { smile: -.05 }; Fc.micT = 1.5 + 1.5 * this.rand(); Fc.micA = 0; } }
+    if (Fc.micT > 0) { Fc.micT -= dt; Fc.micA = Math.min(1, (Fc.micA || 0) + dt / .6); } else Fc.micA = Math.max(0, (Fc.micA || 0) - dt / .9);
+    // v4：左右の差を、ときどき（2〜6 秒ごと）少し変える。いつもの側は保つ
+    Fc.asymT -= dt; if (Fc.asymT <= 0) { Fc.asymT = 2 + 4 * this.rand(); Fc.asym.t = Fc.side + (this.rand() - .5) * .14; } Fc.asym.step(dt);
+    const talkMouth = sp ? .45 : 1, asym = L ? Fc.asym.v : 0;
     for (const [ch, o] of Object.entries(Fc.ch)) {
-      let v = (E[ch] || 0) * Fc.emoW.v;
+      let v = (E[ch] || 0) * Fc.emoW.v + (Fc.mic?.[ch] || 0) * (Fc.micA || 0);
       if (ch === "smile") v *= talkMouth;
-      if (ch === "browUp") v += .35 * fl + .1 * (this._beat || 0);   // 強く読む音で眉が少し上がる
+      if (ch === "browUp") v += .35 * fl + .14 * (this._beat || 0);   // 強く読む音で眉が少し上がる
+      if (ch === "wide") v += (this._lidUp || 0);   // 上を見ると上まぶたが少し上がる
       if (sp && (ch === "smile" || ch === "lidLow" || ch === "cheek")) { const c = sp.clock(), e = sstep((c - (sp.dur - .9)) / .5); v += (ch === "smile" ? .16 : ch === "cheek" ? .3 : .12) * e; }   // 言い終わりに、頬が少し上がる
       if (ch === "lidLow" || ch === "cheek") v *= 1 - .7 * (this.blink.v || 0);   // まばたきの最中は下まぶたを戻す（目を閉じきったように見せない）
       if (L) v += (ch === "smile" ? .035 : ch.startsWith("brow") ? (sp ? .07 : .03) : .015) * wob(t * (sp ? .9 : .5), sd + ch.length);
       if (ch === "browUp" && this.listening) v += .08;
       o.v.t = clamp(v, 0, CHMAX[ch] ?? 1); o.v.step(dt);
-      for (const [m, i, w] of o.binds) m.morphTargetInfluences[i] = clamp(o.v.v * w, 0, 1);
+      const ak = ch === "smile" ? 1 : ch.startsWith("brow") ? (ch === "browUp" && this._beat ? 1.6 : .7) : 0;   // 眉は拍のとき片方が少し強い
+      for (const [m, i, w, s] of o.binds) m.morphTargetInfluences[i] = clamp(o.v.v * w * (1 + s * asym * ak * 2), 0, 1);
     }
+    if (this.tint) this.tint.set((Fc.ch.cheek?.v.v || 0) * .26);   // 頬が上がるほど、頬の血色を少し上げる
     // 口：時刻表の母音へ（音より 40ms 先に形をつくる）。声の大きさで開きを変える。唇を閉じる子音は閉じる
+    // v4：①音の頭（子音）で口を少し閉じる（同じ母音が続いても口が動く＝ゴムの口にしない）②音の終わり 3 割で次の母音へ寄せる（調音結合）③句の切れ目では閉じきらず少しあける
     const want = { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 };
     if (sp) { const c = sp.clock() + .04, M = sp.tl.m || []; while (sp.i < M.length - 1 && M[sp.i][0] + M[sp.i][1] <= c) sp.i++;
       const mo = M[sp.i]; if (mo && c >= mo[0] && c < mo[0] + mo[1] + .02) { const [st, len, v, cl] = mo; const vis = VIS[v]; const ph = (c - st) / Math.max(.01, len);
-        const open = sp.level ? clamp(.55 + .6 * sp.level(), .5, 1.15) : 1; const close = cl && ph < .35 ? sstep(ph / .35) : 1;
-        if (vis) for (const [kk, w] of Object.entries(vis)) want[kk] = w * open * close; } }
-    for (const kk of MOUTH) { const s = Fc.mouth[kk]; s.t = want[kk]; s.step(dt); em.setValue(kk, clamp(s.v, 0, 1)); }
+        const open = sp.level ? clamp(.55 + .6 * sp.level(), .5, 1.1) : 1; const close = cl && ph < .35 ? sstep(ph / .35) : 1, onset = v === "pau" || v === "cl" ? 1 : .72 + .28 * sstep(ph / .22);
+        if (vis) for (const [kk, w] of Object.entries(vis)) want[kk] = w * open * close * onset;
+        const nx = M[sp.i + 1], nv = nx && VIS[nx[2]]; if (nv && ph > .7 && nx[0] - (st + len) < .05) { const b = sstep((ph - .7) / .3) * .45 * (nx[3] ? .4 : 1); for (const kk of MOUTH) want[kk] = want[kk] * (1 - b) + (nv[kk] || 0) * open * b; } } }
+    for (const kk of MOUTH) { const s = Fc.mouth[kk]; s.t = want[kk]; s.step(dt, want[kk] > s.v ? 30 : 22); em.setValue(kk, clamp(s.v, 0, 1)); }   // 開くのは速く・閉じるのは少しゆっくり
   }
   _gauss() { let u = 0, v = 0; while (!u) u = this.rand(); while (!v) v = this.rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 }

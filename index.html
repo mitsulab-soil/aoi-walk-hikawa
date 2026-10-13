@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-64b56826fb">
+<meta name="aoiwalk-build" content="r9-cc57e7a629">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -1800,6 +1800,12 @@ function rtex(name, srgb) {
   if (!rtexC[name]) { const t = TL.load(imgURL(ROAD_TEX[name], "image/webp")); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; rtexC[name] = t; }
   return rtexC[name];
 }
+/* 2026-10-13 夜　本人「石畳や木の樹皮など…サーフェイスのクオリティ、フォトリアルを」：PC は、はじめたあとで舗装の質感を同じ素材（Poly Haven・CC0）の 2k へ差し替える
+   （web/tex_road2k_*.webp・_dev/fetch_road_2k.py）。スマホ（LITE）は 1k のまま（読み込みの予算）。?tex1k で前のまま */
+const ROAD2K = ["granite_tile_04", "granite_tile", "concrete_pavers_02", "concrete_pavement", "gravel_embedded_concrete", "asphalt_04"];
+function road2k() { if (LITE || QS.has("tex1k")) return; for (const n of ROAD2K) for (const s of ["c", "n", "r"]) { const t = rtexC[n + "_" + s]; if (!t) continue;
+  const img = new Image(); img.decoding = "async"; img.onload = () => { t.image = img; t.needsUpdate = true; }; img.src = "web/tex_road2k_" + n + "_" + s + ".webp"; } }
+{ const w2k = setInterval(() => { if (window.__nearHold) return; clearInterval(w2k); setTimeout(road2k, 1500); }, 700); }
 const roadMat = {};
 for (const [k, m] of Object.entries(ROAD_MATS)) {
   const mat = new THREE.MeshStandardMaterial({ map: rtex(m.tex + "_c", true), normalMap: rtex(m.tex + "_n"), roughnessMap: rtex(m.tex + "_r"), aoMap: m.hasAO ? rtex(m.tex + "_r") : null,
@@ -1858,10 +1864,17 @@ const RL = (() => {
                enoki: [doyOf(10, 25), doyOf(11, 20), doyOf(11, 28), doyOf(12, 18), doyOf(4, 8), doyOf(5, 10)] };
   const SP = { keyaki: 0, shii: 1, kusu: 2, kashi: 3, sugi: 4, sakura: 5, enoki: 6, hinoki: 7, matsu: 8 };
   const spOf = type => SP[String(type).replace(/_s\d+$/, "")] ?? 0;
+  /* 2026-10-13（11 人「冬も路面に木漏れ日の影が濃い」）：落葉樹の葉の落ち具合（0＝茂る・1＝裸）。葉の色の式（LEAF_FS）と同じ目安で、木ごとのずれは入れない。
+     冬は ①樹冠の地図（木漏れ日・樹冠の下の暗さ）で落葉樹を薄く（枝の影だけ 1 割）②落葉樹の葉の影を落とさない */
+  const ss = (a, b, x) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+  const bareOf = code => { const k = Object.keys(PH).find(n => SP[n] === code); if (!k) return 0; const v = PH[k]; return Math.max(ss(v[2], v[3], DAY), 1 - ss(v[4] - 6, v[4] + 4, DAY)); };
+  window.__canopyLeaf = type => 1 - .9 * bareOf(spOf(type));
   const ph = new Array(9).fill(0).map(() => new THREE.Vector4()), sp2 = new Array(9).fill(0).map(() => new THREE.Vector2(-999, -998));
   for (const [k, v] of Object.entries(PH)) { ph[SP[k]].set(v[0], v[1], v[2], v[3]); sp2[SP[k]].set(v[4], v[5]); }
   const U = { rlT: { value: 0 }, rlWind: { value: RMo ? 0 : 1 }, rlSun: { value: SUN_DIR }, rlSunC: { value: sun.color.clone().multiplyScalar(sun.intensity / 2.6) },
-    rlDay: { value: DAY }, rlPh: { value: ph }, rlSpr: { value: sp2 }, rlLitter: { value: 0 } };
+    rlDay: { value: DAY }, rlPh: { value: ph }, rlSpr: { value: sp2 }, rlLitter: { value: 0 },
+    rlFut: { value: 0 }, rlNP: { value: new THREE.Vector4(0, 0, -1, -1) } };   /* 2026-10-13：未来（想像）で南区間の白線を消す（walk_r21 が値を入れる） */
+  window.__rlU = U;
   { // 並木敷きの落ち葉の量（秋は多く）：ケヤキの散り方から
     const k = PH.keyaki, d = DAY, s = (a, b, x) => Math.min(1, Math.max(0, (x - a) / (b - a)));
     U.rlLitter.value = .35 + .4 * s(k[1], k[3], d) * (1 - s(k[3] + 40, k[3] + 110, d)) + .25 * (d < k[4] || d > k[3] ? 1 : 0); }
@@ -2035,7 +2048,8 @@ const RL = (() => {
     for (const [type, T] of Object.entries(TYPES)) { const code = spOf(type);
       for (const im of [...T.near, ...T.far]) { const g = im.geometry, n = g.attributes.position.count;
         g.setAttribute("aRlSp", new THREE.BufferAttribute(new Float32Array(n).fill(code), 1));
-        treeMat(im.material, !!im.material.userData.leaf); } }
+        treeMat(im.material, !!im.material.userData.leaf);
+        if (im.material.userData.leaf && bareOf(code) > .85) im.castShadow = false; } }   /* 冬：落葉樹の葉の影を落とさない（散った葉が影の計算に残っていた） */
     const go = () => { if (!(terrain && roadReady)) return setTimeout(go, 300); makeAO(); ready = true; splitLOD(); };   /* 根張り（makeRoots）は 11 人の点検で「置いた板に見える」とされたので出さない（2026-10-13）。足もとの暗みだけ */
     go();
   }
@@ -2047,8 +2061,8 @@ const RL = (() => {
     try { leafTex = TL.load(imgURL("@web/tex_ground_leaves_diff.jpg", "image/jpeg")); leafTex.wrapS = leafTex.wrapT = THREE.RepeatWrapping; leafTex.colorSpace = THREE.SRGBColorSpace; leafTex.anisotropy = 8; } catch { leafTex = null; }
     for (const [k, mat] of Object.entries(roadMat)) { const kd = KIND[k] ?? 0; if (!kd) continue;
       chainOBC(mat, sh => {
-        sh.uniforms.rlKind = { value: kd }; sh.uniforms.rlLeaf = { value: leafTex }; sh.uniforms.rlLitter = U.rlLitter;
-        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float rlKind, rlLitter; uniform sampler2D rlLeaf;" + NOISE)
+        sh.uniforms.rlKind = { value: kd }; sh.uniforms.rlLeaf = { value: leafTex }; sh.uniforms.rlLitter = U.rlLitter; sh.uniforms.rlFut = U.rlFut; sh.uniforms.rlNP = U.rlNP;
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float rlKind, rlLitter, rlFut; uniform vec4 rlNP; uniform sampler2D rlLeaf;" + NOISE)
           .replace("#include <color_fragment>", `#include <color_fragment>
           { float dist = distance(vW, cameraPosition), nf = (1.0 - smoothstep(28.0, 95.0, dist)), ff = 1.0 - smoothstep(6.0, 16.0, dist);
             if (nf > 0.0) {
@@ -2064,6 +2078,7 @@ const RL = (() => {
               c *= mix(1.0, .82 + .36 * rlH3(floor(vec3(vW.xz * 90.0, 1.0))), ff * .35);
             } else if (K == 16) {                                                               /* 白線：タイヤが通る所ほどかすれる */
               float w = smoothstep(.45, .75, rlF3(vec3(vW.xz * 2.2, 3.0))); c = mix(c, vec3(L * .32), w * .45 * nf);
+              if (rlFut > .5 && vW.x > rlNP.x && vW.x < rlNP.z && vW.z > rlNP.y && vW.z < rlNP.w) c = vec3(L * .3) * (.92 + .16 * mot);   /* 未来（想像）：南区間は歩行者専用の道へ＝車の白線を消す */
             } else if (K == 4 || K == 5 || K == 6 || K == 8) {                                  /* 御影石：石英・長石・黒雲母の粒 */
               float g1 = rlH3(floor(vec3(vW.xz * 110.0, 2.0))), g2 = rlH3(floor(vec3(vW.xz * 55.0, 5.0)));
               float dk = step(.9, g1) * (K == 6 ? .0 : .42), lt = step(.93, g2) * (K == 6 ? .9 : .18);
@@ -2608,8 +2623,8 @@ function buildCanopy() {
   INST.forEach((t, i) => {
     const R = (RV[t.type] ?? SPR[t.type]?.R ?? 6) * t.xf.s[0] / k, x = (t.p[0] - x0) / k, y = (t.p[2] - z0) / k;
     const forest = i >= N_SANDO && (FOREST.trees[i - N_SANDO]?.zone ?? "") !== "yard";
-    const gr = g.createRadialGradient(x, y, 0, x, y, R * 1.08), col = forest ? "255,255,0" : "255,0,0";
-    gr.addColorStop(0, `rgba(${col},.95)`); gr.addColorStop(.72, `rgba(${col},.8)`); gr.addColorStop(1, `rgba(${col},0)`);
+    const gr = g.createRadialGradient(x, y, 0, x, y, R * 1.08), col = forest ? "255,255,0" : "255,0,0", lf = window.__canopyLeaf?.(t.type) ?? 1;   /* 2026-10-13：冬の落葉樹は薄く（walk_real の季節から） */
+    gr.addColorStop(0, `rgba(${col},${.95 * lf})`); gr.addColorStop(.72, `rgba(${col},${.8 * lf})`); gr.addColorStop(1, `rgba(${col},0)`);
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, R * 1.08, 0, 6.2832); g.fill(); });
   const tx = new THREE.CanvasTexture(cv); tx.flipY = false; tx.colorSpace = THREE.NoColorSpace; tx.needsUpdate = true;
   LIGHTU.canopyMap.value = tx; LIGHTU.canopyRect.value.set(x0, z0, x1 - x0, z1 - z0);
@@ -3483,7 +3498,12 @@ function frame() {
   updatePins(eye);
   clLine.visible = !eye && camera.position.distanceTo(controls.target) > 220;   // 参道の線は引いて見るときだけ（近くでは路面の邪魔）
 }
-renderer.setAnimationLoop(now => { if (!isEye()) controls.update(); dragEase(now); frame(); renderer.render(scene, camera); labels.render(scene, camera); adaptPR(now); });
+/* 2026-10-13 夜（PC の神社の近くで 約 40 こま/秒）：影の地図は 2 こまに一度描きなおす（影の箱が 0.15 m より動いたこまは必ず）。?shadowAll で毎こま */
+const SHU = { n: 0, p: null, all: QS.has("shadowAll") };
+function shadowGate() { if (!renderer.shadowMap.enabled || SHU.all) return; renderer.shadowMap.autoUpdate = false; SHU.n++;
+  const sp = sun.position, mv = SHU.p ? Math.hypot(sp.x - SHU.p.x, sp.y - SHU.p.y, sp.z - SHU.p.z) : 1e9;
+  if (SHU.n % 2 === 0 || mv > .15) { renderer.shadowMap.needsUpdate = true; (SHU.p ||= sp.clone()).copy(sp); } }
+renderer.setAnimationLoop(now => { if (!isEye()) controls.update(); dragEase(now); frame(); shadowGate(); if (!window.__lensRender?.(renderer, scene, camera)) renderer.render(scene, camera);   /* 2026-10-13 夜：身体（環世界）の色の写し方（walk_umwelt） */ labels.render(scene, camera); adaptPR(now); });
 
 // ---- 確かめ用（スクリーンショット・位置の試し）。画面の操作には使わない
 window.__sando = {
@@ -4072,6 +4092,7 @@ function tick() {
   if (faceT && !speaking && introDone && !stopFor) { faceT.t ??= performance.now();
     if (!SEG.some(a => a.kind === "anchor" && a.layers.includes(layer) && startAdj(a) && talkable(a)) || (performance.now() - faceT.t) * TS > 15000) faceT = null; }   /* 楼門の話が済んだら（15 秒まで）、歩く向きへ（カメラはゆっくり回る） */   /* 楼門の話が済んだら、歩く向きへ（カメラはゆっくり回る） */
   if (!started || speaking || document.hidden || tpBusy || farMode || (!introDone && !introYield) || !gpsReady()) return;
+  if (window.__r21?.busy?.() && !(mode === "gps" && toXe() < 40)) return;   /* 2026-10-13 夜：見なおしの札を開いているあいだは、碧は新しい話を始めない（札と声が別の話をしない）。現地で横断の 40 m 手前からは安全の案内を優先 */
   if (JOURNEY.manual || SLIP.on || SLIP.leaving) return;
   if (stopFor?.kind === "more" && !speaking) return;   /* 第11回：立ち止まって聞いているあいだの「もっと」を先に（次の地点に取られない） */
   if (!bestPin() && (((himoPend || (himoQ.length && !pinOf(himoQ[0].h))) && !pinBusy(15)) || (SLIP.pend?.ready && (mode === "sim" || moving.since == null)))) return;   /* 第9回：神籬の一言は、大事な地点の話の窓が近いときは待たせる（そのあいだも地点の話は進める） */   /* 現地で歩き続けているあいだは、ほかの話を止めない */   /* 第8回：時のかさなりの場面・神籬の一言のあいだは、ほかの話をしない */
@@ -4514,8 +4535,18 @@ function gpsFrame(dt) {
   const pd = d; d = clamp(G.rd, D_MIN - 30, D_MAX + 30); U.s = G.rs; U.v = dt > 0 ? (d - pd) / dt : 0;
   let yawT = null;
   if (gps.heading != null && performance.now() - gps.headT < 3000) yawT = -gps.heading * Math.PI / 180 + viewOff();
-  placeEye(dt, yawT);
+  /* 2026-10-13（11 人「現地で碧の大きさが跳ぶ」＝GPS の 1〜2.5 m の跳びに目の位置がつられ、碧が遅れて追う）：
+     話・安全の判断に使う d はそのまま（横断の案内を遅らせない）。目と碧だけ、見た目の位置 G.dv を使う。
+     G.dv は d へ、毎秒 2.0 m・加速 毎秒毎秒 1.2 m までで寄る。0.5 m より小さいずれ（立っているときのゆれ）は、ほとんど追わない。6 m より遅れない */
+  { const dts2 = Math.max(dt * TS, 0); if (G.dv == null || Math.abs(d - G.dv) > 30) { G.dv = d; G.dvv = 0; }
+    const e = d - G.dv; let want = clamp(e * 1.0, -2.0, 2.0); if (Math.abs(e) < .5) want *= Math.abs(e) / .5;
+    G.dvv = (G.dvv ?? 0) + clamp(want - (G.dvv ?? 0), -1.2 * dts2, 1.2 * dts2); G.dv += G.dvv * dts2;
+    if (Math.abs(d - G.dv) > 6) G.dv = d - Math.sign(d - G.dv) * 6; }
+  visD(() => placeEye(dt, yawT));
 }
+/* 現地で歩くとき、目と碧は見た目の位置 G.dv の上で動かす（d を一時だけ置きかえて、すぐ戻す） */
+const GPS_RAW = new URLSearchParams(location.search).has("gpsRaw");   /* 確かめ用：前のやり方（目と碧も d のまま） */
+function visD(fn) { if (mode !== "gps" || G.dv == null || GPS_RAW) return fn(); const dl = d; d = G.dv; try { return fn(); } finally { d = dl; } }
 function status(t) { if (!speaking) setSub(t, true); }
 function fadeOut(cb) { const v0 = AU.volume; let k = 0; const iv = setInterval(() => { k++; try { AU.volume = Math.max(0, v0 * (1 - k / 8)); } catch {} if (k >= 8) { clearInterval(iv); hush(); try { AU.pause(); AU.volume = v0; } catch {} cb(); } }, 80 / TS); }
 const DIR8 = ["北", "北東", "東", "南東", "南", "南西", "西", "北西"];
@@ -5077,6 +5108,8 @@ function loadAoi() {
     /* 2026-10-13 本人「碧の動きは共通部品の AoiMotion」：体・足・目と頭・まばたき・口・表情・礼・指す・裾の布は、共通部品（web/kit/）に任せる。
        位置（見る人の斜め前・1.6 m より近づかない＝10-10 の大きさのゆれの直し）と、止まったときの向き・楼門での一礼の合図・横断で黙ることは、これまでどおりこのページが決める */
     const { AoiMotion } = await import(new URL("web/kit/aoi_motion.js", document.baseURI).href);
+    /* 2026-10-13（11 人「歩くと裾の割れ目から脚の肌が見える」）：ローブに隠れる脚の肌を畳む（共通部品の hideCoveredLegs・足首と靴は残す） */
+    try { const { hideCoveredLegs } = await import(new URL("web/kit/aoi_robe.js", document.baseURI).href); A.legHidden = hideCoveredLegs?.(v, { keep: .12 }) ?? 0;   /* 11 人の P1（後ろ姿で裾の割れ目から肌）：ふくらはぎ・膝の裏まで畳む（足首と靴だけ残す） */ } catch (e) { A.legHidden = -1; }
     AM = new AoiMotion(v, { root: aoi, reducedMotion: RM, wind: 0, groundAt: aoiGround });   /* 髪の風は、このページの windTick（めくれ上がらない調整）のまま */
     if (AM.robe) AM.robe.wind = .25;   /* 裾の布には、そよ風だけ */
     fetch("web/lipsync.json").then(r => r.ok ? r.json() : null).then(j => { LIPSYNC = j; }).catch(() => {});   /* 口の時刻表（無ければ声のかなから） */
@@ -5380,7 +5413,7 @@ function windTick(dt, wp) {
 let lastF = performance.now();
 (function aoiLoop(now) {
   const dt = Math.min(.25, Math.max(0, ((now ?? performance.now()) - lastF) / 1000)); lastF = now ?? performance.now();   /* 第5回：歩く層（walkStep）と同じ 0.25 秒まで（こまの遅い端末で碧が遅れて近づかない） */
-  try { if (!NO3D) aoiTick(dt); } catch (e) { console.warn("aoi", e); vrm = null; aoiFail = true; if (aoi) aoi.visible = false; }
+  try { if (!NO3D) visD(() => aoiTick(dt)); } catch (e) { console.warn("aoi", e); vrm = null; aoiFail = true; if (aoi) aoi.visible = false; }
   try { if (!NO3D) r8Tick(dt); } catch (e) { if (!window.__r8Err) { window.__r8Err = String(e?.stack ?? e); console.warn("r8", e); } }
   try { if (!NO3D) marksTick(); } catch (e) { if (!window.__mkErr) { window.__mkErr = String(e?.stack ?? e); console.warn("marks", e); } for (const m of MARKS) { m.el.hidden = true; m.vis = false; } }   /* 第5回：印の失敗で碧を止めない */
   requestAnimationFrame(aoiLoop);
@@ -6023,7 +6056,7 @@ function zTick(dt) {
   zInit(); if (!ZN.ready) return;
   if (JOURNEY.manual) { ZN.k = 0; ZN.kmax = 0; ERA.tick(); return; }
   if (ERA.active) ERA.leave();   /* 物に触れて時のかさなりへ移ったときなど、手動の時代を抜けたら、その場面を片づける */   /* 2026-10-13 時代の精度：手動の時代（時を越える）は、歩く人のまわりに組んだ場面だけで決める（era_scenes_20261013.js） */
-  const on = !JOURNEY.manual && slipL() && started && introDone && !farMode && !tpBusy && !document.hidden, w = toWorld(d, U.s);
+  const on = !JOURNEY.manual && slipL() && started && introDone && !farMode && !tpBusy && !document.hidden && !window.__r21?.busy?.(), w = toWorld(d, U.s);   /* 2026-10-13 夜：見なおしの札を開いているあいだは、時の層へ入らない（見る物が消えないように） */
   let best = null, bk = 0;
   for (const z of ZN.zones) { z.dist = Math.hypot(z.p.x - w.x, z.p.z - w.z); const t = clamp((z.r_out - z.dist) / (z.r_out - z.r_in), 0, 1); z.raw = on ? t * t * (3 - 2 * t) : 0; if (z.raw > bk) { bk = z.raw; best = z; } }
   /* 別のゾーンへ移るときは、いったん今へ戻ってから */
@@ -6525,10 +6558,10 @@ const ERA = (() => {
     const fx = (b[0] - a[0]) / L, fz = (b[1] - a[1]) / L; return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, fx, fz }; }
   const SRC = {
     jomon: "出どころ：寿能泥炭層遺跡（縄文後期・木材はクリが多い）・国土地理院の標高（模式）",
-    edo: "出どころ：『氷川参道のまちづくり』・『江戸名所図会』・迅速測図・OpenStreetMap（模式）",
+    edo: "出どころ：『氷川参道のまちづくり』・『江戸名所図会』（並木のまわりの畑）・迅速測図・OpenStreetMap（家と畑の区画は模式）",
     heisei: "出どころ：構造物の年（神社の由緒ほか）",
     now: "出どころ：国土地理院・OpenStreetMap・樹木調査（令和 4 年）",
-    future: "想像：市の方針（歩行者専用の道へ）と植樹（カシ・コナラ・クスノキ）から" };
+    future: "想像：市の発表（南区間を歩行者専用の道へ・車止め）＝白線を消し両端に車止め／植樹（カシ・コナラ・クスノキ）＝空いた所に若木" };
   const NAME = { jomon: "縄文（後期・約 4000 年前）", edo: "江戸（嘉永のころ）", heisei: "平成（2009 年ごろ）", now: "現代", future: "未来（想像）" };
   const rng = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const gY = (x, z) => C.groundY(x, z);
@@ -6627,8 +6660,37 @@ const ERA = (() => {
     /* 溶かす網目（zPatch の in）は、物の原点からの距離で決まる。原点を帯の中ほどへ移す（原点が世界の原点のままだと、輪の外として全部消えていた） */
     const mid = Math.floor(n / 2) * NK * 3, ox = P[mid] ?? 0, oz = P[mid + 2] ?? 0; g.translate(-ox, 0, -oz);
     const m = new THREE.Mesh(g, mat); m.position.set(ox, 0, oz); m.receiveShadow = true; m.userData.slSkip = true; m.frustumCulled = false; return m; }
-  function sandoRibbon(dd0, dd1, mat) { const pts = []; for (let dd = Math.max(D_MIN, dd0); dd <= Math.min(1880, dd1); dd += 4) { const b = bandAt(dd), w = toWorld(dd, (b[2] + b[3]) / 2); pts.push([w.x, w.z, (b[3] - b[2]) / 2 + .6, w.fx, w.fz]); } return ribbon(pts, mat, 0x8a7457); }
+  /* 2026-10-13 夜（11 人の P1：札は「参道元来の三間（約 5.4 m）の幅」なのに、江戸の土の道は並木のあいだ全体 8〜9 m だった）：
+     土の道は参道の中心線（正中）に、三間＝約 5.45 m の幅で（『ひかわ参道だより』「参道元来の３間幅員」）。その外は地面（並木敷き） */
+  function sandoRibbon(dd0, dd1, mat) { const pts = []; for (let dd = Math.max(D_MIN, dd0); dd <= Math.min(1880, dd1); dd += 4) { const w = toWorld(dd, 0); pts.push([w.x, w.z, 2.73, w.fx, w.fz]); } return ribbon(pts, mat, 0x8a7457); }
   function nakaRibbon(cx, cz, rad, mat) { const pts = []; for (let s = 0; s < NK_ACC[NK_ACC.length - 1]; s += 4) { const c = nkAt(s); if (Math.hypot(c.x - cx, c.z - cz) < rad + 40) pts.push([c.x, c.z, NK_HW, c.fx, c.fz]); } return pts.length > 1 ? ribbon(pts, mat, 0x86704f) : null; }
+  /* 2026-10-13 夜（11 人「江戸の地面が無地・参道の両脇は畑のはず」）：参道の並木の外の畑。
+     出どころ：『江戸名所図会』「氷川宮大門先」（並木のまわりは開けた畑）・第一軍管地方二万分一迅速測図（明治 13〜19 年。参道のまわりは畑・桑畑）。
+     区画の形・大きさ・作物は確かめていない（模式）。畝の向きは資料が無いので描かない＝区画ごとの土と作物の色の違いと、区画のあいだの細い畦（地面の色）だけ。
+     中山道の家並み（線から 45 m の内）と、歩く帯・並木の列には置かない */
+  function nakaDist(x, z) { let m = Infinity; for (let i = 1; i < NAKA.length; i += 1) { const a = NAKA[i - 1], b = NAKA[i], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / L2)); m = Math.min(m, Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t)); } return m; }
+  function edoFields(dd0, dd1, mat, seed = 1836) {
+    const r = rng(seed), P = [], Cc = [], I = []; let n = 0, parcels = 0;
+    const SOIL = [[.47, .38, .27], [.42, .34, .24], [.5, .41, .29]], CROP = [[.42, .47, .26], [.47, .5, .29], [.53, .52, .33], [.38, .44, .25]];
+    for (const sd of [-1, 1]) for (let dd = Math.max(D_MIN + 8, dd0); dd < Math.min(1440, dd1); ) {
+      const len = 9 + r() * 14, gapD = .7; if (isX(dd) || isX(dd + len)) { dd += len; continue; }
+      let s0 = rowS(dd, sd) + sd * (3 + r() * 1.5);
+      for (let k = 0; k < 3; k++) {
+        const wid = 14 + r() * 26, s1 = s0 + sd * wid, col = r() < .45 ? SOIL[Math.floor(r() * SOIL.length)] : CROP[Math.floor(r() * CROP.length)], j0 = .94 + r() * .1;
+        const c0 = toWorld(dd + len / 2, (s0 + s1) / 2); if (nakaDist(c0.x, c0.z) < 45 || r() < .08) { s0 = s1 + sd * gapD; continue; }
+        const NU = 4, NV = 4, base = n;
+        for (let u = 0; u <= NU; u++) for (let v = 0; v <= NV; v++) {
+          const w = toWorld(dd + (len - gapD) * u / NU, s0 + (s1 - s0) * v / NV), y = gY(w.x, w.z), jj = j0 * (.93 + r() * .1);
+          P.push(w.x, (y ?? 0) + .05, w.z); Cc.push(...col.map(c => Math.pow(c * jj, 2.2))); n++; }   /* 色は見た目（sRGB）で書いたので、頂点の色（線形）へ直す */
+        for (let u = 0; u < NU; u++) for (let v = 0; v < NV; v++) { const a = base + u * (NV + 1) + v, b = a + NV + 1; I.push(a, b, a + 1, a + 1, b, b + 1); }
+        parcels++; s0 = s1 + sd * gapD; }
+      dd += len; }
+    if (!n) return { mesh: null, n: 0 };
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(Cc, 3)); g.setIndex(I); g.computeVertexNormals();
+    const ox = P[0], oz = P[2]; g.translate(-ox, 0, -oz); const m = new THREE.Mesh(g, mat); m.position.set(ox, 0, oz); m.receiveShadow = true; m.userData.slSkip = true; m.frustumCulled = false; return { mesh: m, n: parcels }; }
+  /* 町家の壁と屋根の明るさ：地面に近いほど暗く（雨のはね返りと軒の陰。材や形は足さない） */
+  function shadeGeo(G) { if (G.shaded) return; for (const [k, lo] of [["wall", .74], ["roof", .82], ["hisashi", .85]]) { const g = G[k], p = g.attributes.position, c = []; let y0 = Infinity, y1 = -Infinity; for (let i = 0; i < p.count; i++) { y0 = Math.min(y0, p.getY(i)); y1 = Math.max(y1, p.getY(i)); }
+      for (let i = 0; i < p.count; i++) { const t = (p.getY(i) - y0) / ((y1 - y0) || 1), v = lo + (1 - lo) * Math.sqrt(t); c.push(v, v, v); } g.setAttribute("color", new THREE.Float32BufferAttribute(c, 3)); } G.shaded = true; }
   /* ---- 手動の時代（時を越える）の場面。歩く人のまわりに組み、140 m 動いたら組み直す */
   let G = null, gEra = null, gAt = null, gInfo = {};
   const uIn = { value: 1 };
@@ -6639,7 +6701,9 @@ const ERA = (() => {
     if (id === "edo") {
       const mv = mIn(false); mv.vertexColors = true;
       const pr = sandoPines(d - 340, d + 340, mv, 1853 + Math.round(d)); if (pr.meshes.length) g.add(...pr.meshes); info.trees = pr.n;
-      const hs = nakaHouses(w.x, w.z, 430, [mIn(), mIn()]); if (hs.meshes.length) g.add(...hs.meshes); info.houses = hs.n;
+      shadeGeo(GEO.house ||= houseGeo()); const hm0 = mIn(), hm1 = mIn(); hm0.vertexColors = true; hm1.vertexColors = true;
+      const hs = nakaHouses(w.x, w.z, 430, [hm0, hm1]); if (hs.meshes.length) g.add(...hs.meshes); info.houses = hs.n;
+      const mf = mIn(false); mf.vertexColors = true; mf.polygonOffset = true; mf.polygonOffsetFactor = -1; const fl = edoFields(d - 360, d + 360, mf); if (fl.mesh) g.add(fl.mesh); info.fields = fl.n;
       const mr = mIn(false); mr.vertexColors = true; mr.polygonOffset = true; mr.polygonOffsetFactor = -2;
       g.add(sandoRibbon(d - 360, d + 360, mr)); const nr = nakaRibbon(w.x, w.z, 430, mr); if (nr) g.add(nr);
     } else if (id === "jomon") {
@@ -6708,6 +6772,227 @@ const ERA = (() => {
   { const st = document.createElement("style"); st.textContent = "#slipCap small{display:block;font-size:10.5px;letter-spacing:.02em;opacity:.86;white-space:normal;max-width:min(520px,calc(100vw - 40px));line-height:1.45;margin-top:1px}"; document.head.append(st); }
   return { YEAR, NAME, SRC, houseGeo: () => (GEO.house ||= houseGeo()), get active() { return gEra != null; }, tick, leave, ensure, check, nakaHouses, sandoPines, sandoRibbon, nakaRibbon, rows, get info() { return gInfo; } };
 })();
+
+/* ======================================================================== 2026-10-13 夜「80 点へ」（build_walk.py の 11b が、ERA のあとへ差し込む）
+   本人「寄席を80点まで上げて。他も同様。基準をさらに上げてください。」→ 11 人のミカタ 64・未来と現代の差・375px のボタンと碧の重なり。
+   ① 見なおしの札（ミカタ）：本物の物の前で、見る → 時を重ねる（典拠つきの一つの事実・江戸の景色を重ねられる所も）→ 見なおす（いま何が見えるかを選ぶ）。
+      選んだ見方は、この端末の中だけに置く（送らない・保存しない＝ページを閉じれば消える）。事実はすべて、台本ですでに使っている典拠の文から（新しい事実を書かない）。
+   ② 375px：「いまへ戻る」などのボタンが碧の衣に重ならないよう、碧のいない側へ寄せる。
+   ③ 未来（想像）：南区間（市の発表＝歩行者専用の道へ・車止め）で、車道の白線を消し、区間の両端に車止めの列。 */
+const R21 = (() => {
+  /* ---- ① 見なおしの札。at＝札が出る道のり（どちら向きでも ±10 m）・obj＝見る物の道のり */
+  const CARDS = [
+    { id: "ichi", at: -8, obj: 0, title: "一の鳥居",
+      see: "鳥居の柱が、地面に入るところを見てください。",
+      fact: "大正 12 年（1923）の関東大震災で、もとの石の鳥居は壊れました。いまの鳥居は昭和 30 年（1955）に建て替えられ、令和 5 年（2023）に柱と基礎を新しくしています。",
+      src: "氷川神社「由緒・歴史」",
+      ask: "同じ鳥居を、「建っている物」ではなく「建てなおされてきた入口」として、もう一度見てください。いま、何が目に入りますか。",
+      opts: ["足もとの新しさ", "古いままに見える所", "入口の幅と向こうの道"] },
+    { id: "sangen", at: 470, obj: 470, title: "中区間の黒い石の線", era: "edo", eraBtn: "江戸の土の道を重ねる",
+      see: "足もとの石の道の両端に、黒い石の細い線があります。線と線のあいだを見てください。",
+      fact: "この黒い線（スリット側溝）は、雨水を集めるとともに、「参道元来の三間（約 5.4 m）の幅」を表すために置かれました。",
+      src: "さいたま市『ひかわ参道だより』（舗装デザインのワークショップの記録）",
+      ask: "線の内側を、むかしからの道幅として歩いてみてください。いまの道は、どう見えますか。",
+      opts: ["線の内側が「道」に見えた", "外の並木の帯が広く見えた", "線にいま初めて気づいた"] },
+    { id: "hiro", at: 1180, obj: 1200, title: "平成ひろばの緑",
+      see: "石の道の両側の、緑の帯を見てください。",
+      fact: "この並木の帯には、戦後、店や住まいが建ち並んでいました。1985 年からの整備で 163 戸が移り、1989 年に緑地になりました。",
+      src: "さいたま市・氷川の杜まちづくり協議会『氷川参道のまちづくり』",
+      ask: "この緑を、「もとからの自然」ではなく「暮らしが移ったあとに戻った並木」として、もう一度見てください。",
+      opts: ["木の若さや細さ", "建物があった幅", "緑の静けさ"] },
+    { id: "ni", at: 1470, obj: 1457, title: "二の鳥居",
+      see: "柱の足もとと、上のほうの色や木目を見くらべてください。",
+      fact: "昭和 51 年（1976）に明治神宮から移された鳥居です。木は台湾の阿里山で育った、樹齢 1200 年以上の檜とされています。",
+      src: "氷川神社「由緒・歴史」・公式 note 第 46 回「鳥居の話」",
+      ask: "柱を、一本の木が生きた時間で見なおしてください。芽生えたのは、少なくとも千二百年ほど前です。",
+      opts: ["木目の細かさ", "柱の太さ", "上と下の色の違い"] },
+    { id: "namiki", at: 1630, obj: 1640, title: "ケヤキの並木", era: "edo", eraBtn: "江戸の松と杉の並木を重ねる",
+      see: "並木の幹を、二、三本見くらべてください。太さも、かたむきも違います。",
+      fact: "昭和のはじめまで、この参道は、スギや松を主とする並木道でした。いまはケヤキが多く、根もとの土の環境をよくする手入れが続いています。",
+      src: "さいたま市・氷川の杜まちづくり協議会『氷川参道のまちづくり』",
+      ask: "いまのケヤキを、「ずっとある木」ではなく「入れかわってきた並木の、いまの顔」として見てください。",
+      opts: ["幹の太さの違い", "根もとの土", "空の見え方"] },
+    { id: "san", at: 1865, obj: 1894, title: "三の鳥居と社叢",
+      see: "鳥居の向こうの境内の木々と、ここまでの並木を見くらべてください。",
+      fact: "明治 35 年（1902）の風の害の報告書には、赤い鳥居と書かれています。いまの鳥居は、昭和 9 年（1934）に奉納されたものです。",
+      src: "氷川神社「由緒・歴史」",
+      ask: "鳥居を「境い目」として見てください。並木の道と、境内の森は、どこで変わりますか。",
+      opts: ["木の種類", "地面の色", "空の広さ"] },
+  ];
+  const ST = { done: new Map(), open: null, step: 0, lastT: 0, wasWalking: false };
+  const css = document.createElement("style");
+  css.textContent = `
+#mkCard{position:fixed;z-index:7;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 140px);width:min(440px,calc(100vw - 32px));box-sizing:border-box;background:rgba(6,10,18,.8);color:#eef5fb;border:1px solid rgba(92,200,224,.45);border-radius:2px;padding:12px 14px 12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:15px;line-height:1.65}
+#mkCard[hidden]{display:none}
+#mkCard .mkH{display:flex;align-items:baseline;gap:10px;font-family:var(--title);letter-spacing:.1em}
+#mkCard .mkH b{font-size:13px;color:#9bdcf0;font-weight:500}#mkCard .mkH span{font-size:14.5px}
+#mkCard .mkSteps{display:flex;gap:6px;margin:6px 0 8px}#mkCard .mkSteps i{flex:1;height:2px;background:rgba(195,204,224,.25)}#mkCard .mkSteps i.on{background:#9bdcf0}
+#mkCard p{margin:0 0 8px}#mkCard small{display:block;color:#a9b3c8;font-size:12.5px;margin:-2px 0 8px}
+#mkCard .mkRow{display:flex;flex-wrap:wrap;gap:8px}
+#mkCard button{min-height:44px;padding:0 14px;border-radius:2px;border:1px solid rgba(195,204,224,.5);background:rgba(255,255,255,.04);color:#eef5fb;font-size:14px;cursor:pointer;font-family:inherit}
+#mkCard button.mkGo{border-color:rgba(92,200,224,.75)}
+#mkCard .mkX{position:absolute;right:4px;top:4px;min-height:44px;min-width:44px;padding:0;border:0;background:none;font-size:18px;color:#a9b3c8}
+#mkChip{position:fixed;z-index:6;left:12px;top:calc(env(safe-area-inset-top,0px) + 112px);min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(120,96,60,.25);background:rgba(246,238,220,.85);color:#3a2f22;font-size:13px;cursor:pointer}
+#mkChip[hidden]{display:none}
+#mkList{position:fixed;z-index:8;inset:auto 16px calc(env(safe-area-inset-bottom,0px) + 140px) 16px;max-width:460px;margin:0 auto;background:rgba(246,238,220,.96);color:#2f271d;border-radius:4px;padding:14px 16px;font-size:14.5px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+#mkList[hidden]{display:none}#mkList h3{margin:0 0 6px;font-size:15px;font-family:var(--title)}#mkList li{margin:0 0 4px}#mkList button{min-height:44px;margin-top:6px}
+@media(max-width:820px){#mkCard{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);font-size:14.5px;padding:10px 12px}#mkChip{left:154px;top:calc(env(safe-area-inset-top,0px) + 18px);min-height:32px;padding:0 10px;font-size:12px}}
+body.mkOn #actBtn{display:none!important}
+@media(max-width:820px){#actBtn.dodgeR{left:auto!important;right:12px;transform:none!important}#actBtn.dodgeL{left:12px!important;right:auto;transform:none!important}}
+@media(min-width:821px){#mkCard{left:16px;transform:none;top:calc(env(safe-area-inset-top,0px) + 172px)}}   /* PC：碧の顔に重ならないよう、左の欄の下へ */
+@media(prefers-reduced-motion:reduce){#mkCard,#mkCard *{transition:none!important}}`;
+  document.head.append(css);
+  const card = document.createElement("section"); card.id = "mkCard"; card.hidden = true; card.setAttribute("role", "dialog"); card.setAttribute("aria-live", "polite"); card.setAttribute("aria-label", "見なおしの札"); document.body.append(card);
+  const chip = document.createElement("button"); chip.id = "mkChip"; chip.type = "button"; chip.hidden = true; document.body.append(chip);
+  const list = document.createElement("section"); list.id = "mkList"; list.hidden = true; list.setAttribute("role", "dialog"); list.setAttribute("aria-label", "あなたの見なおし"); document.body.append(list);
+  const e = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function chipLbl() { chip.hidden = !ST.done.size; chip.textContent = `見なおし ${ST.done.size}/${CARDS.length}`; }
+  chip.onclick = () => { list.hidden = !list.hidden; if (!list.hidden) {
+    list.innerHTML = `<h3>あなたの見なおし</h3><ol>${CARDS.filter(c => ST.done.has(c.id)).map(c => `<li><b>${e(c.title)}</b>：${e(ST.done.get(c.id))}</li>`).join("")}</ol><small>この端末の中だけ。閉じると消えます。</small><br><button type="button" id="mkLClose">閉じる</button>`;
+    list.querySelector("#mkLClose").onclick = () => { list.hidden = true; chip.focus(); }; } };
+  function pauseWalk(on) {
+    try { if (on) { if (mode === "sim" && walking) { ST.wasWalking = true; walking = false; walkLbl(); } }
+      else if (ST.wasWalking) { walking = true; userPaused = false; walkLbl(); ST.wasWalking = false; } } catch {}
+  }
+  function close(rec) {
+    const c = ST.open; if (!c) return; if (rec) ST.done.set(c.id, rec); else ST.done.set(c.id, ST.done.get(c.id) ?? "（とばした）");
+    if (c.era && JOURNEY.manual === c.era && ST.eraByCard) { try { chooseJourneyEra("auto"); } catch {} }
+    try { if (EX.s?.id?.startsWith?.("_mk_")) { EX.s = null; EX.pt = null; } } catch {}
+    ST.eraByCard = false; ST.open = null; card.hidden = true; document.body.classList.remove("mkOn"); ST.lastT = performance.now(); pauseWalk(false); chipLbl(); }
+  function render() {
+    const c = ST.open; if (!c) return; const k = ST.step;
+    const steps = `<div class="mkSteps" aria-hidden="true"><i class="on"></i><i class="${k >= 1 ? "on" : ""}"></i><i class="${k >= 2 ? "on" : ""}"></i></div>`;
+    const head = `<div class="mkH"><b>${["見る", "時を重ねる", "見なおす"][k]}</b><span>${e(c.title)}</span></div>`;
+    let body = "";
+    if (k === 0) body = `<p>${e(c.see)}</p><div class="mkRow"><button type="button" class="mkGo" data-a="next">見た</button><button type="button" data-a="skip">とばす</button></div>`;
+    else if (k === 1) body = `<p>${e(c.fact)}</p><small>出どころ：${e(c.src)}</small><div class="mkRow">${c.era ? `<button type="button" data-a="era">${e(JOURNEY.manual === c.era ? "いまへ戻す" : c.eraBtn)}</button>` : ""}<button type="button" class="mkGo" data-a="next">もう一度見る</button></div>`;
+    else body = `<p>${e(c.ask)}</p><div class="mkRow">${c.opts.map((o, i) => `<button type="button" data-a="pick" data-i="${i}">${e(o)}</button>`).join("")}</div>`;
+    card.innerHTML = head + steps + body + `<button type="button" class="mkX" data-a="skip" aria-label="札を閉じる">×</button>`;
+    for (const b of card.querySelectorAll("button")) b.onclick = ev => { ev.stopPropagation(); const a = b.dataset.a;
+      if (a === "next") { if (ST.step === 1 && c.era && JOURNEY.manual === c.era && ST.eraByCard) { try { chooseJourneyEra("auto"); } catch {} ST.eraByCard = false; }   /* 見なおすは、いまの景色で（11 人の P1：江戸のまま「いまのケヤキを見て」と言っていた） */
+        ST.step++; render(); card.querySelector("button")?.focus(); }
+      else if (a === "skip") close(null);
+      else if (a === "pick") close(c.opts[+b.dataset.i]);
+      else if (a === "era") { try { if (JOURNEY.manual === c.era) { chooseJourneyEra("auto"); ST.eraByCard = false; } else { chooseJourneyEra(c.era); ST.eraByCard = true; } } catch {} render(); } };
+  }
+  /* 画面で歩くとき：札を開いたら、見る物へカメラを向ける（碧も画面に入るよう、ページの exLook が寄せる）。11 人の P1「見る対象が画面に写らない」 */
+  const AIM = { ichi: [0, 4.5], sangen: [0, 0], hiro: [7, .6], ni: [0, 6], namiki: [6, 3], san: [0, 4] };
+  function aim(c) { try { const [s, ly] = AIM[c.id] ?? [0, 1], w = toWorld(c.obj, s), y = C.groundY?.(w.x, w.z) ?? 0;
+    c._ex ||= { id: "_mk_" + c.id, at: { d: c.obj, s }, _pt: { x: w.x, y: y + ly, z: w.z } }; if (EX.s !== c._ex) { EX.s = c._ex; EX.pt = null; } } catch {} }
+  function open(c) { ST.open = c; ST.step = 0; card.hidden = false; document.body.classList.add("mkOn"); pauseWalk(true); render(); }
+  /* 見せてよいとき：はじめの話のあと・3D あり・ほかの札や地図を開いていない・時を越えるを手で選んでいない。現地では立ち止まって 3 秒たってから、車の通る区間では出さない */
+  function canShow() {
+    if (!started || !introDone || NO3D || tpBusy || mapBig || ended || farMode) return false;
+    if (JOURNEY.manual) return false;
+    try { if (SLIP.on || SLIP.leaving || ACT.f || (ZN.k ?? 0) > .5) return false; } catch {}   /* 時の層（享保などの景色）の中では出さない：見る物が消えていることがある */
+    if (performance.now() - ST.lastT < 12000) return false;
+    if (mode === "gps") { if (still.since == null || (performance.now() - still.since) * TS < 3000) return false; try { if (inCar(d)) return false; } catch {} }
+    return true;
+  }
+  /* ---- ② 375px：ボタンを碧のいない側へ */
+  let v3 = null;   /* THREE は 3D を組んだあとに入る */
+  function dodge() {
+    const b = $("actBtn"); if (!b) return; b.classList.remove("dodgeL", "dodgeR");
+    if (innerWidth > 820 || b.hidden) return; const a = window.__aoi?.aoi; if (!a?.visible || !C?.camera || !THREE) return; v3 ||= new THREE.Vector3();
+    v3.copy(a.position); v3.y += 1.0; v3.project(C.camera); if (v3.z > 1) return;
+    b.classList.add(v3.x < 0 ? "dodgeR" : "dodgeL");
+  }
+  /* ---- ③ 未来：南区間の白線と車止め */
+  let futG = null;
+  function future(on) {
+    const U2 = window.__rlU; if (U2?.rlFut) U2.rlFut.value = on ? 1 : 0;
+    if (U2?.rlNP && !U2.rlNP.set) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (let dd = 2; dd <= 330; dd += 4) { const w = toWorld(dd, 0); x0 = Math.min(x0, w.x - 9); x1 = Math.max(x1, w.x + 9); z0 = Math.min(z0, w.z); z1 = Math.max(z1, w.z); } U2.rlNP.value.set(x0, z0, x1, z1); U2.rlNP.set = true; }
+    if (on && !futG) {
+      futG = new THREE.Group(); futG.name = "r21_future_bollards";
+      const g = new THREE.CylinderGeometry(.055, .06, .85, 10); g.translate(0, .425, 0); const m = new THREE.MeshStandardMaterial({ color: 0x8a8f94, roughness: .5, metalness: .4 });
+      const P = []; for (const dd of [3, 331]) { const b = bandAt(dd); for (let s = b[0] + .4; s <= b[1] - .4; s += 1.4) { const w = toWorld(dd, s), y = C.groundY(w.x, w.z); if (y != null) P.push([w.x, y, w.z]); } }
+      const im = new THREE.InstancedMesh(g, m, Math.max(1, P.length)); const o = new THREE.Object3D(); P.forEach((p, i) => { o.position.set(...p); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.count = P.length; im.castShadow = true;
+      futG.add(im); C.scene.add(futG);
+    }
+    if (futG) futG.visible = on;
+  }
+  function tick() {
+    try {
+      dodge();
+      future(JOURNEY.manual === "future");
+      if (ST.open) { const c = ST.open; if (Math.abs(d - c.at) > 60 && !JOURNEY.manual) close(null); }
+      else if (canShow()) { const c = CARDS.find(c => !ST.done.has(c.id) && Math.abs(d - c.at) < 10);
+        /* 碧が話している途中なら、画面で歩くときは立ち止まって話の区切りを待つ（6 秒まで）。札と声が同時に別の話をしない */
+        if (c && speaking && performance.now() - (ST.waitT ??= performance.now()) < 6000) { if (mode === "sim" && walking) pauseWalk(true); }
+        else if (c) { ST.waitT = null; const keep = ST.wasWalking; open(c); if (keep) ST.wasWalking = true; } else ST.waitT = null; }
+      if (ST.open && mode === "sim") aim(ST.open);
+    } catch (err) { /* 札は無くても歩ける */ }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  return { CARDS, ST, open: id => open(CARDS.find(c => c.id === id)), close, era: () => JOURNEY.manual ?? null, busy: () => !!ST.open };
+})();
+window.__r21 = R21;
+
+/* ======================================================================== 2026-10-13 夜　認知レイヤ：身体（環世界）の軸（build_walk.py の 11c が差し込む）
+   本人「氷川道中でも胡蝶の夢のように、生き物の視点に入れ替えられるようにしてください。同じ氷川参道という場を、環世界を入れ替えたり、時代を越えたりして…」
+   設計＝資料/認知レイヤの設計_v1_2026-10-13.md §2。参道（とその周り）で記録のある生きものだけ：人・鳥（スズメ・ムクドリ・ハクセキレイ）・チョウ（アオスジアゲハ）。
+   色の写し方の数と「なぜ、そう見えるの？」の典拠は、胡蝶の夢から共通部品へ写したもの（web/kit/umwelt_lens.js・web/kit/why.js）。主観の再現ではない（受けとれる信号の置きかえ＝模式）。
+   しくみ：人以外のときだけ、3D をいったん絵（線形の色）に描き、色の行列をかけてから、ふだんと同じ色の処理（トーンマッピング）で画面へ。目の高さも身体ごと。
+   現地で歩くとき（GPS）も、位置・安全の決まりは人のまま（目の高さだけ変える）。 */
+const BODY = (() => {
+  const B = {
+    hito: { name: "人", eye: null, rec: "" },
+    tori: { name: "鳥", eye: 4.5, rec: "参道の記録：スズメ・ムクドリ・ハクセキレイ（iNaturalist・研究等級）。目の研究は近い仲間のアオガラなどから（◐）" },
+    chou: { name: "チョウ", eye: 1.0, rec: "参道の記録：アオスジアゲハ（iNaturalist）。目の研究は同じアゲハチョウ科のナミアゲハから（◐）" },
+  };
+  let cur = "hito", LENS = null, RT = null, qS = null, qC = null, qM = null; const sz = { w: 0, h: 0 };
+  import(new URL("web/kit/umwelt_lens.js", document.baseURI).href).then(m => { LENS = m.LENS; }).catch(() => {});
+  { const s = document.createElement("script"); s.src = "web/kit/why.js"; s.async = true; document.head.append(s); }
+  function ensure(r) {
+    const v = r.getDrawingBufferSize(new THREE.Vector2()), w = v.x | 0, h = v.y | 0;
+    if (!RT) { RT = new THREE.WebGLRenderTarget(w, h, { samples: 4, type: THREE.HalfFloatType }); sz.w = w; sz.h = h;
+      qM = new THREE.ShaderMaterial({ uniforms: { tD: { value: RT.texture }, uM: { value: new THREE.Matrix3() } }, depthTest: false, depthWrite: false,
+        vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+        fragmentShader: "#include <common>\nuniform sampler2D tD; uniform mat3 uM; varying vec2 vUv;\nvoid main(){ vec4 c = texture2D(tD, vUv); gl_FragColor = vec4(max(uM * c.rgb, 0.0), 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}" });
+      qM.toneMapped = true; qS = new THREE.Scene(); qS.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), qM)); qC = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); }
+    else if (w !== sz.w || h !== sz.h) { RT.setSize(w, h); sz.w = w; sz.h = h; }
+  }
+  /* sando_template の描画の輪から呼ばれる（人のときは false＝ふだんどおり） */
+  window.__lensRender = (r, scene, cam) => {
+    if (cur === "hito" || !LENS?.[cur]) return false;
+    ensure(r); qM.uniforms.uM.value.set(...LENS[cur].m);
+    r.setRenderTarget(RT); r.render(scene, cam); r.setRenderTarget(null); r.render(qS, qC); return true;
+  };
+  /* ---- 操作：「時を越える」の欄の上に「身体」の段。いまの組み合わせは欄の見出しに一行で */
+  const css = document.createElement("style");
+  css.textContent = `#bodyRow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}#bodyRow button{min-height:44px;min-width:64px;padding:0 12px;border-radius:2px;border:1px solid rgba(195,204,224,.45);background:rgba(255,255,255,.04);color:#eef5fb;font-family:var(--title);letter-spacing:.08em;cursor:pointer}
+#bodyRow button[aria-pressed=true]{border-color:#9bdcf0;background:rgba(92,200,224,.16)}#bodyHead{font-size:11.5px;color:#a9b3c8;letter-spacing:.06em;margin-top:4px}
+#bodyNote{position:fixed;z-index:6;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);max-width:min(340px,calc(100vw - 32px));background:rgba(6,10,18,.74);color:#eef5fb;border:1px solid rgba(92,200,224,.35);border-radius:2px;padding:8px 12px;font-size:12.5px;line-height:1.6;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#bodyNote[hidden]{display:none}#bodyNote b{font-family:var(--title);font-size:13.5px;letter-spacing:.1em}#bodyNote details{margin-top:4px}#bodyNote summary{cursor:pointer;min-height:32px;line-height:32px;color:#9bdcf0}#bodyNote li{margin:2px 0}
+@media(max-width:820px){#bodyNote{left:12px;right:auto;bottom:auto;top:calc(env(safe-area-inset-top,0px) + 176px);max-width:calc(100vw - 104px);font-size:12px}}
+.jBody{color:#9bdcf0;margin-left:6px}`;
+  document.head.append(css);
+  const note = document.createElement("aside"); note.id = "bodyNote"; note.hidden = true; document.body.append(note);
+  const e = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function setBody(id) {
+    if (!B[id]) return; const was = cur; cur = id;
+    { const A = window.__aoi?.A; if (A) { if (id === "chou") A.hideOv = true; else if (was === "chou") A.hideOv = false; } }   /* チョウの目（1 m）では碧が首から下だけ写るので、碧は出さない（11 人の P2） */ window.__eyeH = B[id].eye ?? undefined; if (B[id].eye == null) delete window.__eyeH;
+    for (const b of document.querySelectorAll("#bodyRow button")) b.setAttribute("aria-pressed", String(b.dataset.b === id));
+    const jb = document.querySelector("#journeyPanel .jBody"); if (jb) jb.textContent = id === "hito" ? "" : "· " + B[id].name + "の目";
+    if (id === "hito") { note.hidden = true; return; }
+    const L = LENS?.[id], W = window.WHY?.[id];
+    note.innerHTML = `<b>${e(B[id].name)}の目</b>　${e(L?.sub ?? "")}<br>${e(B[id].rec)}<br>色は人の画面への置きかえ（模式）。四つ目の色そのものは、人の画面には出せません。`
+      + (W ? `<details><summary>なぜ、そう見えるの？</summary><ul>${[...W.body, ...W.how].map(t => `<li>${e(t)}</li>`).join("")}</ul><small>${e(W.refs.join(" ／ "))}</small></details>` : "");
+    note.hidden = false;
+  }
+  function mount() {
+    const det = document.querySelector("#journeyPanel > details"); if (!det || document.getElementById("bodyRow")) return !!det;
+    const sum = det.querySelector("summary"); if (sum && !sum.querySelector(".jBody")) { const s = document.createElement("span"); s.className = "jBody"; sum.append(s); }
+    const head = document.createElement("p"); head.id = "bodyHead"; head.textContent = "身体（だれの目で見るか）";
+    const row = document.createElement("div"); row.id = "bodyRow"; row.setAttribute("role", "group"); row.setAttribute("aria-label", "身体を選ぶ");
+    for (const [id, b] of Object.entries(B)) { const bt = document.createElement("button"); bt.type = "button"; bt.dataset.b = id; bt.textContent = b.name; bt.setAttribute("aria-pressed", String(id === cur)); bt.onclick = ev => { ev.stopPropagation(); setBody(id); }; row.append(bt); }
+    const sc = det.querySelector(".jScale"); (sc ?? sum).after(head, row); return true;
+  }
+  const mt = setInterval(() => { if (mount()) clearInterval(mt); }, 500);
+  return { set: setBody, get cur() { return cur; }, B };
+})();
+window.__body = BODY;
 
 /* JOURNEY_EXTENSION */
 /* 2026-10-11 本人指定：五時代・一話から遊べるオムニバス。年代は景色の模式。 */
