@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#03060f">
 <meta name="description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
 <meta property="og:title" content="氷川道中"><meta property="og:description" content="《氷川道中》（Hikawa Dochu）氷川参道を、依代の碧と歩き、木や土や水、石に残る時間、生きもの、人の暮らしの気配を、一度の散歩の中で感じなおす作品。">
-<meta name="aoiwalk-build" content="r9-b48d361ba0">
+<meta name="aoiwalk-build" content="r9-64b56826fb">
 <title>氷川道中</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Shippori+Mincho+B1:wght@600&display=swap" media="print" onload="this.media='all'">
@@ -3890,6 +3890,26 @@ const XM = 5;
 function xGuard(dd = d) { if (inX(dd)) return 0; if (dirKnown()) return toXe(dd); let m = Infinity; for (const h of xh()) m = Math.min(m, Math.abs(h.d0 - dd), Math.abs(dd - h.d1)); return m; }
 const xSp = () => Math.max(1.3, walkSp());
 /* これから渡る帯の手前の案内（まだ言っていないもの） */
+/* 2026-10-13 安全（現地）：渡る前の案内を言い終えられなかった横断では、帯の 5 m 手前より前（11 m 以内に入ったとき）に、短い合図を必ず鳴らす。
+   合図＝この作品の中で作った 0.5 秒ほどの穏やかな二つの音（音なしの設定では鳴らさない）と、端末が対応していれば短い振動。黙ったまま渡らない */
+const SAFE_OK = new Set(), XCUE = new Set(), XC = []; window.__XC = XC; let xcueAC = null;
+function crossCue() {
+  try { navigator.vibrate?.([90, 70, 90]); } catch {}
+  if (!soundOn) return;
+  try { const ac = xcueAC ||= new (window.AudioContext || window.webkitAudioContext)(); ac.resume?.(); const t = ac.currentTime, out = ac.createGain(); out.gain.value = .12; out.connect(ac.destination);
+    for (const [t0, f] of [[0, 660], [.2, 880]]) { const o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + t0); g.gain.linearRampToValueAtTime(1, t + t0 + .02); g.gain.exponentialRampToValueAtTime(.001, t + t0 + .28); o.connect(g); g.connect(out); o.start(t + t0); o.stop(t + t0 + .3); } } catch {}
+}
+function crossCueTick() {
+  if (mode !== "gps" || !started || !dirKnown()) return; const dir = curDir(); if (!dir) return;
+  for (const h of XH) { const key = h.d0 + "|" + dir, ah = dir > 0 ? h.d0 - d : d - h.d1;
+    if (ah < -60 || ah > 80) { XCUE.delete(key); continue; }
+    if (XCUE.has(key) || ah <= 0 || ah > XM + 6 || inX(d)) continue;
+    const nt = SEG.find(q => q.kind === "safety" && /^safe_X/.test(q.id) && q.dirOnly === dir && (dir > 0 ? Math.abs(q.d1 + 1 - h.d0) < 4 : Math.abs(q.d0 - 1 - h.d1) < 4));
+    if (nt && SAFE_OK.has(nt.group)) { XCUE.add(key); continue; }
+    if (nt && speaking === nt && ah > XM) continue;   /* 案内の途中（帯の 5 m 手前で言い終わる） */
+    XCUE.add(key); crossCue(); XC.push({ k: "cue", g: nt?.group ?? "", d: +d.toFixed(1), ah: +ah.toFixed(1) }); }
+}
 function safeAhead() { return SEG.find(q => q.kind === "safety" && talkable(q) && /^safe_X/.test(q.id) && d >= q.d0 - 25 && d < q.d1) ?? null; }
 /* 第10回：歩く向きの道の端から m 以内か */
 function atEnd(m) { const dr = mode === "sim" ? simDir : (dirKnown() ? curDir() : 0); return (dr > 0 && d >= D_MAX - m) || (dr < 0 && d <= D_MIN + m); }
@@ -4035,6 +4055,7 @@ function pick() {
   return null;
 }
 function tick() {
+  try { crossCueTick(); } catch (e) { console.warn("crossCue", e); }
   /* 第10回：道の端に着いたら、続きもの・区間の話は行の途中でもそっと止めて、締めのことばを先に（地点の話・時の層の言葉・安全の話は言い終えてから） */
   if (!ended && started && introDone && speaking && !speaking.cut && speaking.id[0] !== "_" && speaking.kind !== "anchor" && speaking.kind !== "safety" && atEnd(mode === "gps" ? 6 : 2)) {
     const s = speaking; s.cut = true; fadeOut(() => { s.cut = false; done(s, true); setSub(""); }); return; }
@@ -4206,6 +4227,7 @@ function done(s, skipped = false, keepPlayed = false) {
   if (speaking !== s) return;
   const L = [...LOG].reverse().find(x => x.id === s.id); if (L) { L.t1 = performance.now(); L.skipped = skipped; L.d1 = +d.toFixed(1); }
   played.add(s.id); if (s.group) groups.add(s.group); s.resume = 0;
+  if (s.kind === "safety" && /^safe_X/.test(s.id)) { if (!skipped) { SAFE_OK.add(s.group); XC.push({ k: "notice", g: s.group, d: +d.toFixed(1) }); } }   /* 2026-10-13：渡る前の案内を言い終えたか（言えなかった横断には合図） */
   if (!skipped && s.disc) discover(s.id, s.disc.k, s.disc.t);   /* 第8回：発見の手帖 */
   const wasStop = stopFor === s, stoppedHere = (s.inv?.st === "stop" && !s.inv.short) || (!s.inv && mode === "gps" && still.since != null && sinceMs(still.since) > 2500);   /* 第9回：誘わなかった地点でも、聞き手が立ち止まっていれば「もっと」まで */
   if (stopFor === s) { stopFor = null; stopLinger = performance.now() + 1500 / TS; }
