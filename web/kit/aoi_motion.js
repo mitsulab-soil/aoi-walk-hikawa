@@ -12,6 +12,7 @@
      身ぶりは人の幅の中で小さく（肘は脇の近く・手は胸から腰の前）。upright（HP）は 6 割の大きさ。指すときは目が先に的へ行き、止めるあいだ的を見る。
    - その場で向きを変える：目と頭が先に、次に胴、そのあと内側の足から踏み出す。20° ほどまでは踏みかえず、80° ほどまでは二歩、それより大きいと四歩。
      踏み出す前に、反対の足へ体重を移す。歩幅も小さい角度ほど小さい。
+   - 現れ方：アプリが材質を薄くするあいだは、半透明で重ねず網目（ディザ）で描く（目だけ先に浮く・透けた顔に白目と口の中が浮く、を防ぐ）。
    - 画質の段（quality："auto"（既定）|"high"|"mid"|"low"）：弱い端末では、裾の布を一こまおきに・指を一こまおきに（mid）、
      さらに髪の揺れも一こまおきに（low）。auto は端末の手がかりで始め、こまの速さを見て下げる（よくなれば戻す）。m.quality で今の段。
    v4（2026-10-13 本人「碧の動きは全体のキモなので、８５点まで上げて。動きと表情を自然な感じに仕上げて。」「碧の表情について、不気味の谷を乗り越えてください。」）：
@@ -117,7 +118,7 @@ const G_RULES = [
   ["iconic", "long", /長い|長く|(?<![ぁ-ん])なが[いく]/, /(?:^|[/、])ナガ[イク]/],
   ["iconic", "round", /丸い|丸く|(?<![ぁ-ん])まる[いく]/, /(?:^|[/、])マル[イク]/],
   ["metaphoric", "contrast", /(?:^|[、。！？\s])(?:でも|けれど|けど|しかし)|一方|ではなく|じゃなく|逆に|違う|違い|ちがう|ちがい|比べ|くらべ|かわりに|よりも/, /(?:^|[、/])(?:デモ|ケレド|シカシ)|イッポ[オウ]|デワナ[クイ]|ジャナク|ギャクニ|チガ[ウイッ]|クラベ|カワリニ|ヨリモ/],
-  ["beat", "", /とても|すごい|すごく|本当|ほんとう|必ず|かならず|一番|いちばん|絶対|ぜったい|大事|だいじ|大切|たいせつ|まさに|全部|ぜんぶ|もっと|[！!]/, /トテモ|スゴ[イク]|ホント[オウ]|カナラズ|イチバン|ゼッタイ|ダイジ|タイセツ|マサニ|ゼンブ|モット/],
+  ["beat", "", /とても|すごい|すごく|本当|ほんとう|必ず|かならず|一番|いちばん|絶対|ぜったい|大事|だいじ|大切|たいせつ|まさに|全部|ぜんぶ|もっと|まったく|全く|[！!]/, /トテモ|スゴ[イク]|ホント[オウ]|カナラズ|イチバン|ゼッタイ|ダイジ|タイセツ|マサニ|ゼンブ|モット|(?:^|[/、])マッタク/],
 ];
 const G_PRI = { deictic: 4, iconic: 3, metaphoric: 2, beat: 1 };
 // 語の位置 → 時刻。かなは口の時刻表と同じ数え方（一拍＝一つ）、字幕は字の重み（漢字は約 1.7 拍・小さい字は 0・句読点は間）
@@ -328,6 +329,7 @@ export class AoiMotion {
     // ローブの裾（v3）
     this.robe = null; if (robe) { try { const r = new AoiRobe(vrm, { wind: wind * .7 }); if (r.ok) this.robe = r; } catch (e) { console.warn("AoiRobe", e); } }
     this._robeReset = true;
+    try { this._fadeGuard(); } catch (e) { console.warn("fadeGuard", e); }   // v5：現れ方の網目（アプリが材質を薄くする前に、もとの半透明かどうかを覚える）
     // 人が動いた記録（v3）
     this.mc = null; this.mcW = new Spr(0, 1.2); this._mq = {}; this._mp = new THREE.Vector3(); this._mt = {}; this._phi = 0;
     this.mi = { cur: "idle_a", t: 0, prev: null, pt: 0, x: 1 };
@@ -394,8 +396,31 @@ export class AoiMotion {
     if (q.ema > 1 / 36) { q.slow += raw; q.fast = 0; if (q.slow > 4 && i < 2) { q.tier = order[i + 1]; q.slow = 0; } }
     else { q.slow = Math.max(0, q.slow - raw); if (q.ema < 1 / 56) { q.fast += raw; if (q.fast > 20 && i > 0) { q.tier = order[i - 1]; q.fast = 0; } } else q.fast = 0; }
   }
+  // v5（11 人の P1「現れるとき、透けた顔に白目の穴と口の中だけが浮いて、お面のように見える」）：
+  // アプリが碧を薄くから濃くするあいだ（材質の opacity が 1 未満）は、半透明に重ねて描かず、細かい網目で「描く点・描かない点」を分けて描く（ディザ）。
+  // どの点も不透明に描くので奥行きの前後が崩れない＝顔の奥の白目・口の中が透けない・目だけ先に浮かない・髪とまつげが入れちがわない。目・肌・髪が同じ速さで現れる。
+  _fadeGuard() {
+    if (this._fade) return; this._fade = true;
+    const BAYER = "uniform float aoiFadeA;\nuniform float aoiCutA;\nfloat aoiBayer(vec2 p){ int x = int(mod(p.x, 4.0)), y = int(mod(p.y, 4.0)), i = x + y * 4;\n float m[16] = float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.); return (m[i] + .5) / 16.; }\n";
+    const mats = new Set(); this.vrm.scene.traverse(m => { if (m.isMesh && !m.userData.aoiOverlay) for (const mt of [].concat(m.material)) mats.add(mt); });
+    for (const mt of mats) { if (mt.userData.aoiFadeU) continue; const u = mt.userData.aoiFadeU = { value: 1 }; mt.userData.aoiCutU = { value: 0 }; mt.userData.aoiBl = mt.blending; mt.userData.aoiTr = mt.transparent; mt.userData.aoiDW = mt.depthWrite; mt.userData.aoiPrevOBC = mt.onBeforeCompile; mt.userData.aoiBayer = BAYER;
+      // もとから半透明の材質（目の光・線など）は、重ね塗りのまま網目だけ掛ける
+      // 注：three はこの関数を文字列にして形の見分けに使うことがあるので、外の変数を使わず this（材質）から読む
+      mt.onBeforeCompile = function (sh, r) { const ud = this.userData; ud.aoiPrevOBC?.call(this, sh, r); sh.uniforms.aoiFadeA = ud.aoiFadeU; sh.uniforms.aoiCutA = ud.aoiCutU; if (!/void\s+main\s*\(\s*\)\s*\{/.test(sh.fragmentShader)) return;
+        sh.fragmentShader = (ud.aoiBayer + sh.fragmentShader.replace(/void\s+main\s*\(\s*\)\s*\{/, "void main() {\n  if (aoiFadeA < .999 && aoiBayer(gl_FragCoord.xy) >= aoiFadeA) discard;")).replace(/\}\s*$/, "  if (aoiCutA > .5 && gl_FragColor.a < .08) discard;\n}\n"); };
+      mt.userData.aoiPrevKey = mt.customProgramCacheKey; mt.customProgramCacheKey = function () { const k = this.userData.aoiPrevKey; return (k ? k.call(this) : "") + "|aoiFade"; }; mt.needsUpdate = true; }
+    // 描く直前に、そのこまの濃さを網目の割合へ移し、重ね塗りをやめて奥行きを書く（アプリの現れ方のコードはそのまま）
+    this.vrm.scene.traverse(m => { if (!m.isMesh || m.userData.aoiOverlay) return; m.userData.aoiM = this; const prev = m.onBeforeRender;
+      m.onBeforeRender = function (r, s, c, g, mt, grp) { prev?.call(this, r, s, c, g, mt, grp); const u = mt?.userData?.aoiFadeU; if (!u) return;
+        const o = mt.transparent ? mt.opacity : 1;
+        // 濃さは網目だけで表し、材質の不透明度は 1 に（VRoid の肌・髪・服は「抜き 0.5」なので、薄くすると半分より下で全部抜けて、目だけが先に見えていた）
+        if (o < .999) { const am = this.userData.aoiM; if (am) am._fadingT = am.t; if (mt.userData.aoiTr) { u.value = 1; if (mt.uniforms?.opacity) mt.uniforms.opacity.value = o; mt.userData.aoiCutU.value = 1; mt.depthWrite = true; }   /* 見えている所だけ奥行きを書く（透明な所は捨てる）。こうしないと、①四角い面の透明な所まで奥行きが入って後ろの白目と肌が抜け、黒い帯になる（11 人の P1）②描く順が入れかわり、白目が黒目の上に塗られて白く光る目になる */   // もとから半透明の細い部品（眉・まつげ・目の線・黒目・目の光）は網目にせず薄くする（網目だと線が欠けて太い帯に見える）。網目の肌と同じくらいの見え方に（目のない顔にならない）
+          else { u.value = 1 - (1 - o) * (1 - o); if (mt.uniforms?.opacity) mt.uniforms.opacity.value = 1; if (!/outline/i.test(mt.name || "")) mt.blending = THREE.NoBlending; mt.depthWrite = mt.userData.aoiDW; }   /* 奥行きを書くかどうかは、もとの材質のまま（白目はもとから書かない＝黒目が隠れない） */ mt.userData.aoiDith = true; }   // 輪郭線の材質は重ね塗りのまま（重ね塗りをやめると、髪の輪郭線が黒い帯になる）
+        else if (mt.userData.aoiDith) { u.value = 1; mt.userData.aoiCutU.value = 0; mt.blending = mt.userData.aoiBl; mt.depthWrite = mt.userData.aoiDW; mt.userData.aoiDith = false; } else u.value = 1; }; });
+  }
   update(dt, camera, { vrmUpdate = true } = {}) {
     this._qTick(dt); dt = Math.min(dt, .05); if (dt <= 0) return; this.t += dt; const S = this.s;
+    if (this._fadingT != null && this.t - this._fadingT < .35 && this.blink.t < 0) this.blink.next = Math.max(this.blink.next, .35);   // v5：現れているあいだと直後はまばたきしない（目が線だけの一こまにしない）
     this._locomotion(dt, camera);
     this._apply();
     const cam = camera ? camera.getWorldPosition(this._cam || (this._cam = new THREE.Vector3())) : null;
@@ -461,6 +486,7 @@ export class AoiMotion {
       else this.yaw += d * (1 - Math.exp(-2 * dt));   // ごく小さな差は、そのまま寄せる
     } else this.yaw += clamp(d * (1 - Math.exp(-3.2 * dt)), -rate * dt, rate * dt);
     const rem = tr ? wrapA(tr.y1 - this.yaw) : d;
+    this._tw = (this._tw || 0) + ((this._turn && this._turn.n ? 1 : 0) - (this._tw || 0)) * (1 - Math.exp(-5 * dt));
     this.s.turnLead.t = clamp(rem, -.9, .9); this.s.turnLead.step(dt, tr ? 7 : 5);   // 胴は足より先に回る
   }
   // v5：向きかえの一歩（i 番め）。内側の足から、交互に。着く場所と向きは、その一歩が終わるころの体の向きで決める
@@ -520,7 +546,7 @@ export class AoiMotion {
     const hips = B.hips; if (hips) { const h0 = this.rest.hip0; hips.position.set(h0.x + this._hipOff[0] * this.hk, h0.y + this._hipOff[1] * this.hk, h0.z + this._hipOff[2] * this.hk); }
     for (const [n, a] of Object.entries(this._pose)) { const b = B[n]; if (!b) continue; const base = this._poseB[n];
       b.quaternion.setFromEuler(_e.set(base[0], base[1], base[2]));
-      const it = (n === "hips" || n === "spine" || n === "chest" || n === "upperChest") ? 1 + ((this._idleTorso ?? 1) - 1) * (1 - this.k) : 1, w = mw * (MOCAP_W[n] || 0) * this._ms(n) * (1 - .6 * bw) * it; if (w > 1e-3 && this._mq[n]) b.quaternion.slerp(this._latQ(n, this._mq[n]), w);
+      const it = (n === "hips" || n === "spine" || n === "chest" || n === "upperChest") ? 1 + ((this._idleTorso ?? 1) - 1) * (1 - this.k) : 1, w = mw * (MOCAP_W[n] || 0) * this._ms(n) * (1 - .6 * bw) * it * (1 - .55 * (this._tw || 0)); if (w > 1e-3 && this._mq[n]) b.quaternion.slerp(this._latQ(n, this._mq[n]), w);
       b.quaternion.multiply(_q[5].setFromEuler(_e.set(a[0], a[1], a[2]))); }
   }
   // 記録をどれだけ効かせるか（姿勢の型ごと）：胴＝mT・首と頭＝mN・肩と腕＝mA
@@ -683,7 +709,8 @@ export class AoiMotion {
       let xbNear = false; for (const x0 of sp.xb || []) { const x = c - x0; if (x > -.18 && x < .45) beat = Math.max(beat, x < 0 ? sstep(1 + x / .18) : 1 - sstep(x / .45)); if (x > -.6 && x < .7) xbNear = true; }
       sp.xbNear = xbNear;
       if (c > (sp.dur || 0) + .35) this.speaking = null; }
-    const pl = sp && L ? (sp.xbNear && !(sp.plan >= 1) ? 1 : sp.plan ?? 1) : 0, gon = (1 - k * .7) * (1 - this._bw) * this.pz.gest;
+    // v5：中身に合う身ぶりがある行では、中身と関係のない型（右手・両手・左手の構え）を出さない（手が腹の前で重なる・胸に手を当てるように見える）。拍子のときだけ右手を上げる
+    const pl = sp && L ? (sp.gq?.length ? (sp.xbNear ? 1 : 0) : sp.xbNear && !(sp.plan >= 1) ? 1 : sp.plan ?? 1) : 0, gon = (1 - k * .7) * (1 - this._bw) * this.pz.gest;
     S.gest.t = (pl === 1 || pl === 2 ? 1 : pl === 3 ? .3 : 0) * gon; S.gest.step(dt, 4.2);
     S.gestL = S.gestL || new Spr(0, 4.2); S.gestL.t = (pl === 2 || pl === 3 ? 1 : pl === 1 ? .3 : 0) * gon; S.gestL.step(dt);
     S.gVar = (S.gVar ?? .5) + ((sp?.var ?? .5) - (S.gVar ?? .5)) * (1 - Math.exp(-3 * dt)); S.gVar2 = (S.gVar2 ?? .5) + ((sp?.var2 ?? .5) - (S.gVar2 ?? .5)) * (1 - Math.exp(-3 * dt));
@@ -716,7 +743,7 @@ export class AoiMotion {
       o.ua = o.ua.map((v, i) => v + (tgtUA[i] - v) * pe); o.la = o.la.map((v, i) => v + ([0, sg * -.15, 0][i] - v) * pe); o.h = o.h.map((v, i) => v + ([0, 0, sg * .05][i] - v) * pe);
       this._pointSide = sd; this._pointW = pe; } else this._pointW = 0;
     // 骨へ：土台（休めの形と記録を混ぜる）× 身ぶりの差。指すときは、ねらいがずれないよう身ぶりの形そのものへ寄せる
-    const mw = this.mcW.v * (this.mc ? 1 : 0) * (1 - bw), qr = _q[3], qf = _q[4];
+    const mw = this.mcW.v * (this.mc ? 1 : 0) * (1 - bw) * (1 - .5 * (this._tw || 0)), qr = _q[3], qf = _q[4];   // v5：向きかえのあいだは、立ち姿の記録の前かがみ・腕の構えを半分に（背を立て、腕は脇へ）
     for (const sd of ["left", "right"]) { const o = sides[sd], r0 = rests[sd], pw2 = this._pointSide === sd ? this._pointW : 0;
       for (const [bn, key] of [["UpperArm", "ua"], ["LowerArm", "la"], ["Hand", "h"]]) { const b = B[sd + bn]; if (!b) continue;
         qf.setFromEuler(_e.set(...o[key])); const w = mw * (MOCAP_W[sd + bn] || 0) * this.pz.mA * (1 + ((this._idleArm ?? 1) - 1) * (1 - this.k) * (1 - this._tk)), mq = this._mq[sd + bn];
@@ -730,14 +757,14 @@ export class AoiMotion {
         if (ex > 0) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(0, 0, 1), -sg * Math.atan(ex / Lr) * 1.1 * free));
         if (ez > 0) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(1, 0, 0), Math.atan(ez / Lr) * free)); }
       // v5：話す身ぶりで、手が体の真ん中を越えて反対の腕の上に重ならない（腕を組んだように見える・腕どうしがめりこむ）。真ん中から 4 cm 手前で止める
-      if (ua && hd && pw2 < .99) { const h = this.root.worldToLocal(hd.getWorldPosition(_v[1])), ix = .03 + .05 * (this._tk || 0) - sg * h.x;   // 話しているあいだは真ん中から 8 cm 手前（ふだん手を前で軽く重ねるのはそのまま）
+      if (ua && hd && pw2 < .99) { const h = this.root.worldToLocal(hd.getWorldPosition(_v[1])), ix = .03 + .07 * (this._tk || 0) - sg * h.x;   // 話しているあいだは真ん中から 8 cm 手前（ふだん手を前で軽く重ねるのはそのまま）
         if (ix > 0 && h.z > .02) ua.quaternion.premultiply(_q[0].setFromAxisAngle(_v[2].set(0, 0, 1), sg * Math.atan(ix / .42) * 1.4 * (1 - pw2))); } }
     // v5：話の中身に合う身ぶり（手の位置を決めて、腕を IK で寄せる）
     const GS = this._gestures(dt, sp && L ? sp : null, bt, gon * (1 - pe));
     // 指：力を抜いた曲がり（人差し指から小指へ深く）。指すときは人差し指を伸ばす
     // v5：mid・low の段では、指は一こまおき（止まって見えるほどの差はない）
     if (this.q.tier !== "high" && (this.q.n & 1) && !GS.on) return;
-    const cu = .3 + .06 * k + (L ? .03 * wob(t * .4, this.seedPh + 2) : 0);
+    const cu = .26 + .06 * k + (L ? .03 * wob(t * .4, this.seedPh + 2) : 0);   // v5：力を抜いた指は少しひらき気味に（身ぶりのあと握ったままに見えない）
     for (const [b, sd, f, j] of this.fingers) { const sg = sd === "left" ? 1 : -1, gw = GS[sd].w, gsh = GS[sd].shape;
       if (f === "Thumb") { const tk = gw * (gsh === "pinch" ? .35 : gsh === "point" ? .2 : 0); b.quaternion.setFromEuler(_e.set(0, sg * ((j === "Metacarpal" ? .25 : j === "Proximal" ? .2 : .12) + tk), sg * -((j === "Distal" ? .18 : .06) + tk * .8))); continue; }
       const m = { Index: .78, Middle: 1, Ring: 1.08, Little: 1.2 }[f] * (j === "Proximal" ? 1 : j === "Intermediate" ? 1.15 : .8);
@@ -756,10 +783,10 @@ export class AoiMotion {
     const dom = g.hand === "left" ? "left" : "right", both = g.hand === "both";
     let parts;
     if (g.type === "deictic") parts = [P(g.hand && g.hand !== "both" ? g.hand : null, a, .55, .5)];
-    else if (g.type === "metaphoric" && g.shape === "contrast") { const a1 = Math.max(.15, a - .6); parts = [P("left", a1, a - a1 + .55), P("right", a + .2, .5)]; }   // 一つめを左の手に置き、くらべる語で右の手に二つめを置く（両手で見くらべる）
+    else if (g.type === "metaphoric" && g.shape === "contrast") parts = [P("left", a, 1.25), P("right", a + .75, .5)];   // くらべる語で一つめを左の手に置き、少し遅れて右の手に二つめを置く（両手で見くらべる）
     else if (g.type === "iconic" && (g.shape === "small" || g.shape === "tall") && !both) parts = [P(dom, a, .45)];
     else if (g.type === "metaphoric") parts = both ? [P("left", a, .5), P("right", a, .5)] : [P(dom, a, .5)];
-    else parts = [P("left", a, .45), P("right", a, .45)];
+    else parts = [P("left", a, g.shape === "large" ? .3 : .45), P("right", a, g.shape === "large" ? .3 : .45)];   // 大きく広げる形は、止めを短く
     return (g._parts = parts);
   }
   _gPose(part, sd, out) {   // その手の、碧の入れ物から見た位置・指の向き・手のひらの向き・指の形
@@ -768,17 +795,18 @@ export class AoiMotion {
     if (g.type === "deictic") {
       if (!g.target) return set(sg * .1, -.4, .29, [0, -.5, 1], [0, -1, 0], "flat");   // 「ここ」：手のひらを下へ、体の前の低いところ
       const tp = g.target.isObject3D ? g.target.getWorldPosition(_v[9]) : _v[9].copy(g.target), tl = this.root.worldToLocal(tp), d = _v[8].subVectors(tl, sh);
-      d.y = clamp(d.y / Math.max(.2, Math.hypot(d.x, d.z)), -.6, .3) * Math.hypot(d.x, d.z); d.normalize(); if (d.z < .2) { d.z = .2; d.normalize(); }   // 体の後ろは指さない（体を回すのは向きの仕事）
-      out.p.copy(sh).addScaledVector(d, .34); out.p.y -= .07; out.f.copy(d); out.n.set(-sg * .3, -1, 0); out.shape = "point"; return out; }
+      d.y = clamp(d.y / Math.max(.2, Math.hypot(d.x, d.z)), -1.4, .3) * Math.hypot(d.x, d.z); d.normalize(); if (d.z < .2) { d.z = .2; d.normalize(); }   // 体の後ろは指さない（体を回すのは向きの仕事）。足もとの物は下へ向けて指す
+      out.p.copy(sh).addScaledVector(d, .36); out.p.y -= .05; out.f.copy(d); out.n.set(-sg * .3, -1, 0); out.shape = "point"; return out; }
     if (g.type === "metaphoric") {
-      if (g.shape === "contrast") return set(sg * .2, -.3, .25, [sg * .35, 0, 1], [-sg * .2, 1, 0], "open");
+      // くらべる：二つを左右の手に載せて量るように、手のひらを内向き・上に、左右で高さを変える（前へ差し出さない＝「どうぞ」に見えない。11 人の指摘）
+      if (g.shape === "contrast") return set(sg * .2, sd === "left" ? -.27 : -.36, .22, [sg * .1, .15, 1], [-sg * .6, .8, 0], "open");
       return set(sg * .12, -.3, .28, [sg * .2, .05, 1], [-sg * .2, 1, 0], "open");   // 差し出す：手のひらを上に（Müller 2004・Kendon 2004）
     }
     switch (g.shape) {
       case "small": return set(sg * .07, -.27, .27, [-sg * .2, .2, 1], [-sg, .7, 0], "pinch");
       case "round": return set(sg * .13, -.24, .27, [-sg * .3, .2, 1], [-sg, .2, 0], "cup");
-      case "large": return set(sg * .26, -.22, .21, [sg * .2, .15, 1], [-sg, .1, 0], "open");
-      case "long": return set(sg * .24, -.27, .3, [sg * .15, 0, 1], [-sg, .1, 0], "flat");
+      case "large": return set(sg * .3, -.22, .24, [sg * .45, .05, 1], [-sg * .7, .45, 0], "open");   // 大きい：胸の下の高さで左右へ（肩の高さまで上げると「お手上げ」「ようこそ」に見える。11 人の指摘）   // 大きい：肩の高さ近くまで、左右に大きく（腕は伸ばしきらない）
+      case "long": return set(sg * .27, -.3, .3, [sg * .1, -.05, 1], [-sg, 0, 0], "flat");      // 長い：腰の上の高さで、そろえた手を横の線に
       case "tall": return set(sg * .15, -.05, .2, [0, .3, 1], [0, -1, 0], "flat");
       case "flat": return set(sg * .18, -.33, .27, [0, -.1, 1], [0, -1, 0], "flat");
       default: return set(sg * .065, -.28, .27, [0, .35, 1], [-sg, .5, 0], "cup");   // small-round：両手で小さな丸
@@ -848,7 +876,8 @@ export class AoiMotion {
     // 歩くとき：ふだんは 5〜8 m 先の道を見て、ときどき（3〜6 秒ごとに 1 秒ほど）見る人を見る
     if (!Lk.target && !(po && po.t < po.sec - .6) && this.k > .45) { Lk.wg = (Lk.wg ?? 2) - dt; if (Lk.wg < -1.1) Lk.wg = 3 + 3 * this.rand();
       if (Lk.wg > 0) { const d = 6.5 * this.sc; tgt.set(this.pos.x + Math.sin(this.yaw) * d, 1.15 * this.sc + this.pos.y, this.pos.z + Math.cos(this.yaw) * d); } }
-    { const tr = this._turn; if (tr && !Lk.target && !po && this.faceYaw != null) { const hp = head.getWorldPosition(_v[1]); tgt.set(hp.x + Math.sin(tr.y1) * 3 * this.sc, hp.y - .1 * this.sc, hp.z + Math.cos(tr.y1) * 3 * this.sc); } }   // v5：向きかえは、目と頭が先に新しい向きへ
+    { const tr = this._turn; if (tr && !Lk.target && !po && this.faceYaw != null) { const hp = head.getWorldPosition(_v[1]), ya = this.yaw + clamp(wrapA(tr.y1 - this.yaw), -.75, .75);   // 頭は体より 45° ほどまで先に（真横まで振り向かない）
+      tgt.set(hp.x + Math.sin(ya) * 3 * this.sc, hp.y, hp.z + Math.cos(ya) * 3 * this.sc); } }   // v5：向きかえは、目と頭が先に新しい向きへ
     if (this._gz && this.t < this._gz.until && !po) { const g = this._gz.p; if (g.isObject3D) g.getWorldPosition(tgt); else tgt.copy(g); } else if (this._gz) this._gz = null;   // v5：話しながら指すとき、目は先に的へ行き、止めるあいだ的を見る
     if (this._bowA > .05) { const hp = head.getWorldPosition(_v[1]); tgt.set(hp.x + Math.sin(this.yaw) * 2, this.pos.y, hp.z + Math.cos(this.yaw) * 2); }   // 礼のときは足もとの少し先（目を伏せる）
     // 目をそらす：話しはじめ・考えるとき・ふだんもときどき（下や横へ。上はまれ）
