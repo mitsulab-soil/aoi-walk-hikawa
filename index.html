@@ -65,7 +65,7 @@
   .top > * { pointer-events:auto; }
   .lft { display:flex; gap:6px; align-items:center; }
   .ib { min-width:44px; height:44px; border-radius:12px; border:1px solid var(--line); background:color-mix(in srgb, var(--panel) 86%, transparent); color:var(--ink); cursor:pointer; display:inline-grid; place-items:center; font-size:18px; padding:0 10px; backdrop-filter:blur(6px); }
-  .brand { font-family:var(--title); font-size:15px; letter-spacing:.04em; padding:5px 10px; border-radius:10px; background:color-mix(in srgb, var(--panel) 80%, transparent); border:1px solid var(--line); line-height:1.3; }
+  .brand { font-family:var(--title); font-size:15px; letter-spacing:.04em; padding:5px 10px; white-space:nowrap; border-radius:10px; background:color-mix(in srgb, var(--panel) 80%, transparent); border:1px solid var(--line); line-height:1.3; }
   .brand small { display:block; font-family:var(--ui); font-size:11px; color:var(--sub); letter-spacing:0; font-variant-numeric:tabular-nums; }
   .brand small:empty { display:none; }
   /* 上の小さな地図：参道の全体（一の鳥居〜神社）と、いまの位置・向き。押すと、そこへ移る */
@@ -81,6 +81,7 @@
   #minimap .out { display:none; pointer-events:none; } #minimap.big .out { display:block; }
   #minimap .out path { fill:var(--sub); } #minimap .out text { font-size:10.5px; fill:var(--sub); paint-order:stroke; stroke:var(--panel); stroke-width:3px; }
   #minimap .lg { display:none; pointer-events:none; } #minimap.big .lg { display:block; }
+  @media (max-width: 820px) { body:has(#minimap.big) #journeyPanel, body:has(#minimap.big) #slipCap, body:has(#minimap.big) #kkBox, body:has(#minimap.big) #mkChip, body:has(#minimap.big) #sub { visibility:hidden; } }   /* 2026-10-14：375px で地図を広げたとき、「時を越える」と時の層の札が地図にかぶり、閉じる × が字幕に乗っていた → 地図のあいだは隠す（声は続く） */
   #minimap .lg text { font-size:9.5px; fill:var(--sub); }
   #minimap .lb { font-size:10.5px; fill:var(--ink); paint-order:stroke; stroke:var(--panel); stroke-width:3px; }
   #minimap .lb.long { display:none; } #minimap.big .lb.long { display:block; } #minimap.big .lb.short { display:none; }
@@ -191,11 +192,15 @@
   #ovPick .ovH b { display:block; font-size:17px; } #ovPick .ovH small { font-size:14px; color:#4a5a56; }
   #ovPick #ovX { position:absolute; right:6px; top:6px; }
   #ovPins { position:absolute; inset:0; }
-  .ovP { pointer-events:auto; position:absolute; left:0; top:0; transform:translate(-50%,-50%); border:0; background:none; padding:6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .ovP i { display:block; width:14px; height:14px; border-radius:50%; background:#8ff6e0; border:2px solid #0b4d4d; box-shadow:0 0 0 4px rgba(143,246,224,.35); }
-  .ovP span { font-size:14px; line-height:1.3; color:#10201d; background:rgba(250,250,246,.92); border-radius:8px; padding:1px 7px; white-space:nowrap; }
-  .ovP.s i { width:10px; height:10px; box-shadow:none; background:#fffbe6; }
-  .ovP.s span { display:none; } .ovP.s:hover span, .ovP.s:focus-visible span, .ovP.on span { display:block; }
+  /* 2026-10-14 景色と画面：丸の真ん中を地点に合わせ、名前の札は丸の下（重なるときは上・それでも重なれば出さない＝押すと出る）。小さな印（途中の地点）にも名前。札は明朝・角 2px。押せる所は 44px */
+  .ovP { pointer-events:auto; position:absolute; left:0; top:0; transform:translate(-50%,-50%); border:0; background:none; padding:15px; cursor:pointer; display:block; }
+  .ovP i { display:block; width:14px; height:14px; border-radius:50%; background:#8ff6e0; border:2px solid #0b4d4d; box-shadow:0 0 0 4px rgba(143,246,224,.35); box-sizing:border-box; }
+  .ovP span { position:absolute; left:50%; top:calc(100% - 12px); transform:translateX(-50%); font-family:var(--title); font-size:14px; line-height:1.3; color:#10201d; background:rgba(250,250,246,.92); border:1px solid rgba(16,32,29,.18); border-radius:2px; padding:1px 7px; white-space:nowrap; pointer-events:none; }
+  .ovP.lf span { top:auto; bottom:calc(100% - 12px); }
+  .ovP.rt span { top:50%; left:calc(100% - 12px); transform:translateY(-50%); } .ovP.lt span { top:50%; left:auto; right:calc(100% - 12px); transform:translateY(-50%); }
+  .ovP.s { padding:17px; } .ovP.s i { width:10px; height:10px; box-shadow:none; background:#fffbe6; border-color:#0b4d4d; }
+  .ovP.s span { font-size:12px; color:#2a3a36; }
+  .ovP.cov { visibility:hidden; } .ovP.nolb span { display:none; } .ovP.nolb:hover span, .ovP.nolb:focus-visible span, .ovP.on span { display:block; }
   .ovP.on i { background:#ffd54a; transform:scale(1.4); }
   #ovPick .ovF { pointer-events:auto; position:absolute; left:12px; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 12px); background:rgba(250,250,246,.96); border-radius:14px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; color:#1d2a27; font-size:15px; }
   #ovPick .ovF[hidden] { display:none; }
@@ -1743,7 +1748,7 @@ function chainOBC(mat, fn, tag) {
 // ---- 地形・写真
 const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
 const tex = {};
-for (const k of ["photo"]) { tex[k] = TL.load((LITE || window.__photoHold) && isUrl(B64.photo) ? "web/tex_photo_s.jpg" : imgURL(B64[k], "image/jpeg")); if (!LITE && window.__photoHold && isUrl(B64.photo)) window.__photoUp = () => { window.__photoUp = null;   /* 第9回：大きい空中写真（2304×4096）は、ほかの手を止めないよう、画像の復号を別の糸で（createImageBitmap）、GPU への送りは手の空いたときに */   fetch(imgURL(B64.photo, "image/jpeg")).then(r => r.blob()).then(b => createImageBitmap(b, { imageOrientation: "flipY" })).then(bm => { (window.requestIdleCallback ?? (f => setTimeout(f, 50)))(() => { tex.photo.image = bm; tex.photo.flipY = false; tex.photo.needsUpdate = true; try { renderer.initTexture(tex.photo); } catch {} }); })     .catch(() => TL.load(imgURL(B64.photo, "image/jpeg"), t => { tex.photo.image = t.image; tex.photo.needsUpdate = true; })); }; tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
+for (const k of ["photo"]) { tex[k] = TL.load((LITE || window.__photoHold) && isUrl(B64.photo) ? "web/tex_photo_s.jpg" : imgURL(B64[k], "image/jpeg")); if (!LITE && window.__photoHold && isUrl(B64.photo)) window.__photoUp = () => { window.__photoUp = null;   /* 第9回：大きい空中写真（2304×4096）は、ほかの手を止めないよう、画像の復号を別の糸で（createImageBitmap）、GPU への送りは手の空いたときに */   fetch(imgURL(B64.photo, "image/jpeg")).then(r => r.blob()).then(b => createImageBitmap(b, { imageOrientation: "flipY" })).then(bm => { (window.requestIdleCallback ?? (f => setTimeout(f, 50)))(() => { tex.photo.dispose(); tex.photo.source = new THREE.Source(bm); tex.photo.flipY = false; tex.photo.needsUpdate = true; try { renderer.initTexture(tex.photo); } catch {} }); })     .catch(() => TL.load(imgURL(B64.photo, "image/jpeg"), t => { tex.photo.dispose(); tex.photo.source = new THREE.Source(t.image); tex.photo.needsUpdate = true; })); }; tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
 let terrain = null; tex.relief = tex.photo;
 const det = TL.load(imgURL(B64.detail, "image/jpeg")); det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
 const rep = (t, srgb = true) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -1804,7 +1809,19 @@ function rtex(name, srgb) {
    （web/tex_road2k_*.webp・_dev/fetch_road_2k.py）。スマホ（LITE）は 1k のまま（読み込みの予算）。?tex1k で前のまま */
 const ROAD2K = ["granite_tile_04", "granite_tile", "concrete_pavers_02", "concrete_pavement", "gravel_embedded_concrete", "asphalt_04"];
 function road2k() { if (LITE || QS.has("tex1k")) return; for (const n of ROAD2K) for (const s of ["c", "n", "r"]) { const t = rtexC[n + "_" + s]; if (!t) continue;
-  const img = new Image(); img.decoding = "async"; img.onload = () => { t.image = img; t.needsUpdate = true; }; img.src = "web/tex_road2k_" + n + "_" + s + ".webp"; } }
+  const img = new Image(); img.decoding = "async"; img.onload = () => { t.dispose(); t.source = new THREE.Source(img); t.needsUpdate = true; }; img.src = "web/tex_road2k_" + n + "_" + s + ".webp"; } }   /* 2026-10-14：画像だけ差し替えると、1k の大きさで取った GPU の面へ 2k を書きこみ「glTexSubImage2D: Offset overflows」の警告（2k が効かない）→ いちど dispose して GPU の面を放し、新しい Source で取りなおす */
+/* 2026-10-14 景色「樹皮・苔・燈籠を 2k の CC0 PBR に」：PC は近景の樹皮（ケヤキの法線・クスノキ・スギ）と、構造物の石（江戸の燈籠・標石・社号碑・狛犬・台石）を 2k へ。
+   素材は Poly Haven（japanese_zelkova_bark・japanese_camphor_bark・japanese_cedar_bark・lichen_rock・rock_surface。CC0）。作り方＝_dev/tex2k_20261014.py。スマホと ?tex1k は今のまま */
+const TEX2K = !LITE && !QS.has("tex1k");
+const NEAR2K = TEX2K ? { bark_n: "web/tex2k_bark_n.webp", kusu_c: "web/tex2k_kusu_c.webp", kusu_n: "web/tex2k_kusu_n.webp", sugi_c: "web/tex2k_sugi_c.webp", sugi_n: "web/tex2k_sugi_n.webp" } : {};
+function struct2k() {
+  if (!TEX2K) return; const NM = ["stone_base", "stone_nor", "stone_orm", "oldstone_base", "oldstone_nor", "oldstone_orm"], rep = new Map(), slots = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap"];
+  const mats = []; structures.traverse(m => { if (m.isMesh) for (const x of [].concat(m.material)) if (!mats.includes(x)) mats.push(x); });
+  for (const nm of NM) { const img = new Image(); img.decoding = "async";
+    img.onload = () => { for (const mat of mats) for (const s of slots) { const t = mat[s]; if (!t || t.name !== nm) continue; let t2 = rep.get(t); if (!t2) { t2 = t.clone(); t2.name = nm + "_2k"; t2.source = new THREE.Source(img); t2.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy()); t2.needsUpdate = true; rep.set(t, t2); } mat[s] = t2; } };
+    img.src = "web/tex2k_" + nm + ".webp"; }
+}
+{ const w2s = setInterval(() => { if (window.__nearHold || !STRUCTS.length) return; clearInterval(w2s); setTimeout(struct2k, 2500); }, 900); }
 { const w2k = setInterval(() => { if (window.__nearHold) return; clearInterval(w2k); setTimeout(road2k, 1500); }, 700); }
 const roadMat = {};
 for (const [k, m] of Object.entries(ROAD_MATS)) {
@@ -2934,7 +2951,7 @@ let nearBusy = 0;
 const nearTexC = {};
 function nearTex(k, srgb = false) {
   const src = NEAR?.tex?.[k]; if (!src) return Promise.resolve(null);
-  return nearTexC[k] ??= TL.loadAsync(imgURL(src, "image/webp")).then(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }).catch(() => null);
+  return nearTexC[k] ??= TL.loadAsync(NEAR2K[k] ?? imgURL(src, "image/webp")).then(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }).catch(() => null);
 }
 const rngOf = str => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h |= 0; h = h + 0x6D2B79F5 | 0; let t = Math.imul(h ^ h >>> 15, 1 | h); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
 const yieldUI = () => new Promise(r => setTimeout(r, 0));
@@ -3167,7 +3184,9 @@ async function buildLeaves(site, rnd, sd, trees, forestSite) {
     let dist = 9, src = null; for (const ds of [-.8, -.55, -.3, -.15, .15, .3, .55, .8]) { const nb = bandAt(q.d, q.s + ds); if (LOOSE.has(nb) && Math.abs(ds) < dist) { dist = Math.abs(ds); src = nb; } }
     if (!src || rnd() > Math.pow(1 - dist / .9, 1.6)) continue; grit.push([x, z, src === "gravel" ? 1 : 0]);
   }
-  const N = pts.length + moss.length + grit.length; if (N < 20) return null;
+  const N0 = pts.length + moss.length + grit.length; if (N0 < 20) return null;
+  /* 2026-10-14 景色：苔の塊は、実写の苔（ambientCG Moss004・CC0・2k から切り出し・_dev/tex2k_20261014.py）を別の板で描く（丸の寄せ集めの絵をやめる）。読めなければ前の絵のまま */
+  const mtx = moss.length ? await mossTex() : null, mossPhoto = !!mtx, N = N0 - (mossPhoto ? moss.length : 0);
   const geo = new THREE.PlaneGeometry(1, 1, 2, 2); geo.rotateX(-Math.PI / 2);
   const p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, .16 * x * x * 4 * .25 + .06 * (z + .5) ** 2); }
   geo.computeVertexNormals(); for (let i = 0; i < p.count; i++) geo.attributes.normal.setXYZ(i, 0, 1, 0);
@@ -3179,12 +3198,21 @@ async function buildLeaves(site, rnd, sd, trees, forestSite) {
   for (const [x, z, curl] of pts) { if ((i & 127) === 0) await slice(); const L = forestSite ? .05 + .05 * rnd() : .045 + .03 * rnd();
     o.position.set(x, (groundY(x, z) ?? 12) + .004 + .01 * rnd(), z); o.rotation.set((rnd() - .5) * .5, rnd() * 6.283, (rnd() - .5) * .5, "YXZ"); o.scale.set(L * .5, L * (.6 + .5 * rnd()) * (curl ? 1.6 : 1), L); o.updateMatrix(); im.setMatrixAt(i, o.matrix); tile[i] = curl;
     let u = rnd(), k = 0; while (k < PW.length - 1 && (u -= PW[k]) > 0) k++; const v = (.85 + .3 * rnd()) * (curl ? .8 : 1); c.setRGB(PAL[k][0] * v, PAL[k][1] * v, PAL[k][2] * v, THREE.SRGBColorSpace); im.setColorAt(i++, c); }
-  for (const [x, z, S] of moss) { if ((i & 127) === 0) await slice(); o.position.set(x, (groundY(x, z) ?? 12) + .003, z); o.rotation.set(0, rnd() * 6.283, 0); o.scale.set(S * .5, .01, S); o.updateMatrix(); im.setMatrixAt(i, o.matrix); tile[i] = 2;
+  if (!mossPhoto) for (const [x, z, S] of moss) { if ((i & 127) === 0) await slice(); o.position.set(x, (groundY(x, z) ?? 12) + .003, z); o.rotation.set(0, rnd() * 6.283, 0); o.scale.set(S * .5, .01, S); o.updateMatrix(); im.setMatrixAt(i, o.matrix); tile[i] = 2;
     const v = .8 + .4 * rnd(), y = rnd() < .25 ? .08 : 0; c.setRGB((.19 + y) * v, (.27 + y * .5) * v, .09 * v, THREE.SRGBColorSpace); im.setColorAt(i++, c); }
   for (const [x, z, gv] of grit) { if ((i & 127) === 0) await slice(); const S = gv ? .07 + .06 * rnd() : .04 + .04 * rnd(); o.position.set(x, (groundY(x, z) ?? 12) + .003, z); o.rotation.set(0, rnd() * 6.283, 0); o.scale.set(S * .5, .01, S); o.updateMatrix(); im.setMatrixAt(i, o.matrix); tile[i] = 3;
     const v = .85 + .25 * rnd(); gv ? c.setRGB(.64 * v, .62 * v, .58 * v, THREE.SRGBColorSpace) : c.setRGB(.6 * v, .52 * v, .4 * v, THREE.SRGBColorSpace); im.setColorAt(i++, c); }
-  im.receiveShadow = true; im.name = "near_leaves"; im.userData.counts = { leaves: pts.length, moss: moss.length, grit: grit.length }; return im;
+  im.receiveShadow = true; im.name = "near_leaves"; im.userData.counts = { leaves: pts.length, moss: moss.length, grit: grit.length };
+  if (mossPhoto) { const mg = new THREE.PlaneGeometry(1, 1, 4, 4); mg.rotateX(-Math.PI / 2);   /* 塊は中ほどが少し盛り上がる（縁は地面に沿う） */
+    const mp = mg.attributes.position; for (let k = 0; k < mp.count; k++) { const x = mp.getX(k) * 2, z = mp.getZ(k) * 2; mp.setY(k, .35 * Math.max(0, 1 - (x * x + z * z) * .9)); } mg.computeVertexNormals();
+    const mm = nearMat({ map: mtx.c, normalMap: mtx.n, alphaTest: .45, roughness: .96, metalness: 0, side: THREE.DoubleSide }, "moss2k"), mi = new THREE.InstancedMesh(mg, mm, moss.length); let j = 0;
+    for (const [x, z, S] of moss) { if ((j & 127) === 0) await slice(); o.position.set(x, (groundY(x, z) ?? 12) + .004, z); o.rotation.set(0, rnd() * 6.283, 0); o.scale.set(S * .62, S * .25, S * 1.05); o.updateMatrix(); mi.setMatrixAt(j, o.matrix);
+      const v = .78 + .3 * rnd(), y = rnd() < .2 ? .1 : 0; c.setRGB((1 + y * 1.4) * v, (1 + y * .6) * v, (1 - y * .4) * v, THREE.SRGBColorSpace); mi.setColorAt(j++, c); }
+    mi.receiveShadow = true; mi.name = "near_moss"; im.add(mi); }
+  return im;
 }
+let mossP = null;
+function mossTex() { return mossP ??= Promise.all(["c", "n"].map(k => TL.loadAsync("web/tex2k_moss_" + k + ".webp").then(t => { t.anisotropy = 8; if (k === "c") t.colorSpace = THREE.SRGBColorSpace; return t; }).catch(() => null))).then(([c, n]) => c ? { c, n } : null); }
 // ---- 芝（刈った芝の株：高さ 6〜14 cm）。平成ひろばの緑地の帯の中だけ。風でわずかに揺れる
 async function buildGrass(site, rnd, sd) {
   const want = Math.round((LITE ? 2600 : 9000) * (site.grass ?? 0)); if (want < 30) return null;
@@ -4622,12 +4650,27 @@ function ovOpen(on) {
     A.hideOv = true;
     const box = $("ovPins"); box.innerHTML = ""; OV.pins = ovChoices().map(c => { const el = document.createElement("button"); el.type = "button"; el.className = "ovP" + (c.big ? "" : " s"); el.innerHTML = `<i></i><span>${esc(c.nm)}</span>`; el.setAttribute("aria-label", c.nm);
       el.onclick = e => { e.stopPropagation(); ovPick(c, el); }; box.appendChild(el); const w = C.pointAt(c.big ? c.dd : c.dd + 8); return { c, el, w }; });
-    const tick = () => { if (!OV.open) return; const v = new THREE.Vector3(); for (const q of OV.pins) { v.set(q.w[0], q.w[1] + 2, q.w[2]).project(C.camera); const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; q.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`; q.el.hidden = v.z > 1; } OV.raf = requestAnimationFrame(tick); };
+    const tick = () => { if (!OV.open) return; const v = new THREE.Vector3(); for (const q of OV.pins) { v.set(q.w[0], q.w[1] + 2, q.w[2]).project(C.camera); const x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight; q.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`; q.el.hidden = v.z > 1; }
+      ovLabels(); OV.raf = requestAnimationFrame(tick); };
     tick();
   } else {
     cancelAnimationFrame(OV.raf); A.hideOv = false; if (C.controls) C.controls.enableRotate = true;
     try { C.onD(d); } catch {} placeAt(d); aoiJump();
   }
+}
+/* 札どうし・札と丸が重ならないように：大きな印から順に、丸の下→上→出さない（押すと出る）。丸はどれも空けておく */
+function ovLabels() {
+  const vis = OV.pins.filter(q => !q.el.hidden), ov = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const dots = vis.map(q => { const r = q.el.querySelector("i").getBoundingClientRect(); return { q, r: { left: r.left - 3, right: r.right + 3, top: r.top - 3, bottom: r.bottom + 3 } }; });
+  const hdr = [$("ovPick").querySelector(".ovH"), $("ovF")].filter(e => e && !e.hidden).map(e => e.getBoundingClientRect());
+  const placed = []; for (const q of vis) q.el.classList.remove("cov");
+  /* 大きな印（始まりの三つ）の名前はいつも出す：重なる小さな印は、その場では隠す（押せる大きな印を優先） */
+  for (const q of [...vis].sort((a, b) => (b.c.big ? 1 : 0) - (a.c.big ? 1 : 0))) {
+    if (q.el.classList.contains("cov")) continue; const big = !!q.c.big;
+    let ok = false; for (const pos of ["", "lf", "rt", "lt"]) { q.el.classList.remove("nolb", "lf", "rt", "lt"); if (pos) q.el.classList.add(pos); const r = q.el.querySelector("span").getBoundingClientRect();   /* 下→上→右→左 */
+      if (r.left < 4 || r.right > innerWidth - 4 || hdr.some(h => ov(r, h)) || placed.some(p => ov(r, p)) || dots.some(o => o.q !== q && (big ? o.q.c.big : true) && ov(r, o.r))) continue; placed.push(r);
+      if (big) for (const o of dots) if (!o.q.c.big && o.q !== q && ov(r, o.r)) o.q.el.classList.add("cov"); ok = true; break; }
+    if (!ok) { q.el.classList.remove("lf", "rt", "lt"); q.el.classList.add("nolb"); } }
 }
 function ovPick(c, el) {
   OV.sel = c; for (const q of OV.pins) q.el.classList.toggle("on", q.el === el);
@@ -4672,9 +4715,9 @@ function drawMap() {
     `<g class="out" id="mapOut"></g>` +
     `<g class="lg" transform="translate(8 ${Hp - 30})"><path class="ic" d="M-2 -6.5 Q4 -8.2 10 -6.5 M-.5 -4 H8.5 M.8 -6.8 V3 M7.2 -6.8 V3" transform="scale(.8)"/><text x="12" y="0">鳥居</text>` +
       `<path class="ic" d="M-2.5 -3 L4 -8 L10.5 -3 M-.5 -3 V3 H8.5 V-3" transform="translate(44 0) scale(.8)"/><text x="56" y="0">神社</text>` +
-      `<circle class="mk tree" cx="${92}" cy="-3" r="3.5"/><text x="98" y="0">樹木</text><circle class="mk stone" cx="132" cy="-3" r="3.5"/><text x="138" y="0">石の道</text><circle class="mk culture" cx="182" cy="-3" r="3.5"/><text x="188" y="0">暮らし</text><path class="tj" d="M224 -6.2l6.4 6.4M230.4 -6.2l-6.4 6.4"/><text x="234" y="0">辻</text>` +
+      `<circle class="mk tree" cx="${92}" cy="-3" r="3.5"/><text x="98" y="0">樹木</text><circle class="mk stone" cx="132" cy="-3" r="3.5"/><text x="138" y="0">石の道</text><circle class="mk culture" cx="182" cy="-3" r="3.5"/><text x="188" y="0">暮らし</text><path class="tj" d="M224 -6.2l6.4 6.4M230.4 -6.2l-6.4 6.4"/><text x="234" y="0">辻</text><circle class="me" cx="258" cy="-3" r="3.5"/><text x="264" y="0">いまの所</text>` +   /* 2026-10-14：白い縁の印（いまの所）にも名前 */
       `<text x="0" y="18">縦は模式（点の間を等しく）。外の場所は向きと直線の距離</text></g>` +
-    `<path class="fan" id="mapFan" d=""/><circle class="me" id="mapMe" r="${mapBig ? 5 : 4}" cx="-9" cy="-9"/>`;
+    `<path class="fan" id="mapFan" d=""/><circle class="me" id="mapMe" r="${mapBig ? 5 : 4}" cx="-9" cy="-9"><title>いまの所</title></circle>`;
   mapOutAt = 0;
 }
 /* 第6回：参道の外の場所（大宮駅など）を、広げた地図の端に、いまの位置からの向き（北が上）と直線の距離で出す */
@@ -4719,6 +4762,16 @@ function mapTick() {
 }
 requestAnimationFrame(mapTick);
 function mapD(cy) { const r = mapEl.getBoundingClientRect(), py = cy - r.top; return dOf((MP.Hp - MP.padB - py) / (MP.Hp - MP.padT - MP.padB)); }
+/* 2026-10-14：かけらの出どころは、同じ本・同じページを一つに（『ひかわ参道だより』の号をまとめ、Wikipedia の項目をまとめ、氷川神社「由緒・歴史」を一度だけ） */
+function kkSources(list) {
+  const parts = []; for (const s of list) for (const p of String(s).split(/(?<=」)・/)) { const q = p.trim(); if (q && !parts.includes(q)) parts.push(q); }
+  const wiki = parts.filter(p => /^日本語版 Wikipedia「/.test(p)), dayori = parts.filter(p => /『ひかわ参道だより』/.test(p)), note = parts.filter(p => /^公式 note/.test(p));
+  const out = parts.filter(p => !wiki.includes(p) && !dayori.includes(p) && !note.includes(p)).map(p => p === "氷川神社「由緒・歴史」" && note.length ? p + "・" + note.join("・") : p);
+  if (note.length && !out.some(p => p.includes(note[0]))) out.push(...note);
+  if (dayori.length) { const nos = dayori.map(p => (p.match(/第 ([^号]+?) ?号/) || [])[1]).filter(Boolean); out.push("さいたま市 氷川参道対策室『ひかわ参道だより』" + (nos.length ? `第 ${nos.join("・")} 号` : "")); }
+  if (wiki.length) out.push("日本語版 Wikipedia" + wiki.map(p => (p.match(/「[^」]+」/) || [""])[0]).join("") + "（CC BY-SA 4.0）");
+  return out;
+}
 function toast(t) { if (!t) return; const el = $("toast"); el.textContent = t; el.classList.toggle("era", /の景色へ/.test(t));   /* 2026-10-13：時の層の知らせは、時の層の札と同じ作法（紺・明朝・角 2px） */ el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); }
 mapEl.addEventListener("click", e => {
   let hit = e.target.closest?.(".hit"), g = hit?.parentNode;
@@ -6282,7 +6335,7 @@ function kkDraw() {
     return `<h3>${esc(a.name)}　${m}/${its.length}</h3><ol>` + its.map(it => { const g = KK.st.got[it.id];
       return g ? `<li class="got"><span class="k">${it.kind === "時" ? "時" : "杜"}${g.seen ? "★" : ""}</span><span class="nm">${esc(it.name)}</span>${it.era ? `<span class="yr">${esc(it.era)}</span>` : ""}<p>${esc(it.fact)}</p></li>`
                : `<li class="no"><span class="k">まだ</span>${esc(it.name)}<p>${esc(kkPlain(it.look))}</p><button data-hint="${esc(it.id)}">ヒントを聞く</button></li>`; }).join("") + `</ol>`; }).join("") +
-  `<h3>出どころ</h3><p class="lead"><small>${KK.D.sources.map(esc).join("／")}</small></p><p><button id="kkReset">はじめから集めなおす</button></p>`;
+  `<h3>出どころ</h3><p class="lead"><small>${kkSources(KK.D.sources).map(esc).join("／")}</small></p><p><button id="kkReset">はじめから集めなおす</button></p>`;
   $("kkX").onclick = () => kkOpen(false);
   P.querySelectorAll("[data-hint]").forEach(b => b.onclick = () => { kkOpen(false); kkHint(kkItem(b.dataset.hint)); });
   $("kkReset").onclick = () => { let yes = true; try { yes = confirm("集めたかけらを消して、はじめから集めなおしますか？"); } catch {} if (!yes) return; KK.st = { got: {} }; kkSave(); KKLOG.push({ reset: true }); kkDraw(); toast("かけらを、はじめから集めます"); };
@@ -6639,12 +6692,12 @@ const ERA = (() => {
       const nx = -c.fz * sd, nz = c.fx * sd, off = NK_HW + .2 + r() * 2 + dep / 2, x = c.x + nx * off + c.fx * shift, z = c.z + nz * off + c.fz * shift, yaw = Math.atan2(nx, nz);
       const y0 = footY(x, z, c.fx, c.fz, w / 2, dep / 2); if (y0 == null) continue;
       const put = (y, sx, sy, sz, fwd = 0, side = 0) => { o3.position.set(x + nx * fwd + c.fx * side, y, z + nz * fwd + c.fz * side); o3.rotation.set(0, yaw, 0); o3.scale.set(sx, sy, sz); o3.updateMatrix(); return o3.matrix.clone(); };
-      H.push(put(y0 - .3, w, eave + .3, dep)); HC.push(r() < .3 ? [0xcfc6b2, 0xbdb39c, 0xc4b9a2][Math.floor(r() * 3)] : [0x6b5640, 0x7a634a, 0x5e4a38, 0x86705a, 0x705c46][Math.floor(r() * 5)]);
+      H.push(put(y0 - .3, w, eave + .3, dep)); HC.push(r() < .18 ? [0xa59a84, 0x9a8f79, 0xaa9e86][Math.floor(r() * 3)] : [0x6b5640, 0x7a634a, 0x5e4a38, 0x86705a, 0x705c46][Math.floor(r() * 5)]);   /* 2026-10-14（11 人 r6〜r9「江戸の地平に白い箱」）：土壁・漆喰の壁を、雨と土ぼこりを受けた灰褐色に（白く浮かない）。割合も 3 割→2 割弱 */
       RF.push(put(y0 + eave, w, rh, dep)); RC.push([0x4a4540, 0x3f3b37, 0x55493c, 0x4d4a44, 0x514a40][Math.floor(r() * 5)]);
       { const ow = w * (.45 + r() * .45), oh = 1.75 + r() * .5, os = (r() - .5) * (w - ow) * .8; FR.push(put(y0, ow, oh, .12, -dep / 2 - .02, os)); FC.push([0x4a3d30, 0x564633, 0x5e4c38, 0x433729][Math.floor(r() * 4)]); }   /* 表の一階の開口（幅・高さ・位置を一軒ずつ。戸や格子の形は描かない） */
       if (r() < .4) { const bw = 3 + r() * 2.5, bd = 3 + r() * 2.5, be = 2.3 + r() * .8, bf = dep / 2 + 6 + r() * 16, bs = (r() - .5) * 5, bx = x + nx * bf + c.fx * bs, bz = z + nz * bf + c.fz * bs, by = gY(bx, bz);
         if (by != null) { const bput = (y, sx, sy, sz) => { o3.position.set(bx, y, bz); o3.rotation.set(0, yaw, 0); o3.scale.set(sx, sy, sz); o3.updateMatrix(); return o3.matrix.clone(); };
-          H.push(bput(by - .3, bw, be + .3, bd)); HC.push([0x6b5640, 0x5e4a38, 0xc4b9a2][Math.floor(r() * 3)]); RF.push(bput(by + be, bw, bd * .36, bd)); RC.push([0x4a4540, 0x3f3b37][Math.floor(r() * 2)]); } }
+          H.push(bput(by - .3, bw, be + .3, bd)); HC.push([0x6b5640, 0x5e4a38, 0x9d927c][Math.floor(r() * 3)]); RF.push(bput(by + be, bw, bd * .36, bd)); RC.push([0x4a4540, 0x3f3b37][Math.floor(r() * 2)]); } }
       if (two) PE.push(put(y0 + 2.4 + r() * .3, w, 1.1 + r() * .3, .9 + r() * .3, -dep / 2));   /* 二階建ての表の庇（一階の上・通りの側。家の +z は通りから離れる向き） */
     }
     const G = GEO.house ||= houseGeo();
@@ -6857,7 +6910,8 @@ const R21 = (() => {
 #mkChip[hidden]{display:none}
 #mkList{position:fixed;z-index:8;inset:auto 16px calc(env(safe-area-inset-bottom,0px) + 140px) 16px;max-width:460px;margin:0 auto;background:rgba(246,238,220,.96);color:#2f271d;border-radius:4px;padding:14px 16px;font-size:14.5px;line-height:1.7;box-shadow:0 8px 30px rgba(0,0,0,.25)}
 #mkList[hidden]{display:none}#mkList h3{margin:0 0 6px;font-size:15px;font-family:var(--title)}#mkList li{margin:0 0 4px}#mkList button{min-height:44px;margin-top:6px}
-@media(max-width:820px){#mkCard{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);font-size:14.5px;padding:10px 12px}#mkChip{left:154px;top:calc(env(safe-area-inset-top,0px) + 18px);min-height:32px;padding:0 10px;font-size:12px}}
+@media(max-width:820px){#mkCard{top:calc(env(safe-area-inset-top,0px) + 64px);bottom:auto;left:12px;right:96px;width:auto;transform:none;font-size:14.5px;padding:10px 12px}body.mkOn #journeyPanel,body.mkOn #kkBox,body.mkOn #mkChip{visibility:hidden}body.mkOn #sub.rest{display:none}}   /* 2026-10-14：375px で札が碧の顔を隠し、下の字幕の欄が「碧」だけで空になっていた → 札は上（右の地図の列の左）へ。札のあいだは「時を越える」「かけら」と空の字幕の欄を隠す */
+@media(max-width:820px){#mkChip{left:154px;top:calc(env(safe-area-inset-top,0px) + 18px);min-height:32px;padding:0 10px;font-size:12px}}
 body.mkOn #actBtn{display:none!important}
 @media(max-width:820px){#actBtn.dodgeR{left:auto!important;right:12px;transform:none!important}#actBtn.dodgeL{left:12px!important;right:auto;transform:none!important}}
 @media(min-width:821px){#mkCard{left:16px;transform:none;top:calc(env(safe-area-inset-top,0px) + 172px)}}   /* PC：碧の顔に重ならないよう、左の欄の下へ */
@@ -7023,7 +7077,8 @@ window.__body = BODY;
    ① 三間の線：参道の正中から ±2.73 m（「参道元来の３間幅員」＝『ひかわ参道だより』）に、一の鳥居〜三の鳥居の手前まで、細い和紙色の線（黒い石の上でも見える）。中区間の黒い石の線と重なる。
    ② 年の線：建った年が分かる物（標石・燈籠・社号碑・鳥居）の上に、古いほど高い細い線（100 年で 2.5 m）。札に年と出どころ。
    ③ 丁石の目盛り：位置の出典のある 4 基（八・十五・十六・十七丁）だけ、細い線と札。ほかの 14 基は描かない（位置が仮置きのため）。
-   ④ 暮らしの移った帯：平成ひろばの並木敷きに、薄い和紙の面（1985 年からの整備で 163 戸が移った＝『氷川参道のまちづくり』。家の形は描かない）。 */
+   ④ 暮らしの移った帯：平成ひろばの並木敷きに、薄い和紙の面（1985 年からの整備で 163 戸が移った＝『氷川参道のまちづくり』。家の形は描かない）。
+   ⑤ 中山道との辻：いまの旧中山道の線（OpenStreetMap）に線一本と札（寛永 5 年に参道の西に新往還＝『氷川参道のまちづくり』）。道幅は描かない。 */
 const CULT = (() => {
   const ITEMS = [
     { id: "hyoseki", yr: 1722, t: "標石「武藏國一宮」　享保 7 年（1722）", src: "氷川神社「由緒・歴史」（位置：OpenStreetMap）" },
@@ -7078,7 +7133,22 @@ const CULT = (() => {
         for (const s of [s0, s1]) { const w = toWorld(dd, s), y = C.groundY(w.x, w.z) ?? 0; P.push(w.x, y + .15, w.z); }
         if (n) I.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2; }
       const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); const m = new THREE.Mesh(g, paper); m.frustumCulled = false; G.add(m); }
-    { const w = toWorld((BAND.d0 + BAND.d1) / 2, bandAt((BAND.d0 + BAND.d1) / 2)[3] + 5), y = C.groundY(w.x, w.z) ?? 0; label(BAND.t, BAND.src, new THREE.Vector3(w.x, y + 1.2, w.z)); }
+    for (const dd of [1100, 1190, 1280, 1350]) for (const sd of [-1, 1]) { const b = bandAt(dd), w = toWorld(dd, sd > 0 ? b[3] + 4 : b[2] - 4), y = C.groundY(w.x, w.z) ?? 0; label(BAND.t, BAND.src, new THREE.Vector3(w.x, y + 1.4, w.z)); }   /* 帯の札は両側に 4 か所ずつ（どこから見ても近くに一つ） */
+    /* 帯の縁に和紙色の細い線（面だけだと芝に溶ける） */
+    for (const sd of [-1, 1]) for (const off of [1, 9]) { const P = [], I = []; let n = 0;
+      for (let dd = BAND.d0; dd <= BAND.d1; dd += 3) { const b = bandAt(dd), sc = sd > 0 ? b[3] + off : b[2] - off, w = toWorld(dd, sc), y = C.groundY(w.x, w.z) ?? 0, nx = -w.fz * .05, nz = w.fx * .05; P.push(w.x - nx, y + .16, w.z - nz, w.x + nx, y + .16, w.z + nz); if (n) I.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2; }
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x8a6f4a, side: THREE.DoubleSide })   /* 縁石の白と見分ける茶 */); m.frustumCulled = false; G.add(m); }
+    /* ⑤ 中山道との辻（2026-10-14）：いまの旧中山道の線（OpenStreetMap way 229374360 の、一の鳥居の辻の前後 約 450 m）に、細い和紙色の線を一本。
+       年と出来事は『氷川参道のまちづくり』（寛永 5 年に参道の西に新往還＝中山道）。道幅は分かっていないので、幅の帯は描かない（線一本だけ） */
+    { const NAKA = [[-108.8, 836.9], [-77.6, 885.8], [-58.5, 916.3], [-41.2, 943.2], [-17.3, 979.1], [-7.6, 993.7], [2.2, 1008.4], [33.7, 1056.1], [39.4, 1064.4], [43.5, 1070.4], [59.9, 1094.4], [78.7, 1123.3], [97.0, 1151.7], [104.6, 1162.7], [108.1, 1167.8], [118.3, 1182.6], [128.2, 1196.3], [144.1, 1218.2]];
+      const gy = (x, z) => (C.groundYs ?? C.groundY)(x, z) ?? C.groundY(x, z) ?? 0, P = [], I = []; let n = 0;
+      for (let i = 0; i < NAKA.length - 1; i++) { const [x0, z0] = NAKA[i], [x1, z1] = NAKA[i + 1], L = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.ceil(L / 2)), ux = (x1 - x0) / L, uz = (z1 - z0) / L, nx = -uz * .06, nz = ux * .06;
+        for (let j = i ? 1 : 0; j <= k; j++) { const x = x0 + (x1 - x0) * j / k, z = z0 + (z1 - z0) * j / k, y = gy(x, z); P.push(x - nx, y + .12, z - nz, x + nx, y + .12, z + nz); if (n) I.push(n - 2, n - 1, n, n - 1, n + 1, n); n += 2; } }
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); const m = new THREE.Mesh(g, ink); m.frustumCulled = false; m.renderOrder = 2; G.add(m);
+      const NT = "中山道（いまの旧中山道の線）　寛永 5 年（1628）、参道の西に開かれた新しい道（新往還）", NS = "さいたま市『氷川参道のまちづくり』（線：OpenStreetMap）";
+      for (const [x, z] of [[-17.3, 979.1], [2.2, 1008.4], [78.7, 1123.3]]) { label(NT, NS, new THREE.Vector3(x, gy(x, z) + 1.4, z)); labels[labels.length - 1].pri = 45; }   /* 一の鳥居から北へ歩き出すとき、左手の先に見える所にも（三間の札より先に出す） */
+      { const w = toWorld(16, -4.5); label("一の鳥居の辻から北西へのびる道が中山道（いまの旧中山道）。寛永 5 年（1628）に参道の西に開かれた新往還", NS, new THREE.Vector3(w.x, gy(w.x, w.z) + 1.9, w.z)); labels[labels.length - 1].pri = 60; }   /* 歩きはじめの目線（一の鳥居から北を向く）でも見える所に一枚 */
+      label("一の鳥居の辻　参道と中山道が出会う所", NS, new THREE.Vector3(39.4, gy(39.4, 1064.4) + 2.2, 1064.4)); labels[labels.length - 1].pri = 45; }
     C.scene.add(G);
   }
   const v = { p: null };
@@ -7089,11 +7159,12 @@ const CULT = (() => {
       if (past) for (const l of labels) l.el.hidden = true;
       let zy = 9999; try { if ((ZN.k ?? 0) > .3) zy = Math.min(...(ZN.cur?.eras ?? []).map(e => R8.slips[e]?.year ?? 9999)); } catch {}   /* 時の層の中では、その年より後の物の線と札は出さない */
       for (const l of labels) if (l.mesh) l.mesh.visible = !(l.yr && l.yr > zy);
-      if (on && !past && C.camera && THREE) { v.p ||= new THREE.Vector3(); const cp = C.camera.position, near = labels.map(l => [l, l.p.distanceTo(cp)]).filter(([, dd]) => dd < 90).sort((a, b) => a[1] - b[1]).slice(0, 4);
+      if (on && !past && C.camera && THREE) { v.p ||= new THREE.Vector3(); const cp = C.camera.position, near = labels.map(l => [l, l.p.distanceTo(cp)]).filter(([l, dd]) => { if (dd >= 110) return false; v.p.copy(l.p).project(C.camera); return v.p.z < 1 && Math.abs(v.p.x) < 1 && Math.abs(v.p.y) < 1; }).sort((a, b) => (a[1] - (a[0].pri ?? 0)) - (b[1] - (b[0].pri ?? 0))).filter(([l], i, A) => A.findIndex(([m]) => m.el.textContent === l.el.textContent) === i).slice(0, 4);   /* 画面に入る札から近い順に 4 つ（同じ文の札は一つだけ） */
         for (const l of labels) l.el.hidden = true;
         const top = innerWidth <= 820 ? 150 : 110, avoid = ["#journeyPanel", "#mkChip", "#slipCap", "#mkCard", "#bodyNote", "#kkBox"].map(q => document.querySelector(q)).concat([document.getElementById("mapSvg")?.parentElement]).filter(e => e && !e.hidden && e.getClientRects().length).map(e => e.getBoundingClientRect()), panelOpen = !!document.querySelector("#journeyPanel > details[open]");   /* 上の欄・題と重ねない／欄を開いているあいだは出さない */
         for (const [l] of near) { if (panelOpen) break; if (l.yr && l.yr > zy) continue; v.p.copy(l.p).project(C.camera); if (v.p.z > 1 || Math.abs(v.p.x) > 1.05 || Math.abs(v.p.y) > 1.05 || (1 - v.p.y) / 2 * innerHeight < top) continue; l.el.hidden = false; { const hw = Math.min(innerWidth <= 820 ? 90 : 110, l.el.offsetWidth / 2 || 90); l.el.style.left = Math.max(hw + 8, Math.min(innerWidth - hw - 8, (v.p.x + 1) / 2 * innerWidth)).toFixed(0) + "px"; }   /* 画面の端で縦に折り返さない */ l.el.style.top = ((1 - v.p.y) / 2 * innerHeight).toFixed(0) + "px";
-          const r = l.el.getBoundingClientRect(); if (avoid.some(q => r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top)) l.el.hidden = true; }   /* 欄・札と重なる札は出さない */ }
+          const hit = r => avoid.some(q => r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top);
+          l.el.style.transform = ""; if (hit(l.el.getBoundingClientRect())) { l.el.style.transform = "translate(-50%, 6px)"; if (hit(l.el.getBoundingClientRect())) l.el.hidden = true; } }   /* 上の欄と重なるときは、線の下側へ吊るす。それでも重なれば出さない */   /* 欄・札と重なる札は出さない */ }
     } catch {}
     requestAnimationFrame(tick); }
   requestAnimationFrame(tick);
@@ -7111,6 +7182,116 @@ const CULT = (() => {
   return { set, get on() { return on; }, labels };
 })();
 window.__cult = CULT;
+
+/* ======================================================================== 2026-10-14　景色：参道の生きもの（build_walk.py の 11e が差し込む）
+   本人「すべての事象にこだわりを持って…生き物は胡蝶の夢以上の質を基準に」。設計＝資料/認知レイヤの設計_v1_2026-10-13.md §2・§6（生きものは記録のある種から）。
+   種：スズメ（Passer montanus）。参道の記録＝iNaturalist 研究等級（2023-07-06・observations/171379620・web/life_moments.json）。
+   形：《森羅博物館》の生きものの立体（web/life3d/creatures3d.js＝胡蝶の夢の道具で組んだもの。羽の数・足指・模様の典拠＝森羅博物館 資料/生き物の形と動き_典拠.md。
+       頭は栗色・白い頬に黒い斑・のどの黒・背の縦斑・翼の白帯 2 本。初列風切 10 枚・尾羽 12 枚・足指は前 3 後 1。体の長さ 14.5 cm）。外から取りこんだ 3D・画像はない。
+   動き：地面では両足をそろえて跳ねて進み（ホッピング）、ついばみ、頭をすばやく向けかえて見回す。人が近づく（約 4.5 m）と群れで飛び立ち、
+       数回はばたいて翼をたたむ波形の飛び方で並木の枝へ。人が離れて 15〜40 秒たつと、また地面へ降りる。
+   置く所：歩く帯の縁と並木敷き（一の鳥居のひろば・中区間・平成ひろば・二の鳥居の先・三の鳥居の手前）。三の鳥居より北（境内）には置かない。
+   時代：いま（と平成）だけ。ほかの時代・時の層では出さない（その時代の記録で置いていないため）。スマホは群れを小さく（3 羽）・毛の層を少なく。 */
+const LIFE3D = (() => {
+  const MOB = innerWidth <= 820 || matchMedia("(pointer: coarse)").matches, NB = MOB ? 3 : 5, L = .145;   /* 体の長さ（くちばし〜尾の先）約 14〜15 cm */
+  /* 群れ：道のり d と、歩く帯の縁からの横（out＞0 は帯の外＝並木敷き、＜0 は帯の内の縁） */
+  /* 縁石（帯の縁の 0.3 m ほど）の上や中に置かない：帯の内は縁から 1.6 m 内、帯の外は 2.4 m 外（一羽ずつの散らばりは横に ±0.6 m） */
+  const FLOCKS = [{ d: 14, side: 1, out: -1.6 }, { d: 120, side: -1, out: -1.6 }, { d: 560, side: 1, out: 2.4 }, { d: 905, side: -1, out: -1.6 }, { d: 1150, side: 1, out: 2.8 },
+    { d: 1290, side: -1, out: 2.6 }, { d: 1500, side: 1, out: 2.4 }, { d: 1700, side: -1, out: 2.4 }];
+  const FID = 4.5, BACK = 15;   /* 飛び立つ距離（人・碧）・戻ってくる距離 */
+  let K = null, kLoading = null, fr = 0, last = performance.now();
+  const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+  const rnd = (() => { let s = 20261014; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+  const gy = (x, z) => (C.groundYs ?? C.groundY)?.(x, z) ?? C.groundY?.(x, z) ?? 0;
+  let shTex = null;
+  const shadowTex = () => shTex ??= (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, "rgba(0,0,0,.7)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); return t; })();
+  function center(F) { const b = bandAt(F.d), w = toWorld(F.d, (F.side > 0 ? b[3] : b[2]) + F.side * F.out); return { x: w.x, z: w.z }; }
+  function spot(F, k) {   /* 群れの中の一羽の地面の位置（群れの中心から 0.3〜1.4 m） */
+    const b = bandAt(F.d), edge = F.side > 0 ? b[3] : b[2], a = hash(F.d + k * 7.3) * 6.283, r = .3 + 1.0 * hash(F.d * 3 + k);
+    const w = toWorld(F.d + Math.cos(a) * r * 1.6, edge + F.side * (F.out + Math.sin(a) * r * .45)); return { x: w.x, z: w.z };
+  }
+  function makeBird(F, k) {
+    const c = K.make("sparrow"), root = new THREE.Group(), pitch = new THREE.Group(); root.add(pitch); pitch.add(c.G);
+    c.G.scale.setScalar(L); c.G.position.y = -c.footY * L;   /* 足先を pitch の原点に（ついばむときは足先を軸に前へ傾く） */
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(.16, .16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, depthWrite: false, opacity: 1 }));
+    sh.renderOrder = 1; const p = spot(F, k);
+    const B = { c, root, pitch, sh, x: p.x, z: p.z, y: gy(p.x, p.z), yaw: hash(k + F.d) * 6.283, st: "ground", t0: performance.now() / 1000 + hash(k * 3.7) * 9, act: null, flyT: 0, from: null, to: null, op: 1, k };
+    root.position.set(B.x, B.y, B.z); root.rotation.y = B.yaw; sh.position.set(B.x, B.y + .006, B.z); G.add(root, sh); return B;
+  }
+  let G = null;   /* THREE は 3D を組んだあとに入る（ここでは作らない） */
+  let added = false; const live = new Map();   /* 群れの番号 → { birds, flushT, away } */
+  function threats() { const out = []; if (window.__life3dCalm) return out;   /* 確かめの写し（近くで撮る）のときだけ、逃げない */ const cp = C.camera?.position; if (cp) out.push([cp.x, cp.z]); try { if (aoi?.visible) out.push([aoi.position.x, aoi.position.z]); } catch {} return out; }
+  function plan(B, now) {   /* 地面での次の一手：跳ねる（1〜3 回）・ついばむ（1〜3 回）・見回して止まる */
+    const u = rnd();
+    if (u < .42) { const n = 1 + Math.floor(rnd() * 3), turn = (rnd() - .5) * 1.4; B.act = { k: "hop", n, i: 0, t: now, turn, dur: .13 }; }
+    else if (u < .82) { const n = 1 + Math.floor(rnd() * 3); B.act = { k: "peck", n, i: 0, t: now }; }
+    else B.act = { k: "look", t: now, dur: .8 + rnd() * 1.8 };
+  }
+  function stepGround(B, F, now, dt) {
+    const a = B.act; if (!a) { plan(B, now); return; }
+    if (a.k === "hop") {   /* 両足をそろえて跳ぶ：一回 0.13 秒・7.5 cm・高さ 3.5 cm。向きを少しずつ変えながら */
+      if (now < a.t) return;
+      if (!a.hx) { B.yaw += a.turn / a.n; let nx = B.x + Math.sin(B.yaw) * .075, nz = B.z + Math.cos(B.yaw) * .075; const c0 = center(F);
+        if (Math.hypot(nx - c0.x, nz - c0.z) > 1.0) { B.yaw += Math.PI * .8; nx = B.x; nz = B.z; }   /* 群れから離れすぎない */
+        a.hx = [B.x, B.z, nx, nz]; }
+      const u = Math.min(1, (now - a.t) / a.dur), h = a.hx; B.x = h[0] + (h[2] - h[0]) * u; B.z = h[1] + (h[3] - h[1]) * u; B.y = gy(B.x, B.z);
+      B.root.position.set(B.x, B.y + .035 * Math.sin(Math.PI * u), B.z); B.root.rotation.y = B.yaw; B.pitch.rotation.x = -.12 * Math.sin(Math.PI * u);
+      if (u >= 1) { a.i++; a.hx = null; a.t = now + .03 + rnd() * .05; if (a.i >= a.n) B.act = { k: "rest", t: now, dur: .3 + rnd() * .7 }; }
+      return; }
+    if (a.k === "peck") { const u = (now - a.t) / .34;   /* 下げる 0.12 秒・止める 0.08 秒・上げる 0.14 秒 */
+      const ang = u < .35 ? u / .35 : u < .6 ? 1 : Math.max(0, 1 - (u - .6) / .4); B.pitch.rotation.x = .62 * ang * ang * (3 - 2 * ang);
+      if (u >= 1) { a.i++; a.t = now + rnd() * .25; if (a.i >= a.n) B.act = { k: "rest", t: now, dur: .4 + rnd() * .8 }; } return; }
+    B.pitch.rotation.x *= .8; if (now - a.t > a.dur) B.act = null;
+  }
+  function flush(F, fl, now, from) {   /* 群れで飛び立つ：脅かすものから離れる向きへ、並木の枝の高さ（6〜9 m）へ */
+    fl.flushT = now; for (const B of fl.birds) { if (B.st !== "ground") continue;
+      const ax = B.x - from[0], az = B.z - from[1], m = Math.hypot(ax, az) || 1, b = bandAt(F.d), sOut = (F.side > 0 ? b[3] : b[2]) + F.side * (5 + 4 * rnd()), w = toWorld(F.d + (rnd() - .5) * 8, sOut);
+      const tx = w.x + ax / m * 3, tz = w.z + az / m * 3; B.st = "takeoff"; B.flyT = now + rnd() * .25; B.from = [B.x, B.y, B.z]; B.to = [tx, gy(tx, tz) + 6 + 3 * rnd(), tz]; B.pitch.rotation.x = 0; B.act = null; }
+  }
+  function stepAir(B, now) {
+    if (now < B.flyT) return;
+    const T = B.st === "land" ? 2.6 : 2.2, u = Math.min(1, (now - B.flyT) / T), e = u * u * (3 - 2 * u), [x0, y0, z0] = B.from, [x1, y1, z1] = B.to;
+    const x = x0 + (x1 - x0) * e, z = z0 + (z1 - z0) * e, y = B.st === "land" ? y0 + (y1 - y0) * (1 - (1 - u) * (1 - u)) : y0 + (y1 - y0) * Math.pow(u, .7);
+    const yaw = Math.atan2(x1 - x0, z1 - z0); B.yaw = yaw; B.root.position.set(x, y + (B.st === "land" ? 0 : .02 * Math.sin(now * 6)), z); B.root.rotation.y = yaw;
+    B.pitch.rotation.x = B.st === "land" ? -.25 * (1 - u) : -.18 * (1 - u);
+    if (B.st === "takeoff") { B.op = u > .82 ? Math.max(0, 1 - (u - .82) / .18) : 1; if (u >= 1) { B.st = "away"; B.op = 0; } }   /* 枝の葉に隠れる */
+    else { B.op = Math.min(1, u / .15); if (u >= 1) { B.st = "ground"; B.x = x1; B.z = z1; B.y = y1; B.root.position.set(x1, y1, z1); B.act = { k: "look", t: now, dur: 1.2 }; } }
+    B.sh.visible = false;
+  }
+  function tick() {
+    requestAnimationFrame(tick); if ((fr++ & 1) && MOB) return;   /* スマホは 2 こまに一度 */
+    const now = performance.now() / 1000, dt = Math.min(.1, now - last); last = now;
+    if (!K || !C.camera || !C.scene || document.hidden) return;
+    if (!added) { G = new THREE.Group(); G.name = "life3d_suzume"; C.scene.add(G); added = true; }
+    let on = started, past = false; try { past = (!!JOURNEY.manual && !["now", "heisei"].includes(JOURNEY.manual)) || !!ACT.f || (ZN.k ?? 0) > .3; } catch {}
+    G.visible = on && !past && !document.body.classList.contains("ovOn"); if (!G.visible) return;   /* 俯瞰（はじまりを選ぶ画面）では出さない */
+    const cp = C.camera.position, TH = threats();
+    FLOCKS.forEach((F, fi) => {
+      const ctr = toWorld(F.d, 0), dist = Math.hypot(ctr.x - cp.x, ctr.z - cp.z); let fl = live.get(fi);
+      if (dist > 160) { if (fl) { for (const B of fl.birds) { G.remove(B.root, B.sh); B.root.traverse(m => { if (m.isMesh) { m.geometry.dispose(); for (const x of [].concat(m.material)) x.dispose(); } }); B.sh.geometry.dispose(); B.sh.material.dispose(); } live.delete(fi); } return; }
+      if (dist > 75) { if (fl) for (const B of fl.birds) { B.root.visible = B.sh.visible = false; } return; }
+      if (!fl) { fl = { birds: [], flushT: -1e9 }; live.set(fi, fl); }
+      if (fl.birds.length < NB) { fl.birds.push(makeBird(F, fl.birds.length)); return; }   /* 一こまに一羽ずつ組む（止まらない） */
+      let near = null; for (const p of TH) for (const B of fl.birds) if (B.st === "ground" && Math.hypot(B.x - p[0], B.z - p[1]) < FID) { near = p; break; }
+      if (near) flush(F, fl, now, near);
+      const far = TH.every(p => Math.hypot(ctr.x - p[0], ctr.z - p[1]) > BACK);
+      for (const B of fl.birds) {
+        B.root.visible = true;
+        if (B.st === "away" && far && now - fl.flushT > 15 + 25 * hash(fi + B.k)) { const s = spot(F, B.k + Math.floor(now)); B.st = "land"; B.flyT = now; B.from = [s.x + 5 * (rnd() - .5), gy(s.x, s.z) + 7, s.z + 5 * (rnd() - .5)]; B.to = [s.x, gy(s.x, s.z), s.z]; B.op = 0; }
+        if (B.st === "ground") { stepGround(B, F, now, dt); B.sh.visible = true; B.sh.position.set(B.x, B.y + .006, B.z); B.op = 1;
+          let look = 0; for (const p of TH) { const dd = Math.hypot(B.x - p[0], B.z - p[1]); if (dd < 9) { const a = Math.atan2(p[0] - B.x, p[1] - B.z) - B.yaw; look = Math.atan2(Math.sin(a), Math.cos(a)) * .5; } }
+          B.c.update({ t: now - B.t0, ph: 31, pt: 0, look: Math.max(-.8, Math.min(.8, look)) }); }
+        else if (B.st === "away") { B.root.visible = false; B.sh.visible = false; }
+        else { stepAir(B, now); B.c.update({ t: now - B.t0, ph: B.st === "takeoff" && now - B.flyT < .35 ? 0 : 2, pt: now - B.flyT, look: 0 }); }
+        B.c.setOpacity(B.op); B.root.visible = B.op > .01;
+      }
+    });
+  }
+  function load() { if (kLoading) return kLoading; return kLoading = import("./web/life3d/creatures3d.js").then(m => { K = m.createCreatures(THREE); }).catch(e => console.warn("life3d", e)); }
+  const w0 = setInterval(() => { if (!started || window.__nearHold) return; clearInterval(w0); setTimeout(() => load().then(() => requestAnimationFrame(tick)), 2500); }, 800);
+  return { get live() { return live; }, FLOCKS, get G() { return G; } };
+})();
+window.__life3d = LIFE3D;
 
 /* JOURNEY_EXTENSION */
 /* 2026-10-11 本人指定：五時代・一話から遊べるオムニバス。年代は景色の模式。 */
