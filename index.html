@@ -4370,7 +4370,7 @@ function freeStep(dt) {
     if (!on) MV.gv = 0;
     else if (dist < .22 || performance.now() - g.t > 240000) { MV.goal = null; MV.gv = 0; ringOff(); }
     else {
-      const vt = Math.min(dist > 25 ? 2.4 : dist > 8 ? 1.8 : 1.4, .45 + dist * .9);
+      const vt = Math.min(dist > 8 ? 1.8 : 1.4, .45 + dist * .9);   /* 2026-10-14 本人「碧の歩き方や髪型がおかしい」：碧が毎秒 2.4〜2.8 m で追うと、歩きの脚が届かず腰が沈み、髪が逆立っていた → 碧は毎秒 2.0 m まで・見る人の押しつづけ／遠くへの移動も 1.8 m まで */ 
       MV.gv += (vt - MV.gv) * (1 - Math.exp(-dt * 4));
       const step = Math.min(dist, MV.gv * dt * Math.max(1, TS));
       d = clamp(d + step * gd / dist, D_MIN, D_MAX);
@@ -4385,7 +4385,7 @@ function freeStep(dt) {
   ringTick(dt);
   /* 押しつづけると少しずつ速く（1.4 → 2.4 m/秒）。離せば止まる */
   if (on && inp.f) { MV.hold0 ||= performance.now(); } else MV.hold0 = 0;
-  const vmax = inp.f > 0 ? 1.4 + clamp((performance.now() - (MV.hold0 || performance.now())) / 2500, 0, 1) : 1.0;
+  const vmax = inp.f > 0 ? 1.4 + .4 * clamp((performance.now() - (MV.hold0 || performance.now())) / 2500, 0, 1) : 1.0;   /* 2026-10-14：1.4 → 1.8 m/秒まで（碧が歩いてついて来られる速さ） */
   MV.v += ((on ? inp.f * vmax : 0) - MV.v) * (1 - Math.exp(-dt * 6));
   const p = pathAt(d), fx = -Math.sin(FR.yaw), fz = -Math.cos(FR.yaw), along = fx * p.fx + fz * p.fz, side = fx * -p.fz + fz * p.fx;
   const step = MV.v * dt * Math.max(1, TS);
@@ -5233,7 +5233,7 @@ function aoiTick(dt) {
   /* 第4回：体の向きと進む向きが合っていないあいだ（反転の直後など）は、ゆっくり（毎秒 0.6 m まで）。向き直ってから、早足（毎秒 2.0 m まで）で追い越す */
   const wantYaw = (() => { const sd = Math.sign(t.td - A.pd) || 1, vx = sd * wp0.fx, vz = sd * wp0.fz; return Math.atan2(vx, vz); })();
   const behind = (A.pd - d) * viewDir() < -.5;
-  const align = Math.cos(wrapA(wantYaw - A.yaw)), vmax = Math.max((.9 + (behind ? 1.9 : 1.1) * clamp((align + .2) / .7, 0, 1)), behind ? 0 : uv + .4) * Math.max(1, TS);   /* 2026-10-10 本人「歩きながら大きくなったり小さくなったり」：見る人が速く歩く（押しつづけると 2.4 m/秒）と、碧の上限（2.0・1.7 m/秒）に詰まって近づいていた。前にいるときは見る人の速さ＋0.4 m/秒まで出す */   /* 第9回：向き直りながら弧を描いて歩く（向きの変化は毎秒 57° まで。うしろからは早足で 4 秒以内に前へ） */   /* 第7回：後ろにいるとき（反転・歩き出し）は毎秒 2.4 m まで（早足）で前へ出る */
+  const align = Math.cos(wrapA(wantYaw - A.yaw)), vmax = Math.min(2.0, Math.max((.9 + 1.1 * clamp((align + .2) / .7, 0, 1)), behind ? 0 : uv + .3)) * Math.max(1, TS);   /* 2026-10-14 本人「碧の歩き方や髪型がおかしい」：碧が毎秒 2.4〜2.8 m で追うと、歩きの脚が届かず腰が沈み、髪が逆立っていた → 碧は毎秒 2.0 m まで・見る人の押しつづけ／遠くへの移動も 1.8 m まで */    /* 2026-10-10 本人「歩きながら大きくなったり小さくなったり」：見る人が速く歩く（押しつづけると 2.4 m/秒）と、碧の上限（2.0・1.7 m/秒）に詰まって近づいていた。前にいるときは見る人の速さ＋0.4 m/秒まで出す */   /* 第9回：向き直りながら弧を描いて歩く（向きの変化は毎秒 57° まで。うしろからは早足で 4 秒以内に前へ） */   /* 第7回：後ろにいるとき（反転・歩き出し）は毎秒 2.4 m まで（早足）で前へ出る */
   const ff = U.v;   /* 見る人の速さを先取り（歩きはじめ・止まりで距離が揺れない）。加速度にも上限（急に駆け出さない） */
   for (let i = 0; i < n; i++) {
     const ad = clamp(w * w * (t.td - A.pd) + 2 * w * (ff - A.vd), -amax, amax), as = clamp(w * w * (t.ts - A.ps) - 2 * w * A.vs, -amax * .6, amax * .6);
@@ -5249,7 +5249,7 @@ function aoiTick(dt) {
     if (g < 1.1 && rl <= -.5) { const [u0, u1] = bandNear(A.pd, 3, userBand), sg = Math.sign(lat || A.side || 1); A.ps = clamp(U.s + sg * Math.max(Math.abs(lat), 1.1), u0 + .1, u1 - .1); }
     if (g < MIN_GAP + .25 && rl > -.5) { const need = Math.sqrt(Math.max(0, (MIN_GAP + .25) ** 2 - lat * lat)); const nd = d + dr * need; const step = clamp(nd - A.pd, -1.8 * dt * Math.max(1, TS), 1.8 * dt * Math.max(1, TS));   /* 第7回の直し：1.1→1.8 m/秒（GPS で見る人が前へ寄ったとき、近すぎのまま残らない） */ A.pd += step; if (Math.sign(A.vd) !== dr || Math.abs(A.vd) < Math.abs(U.v)) A.vd = U.v; } }
   { /* 第4回：碧の歩く速さは、どんなときも毎秒 1.9 m まで（早足。髪が振り回されて頭の上へ回らない） */
-    const vl = behind ? 2.8 : Math.max(1.7, uv + .4), ddp = A.pd - _pd0, dsp = A.ps - _ps0, m = Math.hypot(ddp, dsp), lim = vl * dt * Math.max(1, TS);
+    const vl = Math.min(2.0, Math.max(1.7, uv + .3)), ddp = A.pd - _pd0, dsp = A.ps - _ps0, m = Math.hypot(ddp, dsp), lim = vl * dt * Math.max(1, TS);
     if (m > lim && m < 8) { const k = lim / m; A.pd = _pd0 + ddp * k; A.ps = _ps0 + dsp * k; A.vd = clamp(A.vd, -vl * Math.max(1, TS), vl * Math.max(1, TS)); } }
   { /* 第9回：最後の守り：実際の目の位置（カメラ）から、横の距離で 1.6 m より近づかない。前にいれば道に沿って前へ、うしろ・横なら横へよける（カメラが髪や顔に入らない） */
     const cp = C.camera.position, w1 = toWorld(A.pd, A.ps), g = Math.hypot(w1.x - cp.x, w1.z - cp.z);
@@ -5345,7 +5345,7 @@ function vrmStep(dt) {
   dt = Math.min(dt, 1 / 30);   /* r3：こまが遅れた PC で、ばねが一度に大きく進んで房が跳ねない（1 こまで進めるのは 1/30 秒まで） */
   const n = Math.min(6, Math.max(1, Math.ceil(dt / (1 / 60)))), h = dt / n;
   for (let i = 0; i < n; i++) sb.update(h);
-  hairClamp();
+  if (AM?.springGuard) AM.springGuard(dt); else hairClamp();   /* 2026-10-14：髪・裾の守りは共通部品（v5.3 springGuard）。前の hairClamp は骨の行列を直さず（見た目に効かない）、110° を超えた房だけ休みへ一こまで戻して跳ねていた */
   v.nodeConstraintManager?.update?.(); v.materials?.forEach(m => m.update?.(dt));
 }
 // ---- 振る舞いの状態：lead（先導）／back（振り返る）／glance（見回す）／talkObj（話す対象を見る）／talkUser（見る人へ）
