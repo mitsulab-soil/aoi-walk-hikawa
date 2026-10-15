@@ -588,7 +588,7 @@ export function makeDog(mat = stdMat, o = {}) {
     head.rotation.y=Math.sin(t*.8)*.055;head.rotation.x=Math.sin(phase)*.025*speed;
     ears.forEach((e,i)=>e.rotation.z=(i?1:-1)*Math.sin(phase)*.055*speed);
     tail.rotation.z=Math.sin(t*5)*.18;g.position.y=Math.sin(phase*2)*.004*speed;
-  };g.userData.animate(0,false);return g;
+  };g.userData.animate(0,false);g.scale.setScalar(.64);const small=new T.Group();small.add(g);small.userData=g.userData;return small;
 }
 
 function makeShibaLegacy(mat = stdMat, o = {}) {
