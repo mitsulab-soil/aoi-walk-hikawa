@@ -1759,12 +1759,15 @@ function chainOBC(mat, fn, tag) {
 
 // ---- 地形・写真
 const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+// 地面の画像が届くまでは写真の下地を保つ。形状の完了だけで3Dを見せない。
+const groundSurface = {failed:false};
+function groundTexture(url) { return TL.load(url, undefined, undefined, () => { groundSurface.failed = true; console.warn("ground texture unavailable", url); }); }
 const tex = {};
-for (const k of ["photo"]) { tex[k] = TL.load((LITE || window.__photoHold) && isUrl(B64.photo) ? "web/tex_photo_s.jpg" : imgURL(B64[k], "image/jpeg")); if (!LITE && window.__photoHold && isUrl(B64.photo)) window.__photoUp = () => { window.__photoUp = null;   /* 第9回：大きい空中写真（2304×4096）は、ほかの手を止めないよう、画像の復号を別の糸で（createImageBitmap）、GPU への送りは手の空いたときに */   fetch(imgURL(B64.photo, "image/jpeg")).then(r => r.blob()).then(b => createImageBitmap(b, { imageOrientation: "flipY" })).then(bm => { (window.requestIdleCallback ?? (f => setTimeout(f, 50)))(() => { tex.photo.dispose(); tex.photo.source = new THREE.Source(bm); tex.photo.flipY = false; tex.photo.needsUpdate = true; try { renderer.initTexture(tex.photo); } catch {} }); })     .catch(() => TL.load(imgURL(B64.photo, "image/jpeg"), t => { tex.photo.dispose(); tex.photo.source = new THREE.Source(t.image); tex.photo.needsUpdate = true; })); }; tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
+for (const k of ["photo"]) { tex[k] = groundTexture((LITE || window.__photoHold) && isUrl(B64.photo) ? "web/tex_photo_s.jpg" : imgURL(B64[k], "image/jpeg")); if (!LITE && window.__photoHold && isUrl(B64.photo)) window.__photoUp = () => { window.__photoUp = null;   /* 第9回：大きい空中写真（2304×4096）は、ほかの手を止めないよう、画像の復号を別の糸で（createImageBitmap）、GPU への送りは手の空いたときに */   fetch(imgURL(B64.photo, "image/jpeg")).then(r => r.blob()).then(b => createImageBitmap(b, { imageOrientation: "flipY" })).then(bm => { (window.requestIdleCallback ?? (f => setTimeout(f, 50)))(() => { tex.photo.dispose(); tex.photo.source = new THREE.Source(bm); tex.photo.flipY = false; tex.photo.needsUpdate = true; try { renderer.initTexture(tex.photo); } catch {} }); })     .catch(() => TL.load(imgURL(B64.photo, "image/jpeg"), t => { tex.photo.dispose(); tex.photo.source = new THREE.Source(t.image); tex.photo.needsUpdate = true; })); }; tex[k].colorSpace = THREE.SRGBColorSpace; tex[k].flipY = false; tex[k].anisotropy = 16; }
 let terrain = null; tex.relief = tex.photo;
-const det = TL.load(imgURL(B64.detail, "image/jpeg")); det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
+const det = groundTexture(imgURL(B64.detail, "image/jpeg")); det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
 const rep = (t, srgb = true) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
-const gtex = { grass: rep(TL.load(imgURL(B64.grass, "image/webp"))), soil: rep(TL.load(imgURL(ROAD_TEX.Ground047_c, "image/webp"))), pave: rep(TL.load(imgURL(ROAD_TEX.asphalt_04_c, "image/webp"))) };
+const gtex = { grass: rep(groundTexture(imgURL(B64.grass, "image/webp"))), soil: rep(groundTexture(imgURL(ROAD_TEX.Ground047_c, "image/webp"))), pave: rep(groundTexture(imgURL(ROAD_TEX.asphalt_04_c, "image/webp"))) };
 const v3 = a => new THREE.Vector3(...a);
 getBuf("terrain").then(b => loader.parse(b, "", g => { g.scene.traverse(o => { if (o.isMesh && !o.userData.tile) { terrain = o; lowerPondBeds(o); o.geometry.computeBoundsTree(); try { if (!QS.has("notile")) walkTile(o, 300); } catch (e) { console.warn("tile", e); o.layers.set(0); } o.receiveShadow = true; o.material.map = tex.photo; o.material.roughness = 1; o.material.metalness = 0;
   o.material.onBeforeCompile = sh => {
@@ -1814,7 +1817,7 @@ const EXT = D.extent_m;
 const roadU = { photoMap: { value: tex.photo }, ext: { value: new THREE.Vector4(EXT[0], EXT[1], EXT[2], EXT[3]) }, fadeNear: { value: 70 }, fadeFar: { value: 240 } };
 const rtexC = {};
 function rtex(name, srgb) {
-  if (!rtexC[name]) { const t = TL.load(imgURL(ROAD_TEX[name], "image/webp")); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; rtexC[name] = t; }
+  if (!rtexC[name]) { const t = groundTexture(imgURL(ROAD_TEX[name], "image/webp")); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.flipY = false; t.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; rtexC[name] = t; }
   return rtexC[name];
 }
 /* 2026-10-13 夜　本人「石畳や木の樹皮など…サーフェイスのクオリティ、フォトリアルを」：PC は、はじめたあとで舗装の質感を同じ素材（Poly Haven・CC0）の 2k へ差し替える
@@ -3563,6 +3566,8 @@ window.__core = { THREE, scene, world, camera, renderer, D, STRUCTS, pointAt, he
   eye(x, z, yw, pt) { EYE = [x, z]; if (mode !== "walk") setMode("walk"); if (yw != null) { yaw = yw; if (!drag) dragT = null; } if (pt != null) pitch = pt; placeWalker(); },
   look(yw, pt) { yaw = yw; pitch = Math.max(-1.2, Math.min(1.2, pt)); placeWalker(); },
   setEyeH(h) { window.__eyeH = h; if (mode === "walk") placeWalker(); },   // 2026-10-08 座ったまま巡る：目の高さ（地面から m）
+  surfaceReady: () => !groundSurface.failed && [tex.photo, det, ...Object.values(gtex), ...Object.values(rtexC)].every(t => { const i = t.image; return i && (i.naturalWidth ?? i.width) > 0 && (i.naturalHeight ?? i.height) > 0 && i.complete !== false; }),
+  surfaceFailed: () => groundSurface.failed,
   ready: () => !!(terrain && roadReady && buildings && treesReady), first: () => !!(terrain && roadReady), treesOk: () => !!(terrain && roadReady && treesReady),
   // 感じ方の道具（地形の目・時間の目・機械の目）が 3D の見え方を替えるための口
   get terrain() { return terrain; }, get buildings() { return buildings; }, road, structures, props, trees, contour, tex, bMat, machU, loader, TL, controls,
@@ -4759,8 +4764,8 @@ function entryFallback() {
 let qMapChecks = 0;
 const qMapTimer = setInterval(() => {
   if (started) { clearInterval(qMapTimer); return; }
-  if (window.__no3d || window.__coreFailed) { entryFallback(); clearInterval(qMapTimer); return; }
-  if (!NO3D && C.first?.() && (window.__aoi || aoiFail) && C.ready()) {
+  if (window.__no3d || window.__coreFailed || C.surfaceFailed?.()) { entryFallback(); clearInterval(qMapTimer); return; }
+  if (!NO3D && C.first?.() && (window.__aoi || aoiFail) && C.ready() && C.surfaceReady?.()) {
     $("entryMapOpen").disabled = false; OV.composed = ""; document.body.classList.add("qMapReady"); ovOpen(true); clearInterval(qMapTimer);
   } else if (++qMapChecks >= 180) { entryFallback(); clearInterval(qMapTimer); }
 }, 500);
@@ -6659,9 +6664,10 @@ showLoad();
 let firstShown = false, treesAt = 0;
 function waitReady(t0 = performance.now()) {
   const tOk = (C.treesOk ?? C.ready)?.(); if (tOk && !treesAt) treesAt = performance.now();
-  if (!firstShown && tOk && (aoi?.visible || aoiFail || performance.now() - treesAt > 4000)) { firstShown = true; poster.classList.add("off"); }
+  if (!firstShown && tOk && C.surfaceReady?.() && (aoi?.visible || aoiFail || performance.now() - treesAt > 4000)) { firstShown = true; poster.classList.add("off"); }
   if (C.ready() && firstShown) { loadEl.dataset.done = 1; loadEl.textContent = ""; return; }
-  if (performance.now() - t0 > 60000) { loadEl.textContent = "3D に時間がかかっています"; return; }
+  if (C.surfaceFailed?.()) return;
+  if (performance.now() - t0 > 90000) { loadEl.textContent = "3D に時間がかかっています"; return; }
   setTimeout(() => waitReady(t0), 200);
 }
 if (window.__core) attach3D();
