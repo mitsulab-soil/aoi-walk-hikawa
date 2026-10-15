@@ -23,7 +23,7 @@
    for(let i=0;i<6;i++){const pts=[];for(let j=0;j<40;j++){const y=j*.23;pts.push(new T.Vector3(Math.sin(y*.5+i)*.5+Math.cos(i)*7,y,Math.sin(i)*7))}future.add(new T.Line(new T.BufferGeometry().setFromPoints(pts),new T.LineBasicMaterial({color:0x79b8cc,transparent:true,opacity:.14,depthWrite:false})));}
    sprite=new T.Sprite(new T.SpriteMaterial({transparent:true,depthTest:true}));sprite.position.set(0,3,0);sprite.scale.set(6,1.5,1);groups.language.add(sprite);
   }
-  const isFuture=window.__r21?.era?.()==='future';future.visible=isFuture;root.visible=(isFuture||Object.values(states).some(Boolean))&&talk.mode==='sim'&&!!window.__aoi?.aoi?.visible;
+  const isFuture=window.__r21?.era?.()==='future';future.visible=isFuture;root.visible=(isFuture||Object.values(states).some(Boolean))&&talk.mode==='sim'&&!!document.getElementById('start')?.hidden&&!document.body.classList.contains('ovOn');
   if(!root.visible)return;
   const now=performance.now();if(now-last<100)return;last=now;
   const marks=(talk.MARKS||[]).filter(m=>m.wp&&Number.isFinite(m.wp.x)).sort((a,b)=>Math.hypot(a.wp.x-camera.position.x,a.wp.z-camera.position.z)-Math.hypot(b.wp.x-camera.position.x,b.wp.z-camera.position.z));
