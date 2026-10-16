@@ -19,7 +19,7 @@ export function createEntryMap(C, host, choices) {
   const trees = new T.BufferGeometry(); trees.setAttribute('position', new T.Float32BufferAttribute(treePos, 3));
   group.add(new T.Points(trees, new T.PointsMaterial({color: 0x83bba9, size: 8, sizeAttenuation: true, transparent: true, opacity: .85})));
   let buildingMeshes = 0;
-  if (C.buildings) {
+  function syncBuildings() { if (buildingMeshes || !C.buildings) return;
     C.buildings.updateWorldMatrix(true, true);
     C.buildings.traverse(o => {
       if (!o.isMesh || !o.geometry) return;
@@ -48,7 +48,7 @@ export function createEntryMap(C, host, choices) {
   function project(p) { layout(); v.set(...p).project(camera); return {x: (v.x + 1) * rect.width / 2, y: (1 - v.y) * rect.height / 2, z: v.z}; }
   function render(renderer) {
     if (disposed || !host.isConnected || host.closest('[hidden]')) return;
-    layout(); if (!rect.width || !rect.height) return;
+    syncBuildings(); layout(); if (!rect.width || !rect.height) return;
     const width = innerWidth, height = innerHeight;
     renderer.getViewport(vp); renderer.getScissor(sc);
     const test = renderer.getScissorTest(), clear = renderer.autoClear, shadow = renderer.shadowMap.autoUpdate;
