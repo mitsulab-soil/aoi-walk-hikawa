@@ -5292,6 +5292,16 @@ if (store.get("ftw-hikawa-font", false)) document.body.classList.add("big");
 // ---- 碧：歩ける帯の中を、見る人の斜め前（スマホ 約 3.2 m・デスクトップ 約 2.6 m 先、横に約 0.9 m）を歩く。
 //      位置は道の座標（道のり pd・横 ps）で持ち、臨界減衰のばねで寄せる（歩く向きが反転しても跳ばない。横の側は追い越してから替える）
 //      振る舞い：歩いて先導／ときどき振り返る（20〜45 秒に一度）／きょろきょろ（8〜20 秒に一度、並木や印のほうを見上げる）／話す対象を見る（体・首・目の順）／止まって話すときは見る人へ
+// Optional detail work starts after the first actual 3D frame. Hidden pages wait for return.
+function afterEntryPaint(delay = 250) {
+  return new Promise(resolve => {
+    const ready = () => {
+      if (document.hidden || !(window.__entryFirstFrameAt || window.__no3d || window.__coreFailed || window.__entryMap?.state.fallback)) { setTimeout(ready, 150); return; }
+      setTimeout(() => { if(document.hidden)ready();else resolve(); }, delay);
+    };
+    ready();
+  });
+}
 const AOI_URL = "web/aoi.vrm", AOI_H = 1.67, VRM_LIB = "@pixiv/three-vrm";
 let aoi = null, vrm = null, aoiLoading = null, aoiFail = false, AM = null, LIPSYNC = null;
 const A = { pd: null, ps: 0, vd: 0, vs: 0, side: 1, sp: 0, yaw: 0, k: 0, ph: 0, tk: 0, hp: .1, ws: 3, wsTo: .5, wsv: 0, tl: 12, tlT: null, tlS: 1, gy: null, gyN: 0,
@@ -5337,7 +5347,7 @@ function loadAoi() {
     if (AM.robe) AM.robe.wind = .25;   /* 裾の布には、そよ風だけ */
     /* 2026-10-14（11 人 r5「腰の横が塊のように張り出す」）：ローブの下の脚の肌は畳んだので、裾を脚から押し出す当たり（カプセル）を 6 割の太さに（このページだけ） */
     if (AM.robe?._capsNow) { const c0 = AM.robe._capsNow.bind(AM.robe); AM.robe._capsNow = () => { const c = c0(); for (const q of c) q[2] *= .6; return c; }; }
-    fetch("web/lipsync.json").then(r => r.ok ? r.json() : null).then(j => { LIPSYNC = j; }).catch(() => {});   /* 口の時刻表（無ければ声のかなから） */
+    afterEntryPaint(1200).then(() => fetch("web/lipsync.json", {priority:"low"})).then(r => r.ok ? r.json() : null).then(j => { LIPSYNC = j; }).catch(() => {});   /* 口の時刻表（無ければ声のかなから） */
     try { aoi.visible = true; const pc = C.renderer.compileAsync(aoi, C.camera, C.scene); aoi.visible = false; await pc;
       const textures=new Set(); aoi.traverse(o => { for (const m of [].concat(o.material ?? [])) for (const u of Object.values(m.uniforms ?? {})) if (u?.value?.isTexture) textures.add(u.value); });
       let uploadedAt=performance.now(); for(const texture of textures){ C.renderer.initTexture(texture); if(performance.now()-uploadedAt>8){await new Promise(resolve=>setTimeout(resolve,0));uploadedAt=performance.now();} }
@@ -7203,8 +7213,14 @@ const BODY = (() => {
     else if (w !== sz.w || h !== sz.h) { RT.setSize(w, h); sz.w = w; sz.h = h; }
   }
   const models={};let bodyRoot=null,modelScene=null;
-  import(new URL('web/body/bodies.js',document.baseURI).href).then(m=>{
-    for(const id of ['tori','chou','hachi','inu']){const g=m.makeBody(id);g.visible=false;models[id]=g;}
+  import(new URL('web/body/bodies.js',document.baseURI).href).then(async m=>{
+    await afterEntryPaint(250);
+    // Generate one body at a time so the opening and subsequent controls can draw between them.
+    for(const id of ['tori','chou','hachi','inu']){
+      await afterEntryPaint(0);
+      const g=m.makeBody(id);g.visible=false;models[id]=g;
+      await new Promise(resolve=>window.requestIdleCallback ? window.requestIdleCallback(resolve,{timeout:150}) : setTimeout(resolve,32));
+    }
   }).catch(e=>console.warn('身体の読み込み',e));
   function bodyFrame(scene,cam){if(!bodyRoot)bodyRoot=new THREE.Group();for(const g of Object.values(models))if(g.parent!==bodyRoot)bodyRoot.add(g);if(modelScene!==scene){scene.add(bodyRoot);modelScene=scene;}bodyRoot.visible=cur!=='hito'&&mode==='sim';
     for(const id in models){models[id].visible=id===cur;if(id===cur)models[id].userData.animate(performance.now()/1000,true);}
