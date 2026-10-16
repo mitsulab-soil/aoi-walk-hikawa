@@ -61,3 +61,6 @@ body.entryFallback #ovPick{grid-template-rows:auto minmax(190px,1fr) auto;height
 #entryOtherPlaces{display:grid;grid-template-columns:1fr 1fr;gap:5px;max-height:150px;overflow-y:auto;padding:5px 2px 8px}
 #entryOtherPlaces button{min-height:42px;padding:8px;background:#102c31;border:1px solid #72998c66;color:#d5eae1;font:11px var(--ui);text-align:left;cursor:pointer}
 @media(max-width:600px){#ovPick:has(#entryOther[open]){height:min(65svh,540px)}#entryOtherPlaces{max-height:120px}}
+
+#entryARLink{position:absolute;right:30px;top:max(28px,env(safe-area-inset-top));pointer-events:auto;display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border:1px solid #99cfc57a;background:#071b22de;color:#d8f6ed;font:12px var(--ui);letter-spacing:.1em;text-decoration:none}#entryARLink svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.2}#entryARLink:focus-visible{outline:2px solid #eed5a1;outline-offset:3px}
+@media(max-width:600px){#entryARLink{right:14px;top:max(23px,env(safe-area-inset-top));gap:6px;padding:8px 10px;min-height:44px;font-size:10px}#entryARLink svg{width:16px;height:16px}.entryTitle{max-width:calc(100% - 142px)}}

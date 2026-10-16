@@ -52,7 +52,7 @@
 (() => { if (!window.WebGLRenderingContext || new URLSearchParams(location.search).get("mode") === "oto") return;   /* 音で歩く参道では 3D の素材を取りに行かない */   /* WebGL の文脈をここで作って確かめると、それだけで 2 秒ほど止まる端末がある（headless で起きた）ので、有無だけ見る */
   const S = [[["aoi", "web/aoi.vrm"], ["terrain", "web/terrain.glb"], ["road", "web/road.glb"], ["keyaki", "web/keyaki.glb"], ["keyaki_lod1", "web/keyaki_lod1_notex.glb"]], [["structures", "web/structures.glb"], ["buildings", "web/buildings.glb"], ["forest", "web/forest.glb"], ["props", "web/props.glb"]]], P = {}; let g = Promise.resolve();
   let stage=0;
-  const entryFirst=()=>new Promise(resolve=>{const at=performance.now();const check=()=>{if(window.__entryMap?.state.open || window.__entryMap?.state.frames || window.__entryMap?.state.started || performance.now()-at>20000)setTimeout(resolve,400);else setTimeout(check,100);};check();});
+  const entryFirst=()=>new Promise(resolve=>{const at=performance.now();const check=()=>{if(window.__entryFirstFrameAt || window.__entryMap?.state.started || performance.now()-at>20000)setTimeout(resolve,800);else setTimeout(check,100);};check();});
   for (const st of S) { const w = stage++ ? g.then(entryFirst) : g; const ps = st.map(([k, f]) => P[k] = w.then(() => fetch(f, {priority:k === "aoi" ? "high" : "auto"})).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
     ps.forEach(p => p.catch(() => {})); g = Promise.all(ps.map(p => p.catch(() => null))); }
   window.__PF = P; })();</script>
@@ -395,7 +395,8 @@ body.qMapReady #start .opt>.modes:first-child{display:none}
 body:has(#menu:not([hidden])) #journeyPanel,body:has(#menu:not([hidden])) #bodyQuick,body:has(#menu:not([hidden])) #bodyNote,body.ovOn #bodyQuick,body.ovOn #bodyNote{display:none!important}
 @media(max-width:600px){#ovPick .ovH{left:8px;right:8px;padding-left:10px}.qStartModes{gap:4px}.qStartModes button{flex:1;padding:6px;font-size:11px}.qStartModes span{display:block}#ovPick .ovF{left:8px;right:8px}}
 </style>
-<link rel="stylesheet" href="web/entry-map.css?v=20261016a">
+<link rel="stylesheet" href="web/entry-map.css?v=20261016-ar1">
+<link rel="stylesheet" href="web/ghost-interface.css?v=20261016-field">
 </head><body class="entryPending">
 <div id="v" aria-label="氷川参道のまわりの 3D（実寸）"></div>
 <div class="bar">
@@ -1778,7 +1779,7 @@ function groundTexture(url) {
 }
 let groundUpgradeBusy=false;
 setInterval(()=>{
-  if(document.hidden || groundUpgradeBusy || !groundUpgrades.length || !(window.__entryMap?.state.open || window.__entryMap?.state.started))return;
+  if(document.hidden || groundUpgradeBusy || !groundUpgrades.length || !window.__entryFirstFrameAt || performance.now()-window.__entryFirstFrameAt<1200)return;
   const q=groundUpgrades.shift();if(q.t.source!==q.source)return;groundUpgradeBusy=true;
   const image=new Image();image.decoding="async";image.fetchPriority="low";
   image.onload=async()=>{try{await image.decode();}catch{}if(q.t.source===q.source){const source=new THREE.Source(image),shared=[q.t,...Object.values(rtexC).filter(t=>t.source===q.source)];for(const t of shared){t.dispose();t.source=source;t.needsUpdate=true;}}groundUpgradeBusy=false;};
@@ -1870,7 +1871,7 @@ function roadTextureTick() {
   road.traverse(o => { if (!o.isMesh || o.userData.rs || o.layers.mask !== 1 || !o.material.userData.roadTexture) return;
     const box=o.userData.roadBounds ||= new THREE.Box3().setFromObject(o); if(box.distanceToPoint(camera.position)<90)keys.add(o.material.userData.roadTexture); });
   keys.delete(undefined); roadNearby = keys;
-  for (const suffix of ["c","n","r"]) for (const key of keys) { const q=roadTextures.get(key+"_"+suffix); if(q?.state==="idle")roadTextureLoad(q); }
+  for (const suffix of (window.__entryFirstFrameAt && now-window.__entryFirstFrameAt>900 ? ["c","n","r"] : ["c"])) for (const key of keys) { const q=roadTextures.get(key+"_"+suffix); if(q?.state==="idle")roadTextureLoad(q); }
   // 高解像度は出発後、いま足元にある材だけ。入口と初回の声の通信を先に通す。
   if (!window.__nearHold && TEX2K && now-(roadTextureTick.started ??= now)>8000) for(const key of keys) if(ROAD2K.includes(key)) for(const suffix of ["c","n","r"]){const q=roadTextures.get(key+"_"+suffix);if(q?.state==="ready"&&!q.highTried)roadTextureLoad(q,true);}
 }
@@ -3610,7 +3611,13 @@ function shadowGate() { if (!renderer.shadowMap.enabled || SHU.all) return; rend
   const sp = sun.position, mv = SHU.p ? Math.hypot(sp.x - SHU.p.x, sp.y - SHU.p.y, sp.z - SHU.p.z) : 1e9;
   if (SHU.n % 2 === 0 || mv > .15) { renderer.shadowMap.needsUpdate = true; (SHU.p ||= sp.clone()).copy(sp); } }
 let loadingDrawAt=0;
-renderer.setAnimationLoop(now => { if (document.hidden) { PR.last=0; return; } const covered=document.getElementById("poster")?.classList.contains("off")===false; if(covered && now-loadingDrawAt<160)return;loadingDrawAt=now; if (!isEye()) controls.update(); dragEase(now); frame(); shadowGate(); window.__overviewFrame?.(); window.__qualiumFrame?.(scene,camera); if (!window.__lensRender?.(renderer, scene, camera)) renderer.render(scene, camera);   /* 2026-10-13 夜：身体（環世界）の色の写し方（walk_umwelt） */ labels.render(scene, camera); window.__entryMapRender?.(renderer); if(!covered)adaptPR(now);else PR.last=0; });
+renderer.setAnimationLoop(now => { if (document.hidden) { PR.last=0; return; } const covered=document.getElementById("poster")?.classList.contains("off")===false; if(covered && now-loadingDrawAt<160)return;loadingDrawAt=now; if (!isEye()) controls.update(); dragEase(now); frame(); shadowGate(); window.__overviewFrame?.(); window.__qualiumFrame?.(scene,camera); if (!window.__lensRender?.(renderer, scene, camera)) renderer.render(scene, camera);   /* 2026-10-13 夜：身体（環世界）の色の写し方（walk_umwelt） */ labels.render(scene, camera); window.__entryMapRender?.(renderer);
+  // The poster yields only after the ground and Aoi have actually been drawn.
+  if(window.__entryAwaitReveal && (window.__aoi?.aoi.visible || window.__entryAoiUnavailable)) {
+    window.__entryAwaitReveal=false;window.__entryFirstFrameAt=performance.now();
+    document.getElementById("poster")?.classList.add("off");dispatchEvent(new Event("hikawa-entry-frame"));
+  }
+  if(!covered)adaptPR(now);else PR.last=0; });
 
 // ---- 確かめ用（スクリーンショット・位置の試し）。画面の操作には使わない
 window.__sando = {
@@ -3673,6 +3680,7 @@ window.dispatchEvent(new Event("core3d"));   // 歩く層（先に動いてい�
   </div>
 </section>
 <section id="entryDock" aria-label="氷川幽玄〜Ghosts of Hikawa〜">
+<a id="entryARLink" href="field-ar.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg><span>実景AR</span><span aria-hidden="true">↗</span></a>
   <h1 class="entryTitle">氷川幽玄<span lang="en">〜Ghosts of Hikawa〜</span></h1>
   <div id="entryStatus" role="status" aria-live="polite">参道を読み込んでいます。</div>
   <button id="entryMapOpen" type="button" disabled aria-haspopup="dialog" aria-controls="ovPick">地図をひらく</button>
@@ -4827,14 +4835,17 @@ function entryFallback() {
   $("ovPick").setAttribute("aria-label", "音と字幕で巡る出発地点");
   ovOpen(true);
 }
-let qMapChecks = 0;
-const qMapTimer = setInterval(() => {
-  if (started) { clearInterval(qMapTimer); return; }
-  if (window.__no3d || window.__coreFailed || C.surfaceFailed?.()) { entryFallback(); clearInterval(qMapTimer); return; }
-  if (!NO3D && C.first?.() && (window.__aoi || aoiFail) && C.entryReady?.() && C.surfaceReady?.()) {
-    $("entryMapOpen").disabled = false; OV.composed = ""; document.body.classList.add("qMapReady"); ovOpen(true); if(window.__aoi?.aoi.visible)$("poster").classList.add("off"); clearInterval(qMapTimer);
-  } else if (++qMapChecks >= 900) { entryFallback(); clearInterval(qMapTimer); }
-}, 100);
+let qMapChecks = 0, entryResolved = false;
+function tryEntryReady() {
+  if(entryResolved)return;
+  if(started){entryResolved=true;clearInterval(qMapTimer);return;}
+  if(window.__no3d || window.__coreFailed || C.surfaceFailed?.()) {entryResolved=true;entryFallback();clearInterval(qMapTimer);return;}
+  if(!NO3D && C.first?.() && (window.__aoi?.aoi.visible || aoiFail) && C.entryReady?.() && C.surfaceReady?.()) {
+    entryResolved=true;$("entryMapOpen").disabled=false;OV.composed="";document.body.classList.add("qMapReady");ovOpen(true);
+    window.__entryAoiUnavailable=aoiFail;window.__entryAwaitReveal=true;clearInterval(qMapTimer);
+  }
+}
+const qMapTimer=setInterval(()=>{tryEntryReady();if(!entryResolved && ++qMapChecks>=900){entryResolved=true;entryFallback();clearInterval(qMapTimer);}},100);
 window.__entryMap = { get state() { return {open:OV.open, selected:OV.sel?.id, mode:OV.mode, sound:OV.sound, started, fallback:OV.fallback, frames:OV.map?.frames ?? 0, buildingMeshes:OV.map?.buildingMeshes ?? 0}; }, open:ovOpen };
 
 function releaseHold() { if (window.__nearHold) window.__nearHold = false; if (window.__photoHold) { window.__photoHold = false; setTimeout(() => { const upgrade=()=>{if(document.hidden)return setTimeout(upgrade,1500);try { window.__photoUp?.(); } catch {}};upgrade(); },10000) } }
@@ -5641,7 +5652,7 @@ let lastF = performance.now();
 (function aoiLoop(now) {
   if (document.hidden) { lastF=performance.now(); requestAnimationFrame(aoiLoop); return; }
   const dt = Math.min(.25, Math.max(0, ((now ?? performance.now()) - lastF) / 1000)); lastF = now ?? performance.now();   /* 第5回：歩く層（walkStep）と同じ 0.25 秒まで（こまの遅い端末で碧が遅れて近づかない） */
-  try { if (!NO3D) visD(() => aoiTick(dt)); } catch (e) { console.warn("aoi", e); vrm = null; aoiFail = true; if (aoi) aoi.visible = false; }
+  try { if (!NO3D) {visD(() => aoiTick(dt));tryEntryReady();} } catch (e) { console.warn("aoi", e); vrm = null; aoiFail = true; if (aoi) aoi.visible = false; }
   try { if (!NO3D) r8Tick(dt); } catch (e) { if (!window.__r8Err) { window.__r8Err = String(e?.stack ?? e); console.warn("r8", e); } }
   try { if (!NO3D) marksTick(); } catch (e) { if (!window.__mkErr) { window.__mkErr = String(e?.stack ?? e); console.warn("marks", e); } for (const m of MARKS) { m.el.hidden = true; m.vis = false; } }   /* 第5回：印の失敗で碧を止めない */
   requestAnimationFrame(aoiLoop);
@@ -6732,7 +6743,8 @@ showLoad();
 let firstShown = false, treesAt = 0;
 function waitReady(t0 = performance.now()) {
   const tOk = (C.treesOk ?? C.ready)?.(); if (tOk && !treesAt) treesAt = performance.now();
-  if (!firstShown && tOk && C.surfaceReady?.() && (aoi?.visible || aoiFail || performance.now() - treesAt > 4000)) { firstShown = true; poster.classList.add("off"); }
+  if (!firstShown && window.__entryFirstFrameAt) firstShown = true;
+  if (!firstShown && OV.fallback && tOk && C.surfaceReady?.() && (aoi?.visible || aoiFail || performance.now() - treesAt > 4000)) {firstShown=true;poster.classList.add("off");}
   if (firstShown && !C.ready()) loadEl.textContent = "道と碧を表示 · 森の細部を読込中";
   if (C.ready() && firstShown) { loadEl.dataset.done = 1; loadEl.textContent = ""; return; }
   if (C.surfaceFailed?.()) return;
@@ -7540,5 +7552,5 @@ const journeyLoop=()=>{journeyTick();requestAnimationFrame(journeyLoop);};
 window.__era={check:()=>ERA.check(),info:()=>ERA.info,choose:id=>chooseJourneyEra(id)};requestAnimationFrame(journeyLoop);
 </script>
 
-<script src="web/qualium.js"></script>
+<script src="web/qualium.js?v=20261016-layers"></script>
 </body></html>
