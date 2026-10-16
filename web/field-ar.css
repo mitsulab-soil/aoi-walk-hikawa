@@ -14,3 +14,15 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 
 body[data-mode=camera] #arStage{background:#07151a}
+
+/* 位置合わせ中も照準を隠さず、見えている風景へ端末を向けられる。 */
+.arSheet{overscroll-behavior:contain;scroll-padding-top:60px}
+.arSheetHead{position:sticky;top:-22px;z-index:1;background:#07191e;padding:6px 0}
+.arSheet input[type=range]{min-height:44px;touch-action:pan-y}
+@media(max-width:600px){
+ #arSettingsPanel{top:auto;bottom:max(12px,env(safe-area-inset-bottom));max-height:42svh;padding:14px 18px}
+ #arSettingsPanel .arSheetHead{top:-14px}
+ #arSettingsPanel label{margin:10px 0}
+ #arSettingsPanel #arTargetNote{margin:8px 0}
+ .arSheetHead{top:-18px}
+}

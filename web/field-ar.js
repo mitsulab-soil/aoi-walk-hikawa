@@ -98,7 +98,7 @@ function cleanup(){
  const old=stream;stream=null;old?.getTracks().forEach(t=>t.stop());$('arVideo').srcObject=null;
  for(const g of groups.values()){g.root.visible=false;g.label.hidden=true;}
  renderer?.clear();document.body.classList.remove('arActive');delete document.body.dataset.mode;
- $('arIntro').hidden=false;$('arInterface').hidden=true;$('arSettingsPanel').hidden=true;$('arReading').hidden=true;
+ setSheet(null);$('arIntro').hidden=false;$('arInterface').hidden=true;
  state.position=null;state.orientation=null;state.quality={ready:false,reason:''};
 }
 function stop(message='カメラと位置・向きの取得を終了しました。') {cleanup();setText('arIntroStatus',message);if(loaded)$('arStart').focus();}
@@ -175,14 +175,29 @@ function frame(now){
 $('arStart').onclick=startCamera;$('arPreview').onclick=startPreview;$('arEnd').onclick=()=>stop();
 $('arPause').setAttribute('aria-pressed',String(state.paused));$('arPause').textContent=state.paused?'動きを再開':'動きを止める';
 $('arPause').onclick=()=>{state.paused=!state.paused;$('arPause').setAttribute('aria-pressed',String(state.paused));$('arPause').textContent=state.paused?'動きを再開':'動きを止める';};
-function closeSettings(){$('arSettingsPanel').hidden=true;$('arSettings').setAttribute('aria-expanded','false');$('arSettings').focus();}
-$('arSettings').onclick=()=>{const open=$('arSettingsPanel').hidden;$('arSettingsPanel').hidden=!open;$('arSettings').setAttribute('aria-expanded',String(open));$('arReading').hidden=true;if(open)$('arTarget').focus();};$('arSettingsClose').onclick=closeSettings;
-$('arRead').onclick=()=>{$('arReading').hidden=false;$('arSettingsPanel').hidden=true;$('arSettings').setAttribute('aria-expanded','false');updateTarget();$('arReadingClose').focus();};$('arReadingClose').onclick=()=>{$('arReading').hidden=true;$('arRead').focus();};
+// パネルを閉じた後やカメラ終了時にも、背後の操作を必ず戻す。
+function setSheet(id){
+ for(const name of ['arSettingsPanel','arReading'])$(name).hidden=name!==id;
+ $('arSettings').setAttribute('aria-expanded',String(id==='arSettingsPanel'));
+ $('arInterface').inert=!!id;document.querySelector('.arMast').inert=!!id;
+ if(id)$(id).scrollTop=0;
+}
+function closeSettings(){setSheet(null);$('arSettings').focus();}
+$('arSettings').onclick=()=>{setSheet('arSettingsPanel');$('arTarget').focus({preventScroll:true});};$('arSettingsClose').onclick=closeSettings;
+$('arRead').onclick=()=>{setSheet('arReading');updateTarget();$('arReadingClose').focus({preventScroll:true});};$('arReadingClose').onclick=()=>{setSheet(null);$('arRead').focus();};
 $('arTarget').onchange=()=>{state.selected=$('arTarget').value;state.manualTarget=true;updateTarget();if(state.mode==='preview')setPreviewTarget();};
 $('arAlign').onclick=align;$('arYaw').oninput=()=>{state.yaw=+$('arYaw').value;$('arYawValue').value=state.yaw+'°';};
 $('arFov').oninput=()=>{$('arFovValue').value=$('arFov').value+'°';resize();};$('arPitch').oninput=()=>state.pitch=+$('arPitch').value;
 document.querySelectorAll('[data-layer]').forEach(button=>button.onclick=()=>{const id=button.dataset.layer;layers[id]=!layers[id];button.setAttribute('aria-pressed',String(layers[id]));setText('arMeaning',layers[id]?meanings[id]:Object.keys(layers).filter(k=>layers[k]).map(k=>meanings[k]).join(' ')||'層を外して、目の前の景色へ。');});
-addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('arSettingsPanel').hidden)closeSettings();else if(!$('arReading').hidden)$('arReadingClose').click();else if(state.mode)stop();}});
+addEventListener('keydown',e=>{
+ if(e.key==='Escape'){e.preventDefault();if(!$('arSettingsPanel').hidden)closeSettings();else if(!$('arReading').hidden)$('arReadingClose').click();else if(state.mode)stop();return;}
+ if(e.key!=='Tab')return;
+ const sheet=['arSettingsPanel','arReading'].map($).find(el=>!el.hidden);if(!sheet)return;
+ const stops=[...sheet.querySelectorAll('button:not(:disabled),a[href],select:not(:disabled),input:not(:disabled)')].filter(el=>el.getClientRects().length);
+ const first=stops[0],last=stops.at(-1);if(!first)return;
+ if(e.shiftKey&&(document.activeElement===first||!sheet.contains(document.activeElement))){e.preventDefault();last.focus();}
+ else if(!e.shiftKey&&(document.activeElement===last||!sheet.contains(document.activeElement))){e.preventDefault();first.focus();}
+});
 addEventListener('pagehide',()=>cleanup());document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.mode==='camera')stop('画面を離れたため、カメラと位置・向きの取得を停止しました。');});
 reduced.addEventListener('change',()=>{if(reduced.matches){state.paused=true;$('arPause').setAttribute('aria-pressed','true');$('arPause').textContent='動きを再開';}});
 try{
