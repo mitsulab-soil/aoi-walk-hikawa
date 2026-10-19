@@ -2627,7 +2627,10 @@ bMat.onBeforeCompile = sh => {
           float mott = bvn(vec2(along, hgt) * .18 + seed * 9.0) * .6 + bvn(vec2(along, hgt) * .9 + seed * 3.0) * .4;
           float col = hsh(vec2(floor(along * 2.2), seed * 7.0)), run = smoothstep(.62, 1.0, col) * (.55 + .45 * bvn(vec2(along * 2.2, hgt * .35)));
           float grime = 1.0 - smoothstep(0.0, 1.2, hgt);
-          c *= (.9 + .2 * mott) * (1.0 - .12 * run * fw2) * (1.0 - .16 * grime * fw2);
+          float slab = (1.0 - smoothstep(.0, .035, abs(fract(hgt / 3.2) - .02))) * step(cls, 3.5) * (1.0 - step(1.5, cls) * step(cls, 2.5)) * step(2.0, hgt);   /* 階ごとの床の線（打ち継ぎ・水切り）。住宅のサイディングには付けない */
+          float tone = hsh(vec2(seed * 31.0, cls)) - .5;                              /* 棟ごとの汚れ方の差 */
+          c *= (.86 + .26 * mott) * (1.0 - (.2 + .1 * tone) * run * fw2) * (1.0 - .2 * grime * fw2) * (1.0 - .16 * slab * fw2);
+          c = mix(c, c * vec3(1.03, 1.0, .93), .5 + tone);                            /* 白一色に見えない、わずかな色の偏り */
           c = mix(c, c * vec3(.97, .98, 1.0), .5 * (1.0 - fw2)); }
         /* 窓：材と階数で大きさと並びを変える。住宅（サイディング・モルタル）は小さくまばら、ガラスの壁は一面 */
         float house = step(1.5, cls) * step(cls, 3.5);
@@ -7845,7 +7848,7 @@ const journeyLoop=()=>{journeyTick();requestAnimationFrame(journeyLoop);};
 window.__era={check:()=>ERA.check(),info:()=>ERA.info,choose:id=>chooseJourneyEra(id)};requestAnimationFrame(journeyLoop);
 </script>
 
-<script src="web/qualium.js?v=20261019photoreal1"></script>
+<script src="web/qualium.js?v=20261019photoreal2"></script>
 <script src="web/umwelt-tools.js?v=20261018-senses"></script>
 <script type="module" src="web/physical-materials.js?v=20261019court2"></script>
 <script data-source="umwelt-ui.js">

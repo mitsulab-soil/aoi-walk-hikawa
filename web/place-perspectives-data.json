@@ -1083,7 +1083,7 @@
         ],
         "anchorPrecision": "既存の語り/表示候補地点。史実の発生点・現物の精密座標と同一ではない"
       },
-      "title": "一の鳥居は三度かわった",
+      "title": "一の鳥居の移り変わり",
       "text": "神社の由緒は、石の一の鳥居が関東大震災で壊れて撤去され、昭和9年に大鳥居を移し、昭和30年に建て替えたと記しています。",
       "status": "verified",
       "publicEligible": true,
@@ -1131,7 +1131,7 @@
         "https://musashiichinomiya-hikawa.or.jp/about/index.html"
       ],
       "evidenceLimit": "神社の由緒本文による説明。江戸期の鳥居の正確な位置・形は現物で確かめられない。",
-      "question": "鳥居の数が減ると、参道の区切りはどう感じ方が変わるだろう。",
+      "question": "鳥居の数が減ると、参道の区切りの感じ方はどう変わるだろう。",
       "time": {
         "kind": "historical",
         "dateLabel": "江戸期〜昭和9年（1934）",
@@ -1159,7 +1159,7 @@
         "anchorPrecision": "既存の語り/表示候補地点。史実の発生点・現物の精密座標と同一ではない"
       },
       "title": "赤い鳥居から大きな鳥居へ",
-      "text": "神社は、三の鳥居が江戸期から境内入口にあり、明治期には赤鳥居と呼ばれ、昭和9年に片倉製糸紡績が一回り大きな鳥居を奉納したと記しています。",
+      "text": "神社は、三の鳥居が江戸期から境内入口にあり、明治35年の報告書に「赤色華表」とあることから赤鳥居と呼ばれていたようだとし、昭和9年に片倉製糸紡績が一回り大きな鳥居を奉納したと記しています。",
       "status": "verified",
       "publicEligible": true,
       "sourceIds": [
@@ -1353,7 +1353,7 @@
         "anchorPrecision": "既存の語り/表示候補地点。史実の発生点・現物の精密座標と同一ではない"
       },
       "title": "「御橋内」と刻まれた燈籠",
-      "text": "神社は、17丁付近の石燈籠に「氷川大宮御橋内」と刻まれ、かつて神池の先にあった大鳥居とともに移された由緒を伝えると説明しています。",
+      "text": "神社は、明治44年建立の大鳥居が大正8年に石燈籠二基とともに参道17丁付近へ移され、燈籠には「氷川大宮御橋内」と刻まれていると説明しています。",
       "status": "verified",
       "publicEligible": true,
       "sourceIds": [
@@ -1362,11 +1362,11 @@
       "sourceUrls": [
         "https://musashiichinomiya-hikawa.or.jp/about/index.html"
       ],
-      "evidenceLimit": "神社の由緒本文による。刻字の全文と現物は確かめていない。",
+      "evidenceLimit": "神社の由緒本文による。大鳥居はのちに一の鳥居として移され、燈籠は残ったとされる。刻字の全文と現物は確かめていない。",
       "question": "場所が変わっても残った文字は、何を伝えているだろう。",
       "time": {
         "kind": "historical",
-        "dateLabel": "大正8年（1919）の移築",
+        "dateLabel": "明治44年（1911）建立・大正8年（1919）移築",
         "start": null,
         "end": null,
         "calendar": "和暦の原表記は換算せず保持"
@@ -1400,7 +1400,7 @@
       "sourceUrls": [
         "https://www.musashiichinomiya-hikawa.or.jp/saiten/?scroll=a_reisai"
       ],
-      "evidenceLimit": "神社の祭典案内による。日程・出店数はその年の公式案内で確かめる。",
+      "evidenceLimit": "神社の祭典案内の記載（約350軒）。日程・出店数はその年の公式案内で確かめる。",
       "question": "冬の夜の篝火と人の声は、昼の参道をどう変えるだろう。",
       "time": {
         "kind": "recurring",
@@ -1665,7 +1665,7 @@
       "sourceUrls": [
         "https://musashiichinomiya-hikawa.or.jp/about/index.html"
       ],
-      "evidenceLimit": "整備時（平成元年完成）の記述。せせらぎは現在廃止されていると語りにあり、今の植栽は確かめていない。",
+      "evidenceLimit": "整備時（平成元年完成）の記述。今の植栽やせせらぎの状態は確かめていない。",
       "question": "植えられた木と、自然に生えた木は見分けられるだろうか。",
       "time": {
         "kind": "historical",
@@ -1693,7 +1693,7 @@
         ],
         "anchorPrecision": "語りに出てくる生きものの近くに結んだ、研究の要約。この地点で調べた記録ではない"
       },
-      "title": "鳥の目の四つの錐体",
+      "title": "鳥の目の四種類の単錐体",
       "text": "Hart（2001）は、鳥の網膜には桿体・二重錐体と四種類の単錐体があり、色を感じる範囲は種や生息環境で異なると総説しています。",
       "status": "verified",
       "publicEligible": true,
@@ -1704,14 +1704,15 @@
         "https://doi.org/10.1016/S1350-9462(01)00009-X"
       ],
       "evidenceLimit": "一般的な研究の知見。この参道で測ったものではなく、その生きものが何をどう感じているか（主観）を再現するものでもない。ヒヨドリを調べた研究ではなく、多くの鳥の比較による一般論。",
-      "question": "あなたには見えない色が、この葉に映っているかもしれない。",
+      "question": "鳥には、この景色が違う色に見えているかもしれない。",
       "time": {
         "kind": "research",
         "dateLabel": "研究の発表年 2001",
         "start": null,
         "end": null,
         "calendar": ""
-      }
+      },
+      "bodyMode": "tori"
     },
     {
       "id": "body-starling-uv",
@@ -1749,7 +1750,8 @@
         "start": null,
         "end": null,
         "calendar": ""
-      }
+      },
+      "bodyMode": "tori"
     },
     {
       "id": "body-graphium-eye",
@@ -1787,7 +1789,8 @@
         "start": null,
         "end": null,
         "calendar": ""
-      }
+      },
+      "bodyMode": "chou"
     },
     {
       "id": "body-earthworm-light",
@@ -1864,7 +1867,8 @@
         "start": null,
         "end": null,
         "calendar": ""
-      }
+      },
+      "bodyMode": "koumori"
     },
     {
       "id": "body-sparrow-hearing",
@@ -1903,7 +1907,8 @@
         "start": null,
         "end": null,
         "calendar": ""
-      }
+      },
+      "bodyMode": "tori"
     },
     {
       "id": "view-torii-moving",
@@ -1933,7 +1938,7 @@
         "https://musashiichinomiya-hikawa.or.jp/about/index.html"
       ],
       "evidenceLimit": "mitsulabによる見方。移築の経緯は神社の由緒による。",
-      "question": "この鳥居は、次にどこへ動くことがあるだろう。",
+      "question": "いま見ている鳥居の姿は、どんな移り変わりの上にあるのだろう。",
       "time": {
         "kind": "historical",
         "dateLabel": "出典の記述時点",
