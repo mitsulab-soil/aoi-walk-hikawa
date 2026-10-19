@@ -214,7 +214,7 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
   /* 2026-10-20：Ghost が降りるあいだ、狭い画面では碧の全身が画面に入るよう、視線を少しずつ寄せる（指で見回しているときは寄せない） */
   let userDrag = false; addEventListener('pointerdown', () => { userDrag = true; }, true); addEventListener('pointerup', () => { userDrag = false; }, true); addEventListener('pointercancel', () => { userDrag = false; }, true);
   function frameAoi(t, dt) {
-    const A = window.__aoi, FR = window.__talk?.FR, cam = C.camera; if (!A?.aoi?.visible || !FR || FR.yaw == null || userDrag || t > 3.8 || innerWidth >= 760) return;
+    const A = window.__aoi, FR = window.__talk?.FR, cam = C.camera; if (!A?.aoi?.visible || !FR || FR.yaw == null || userDrag || t > 3.8 || innerWidth >= 760 || ghost?.why !== 'first' || window.__freezeEye || document.querySelector('.fieldVisionRead.fvVisible')) return;   /* 歩き出すときの一度だけ。読む画面を開いているときは動かさない */
     const vrm = A.vrm, base = A.aoi.getWorldPosition(new T.Vector3()), head = boneWorld(vrm, 'head', new T.Vector3()) || base.clone().add(new T.Vector3(0, 1.5, 0));
     const mid = base.clone().lerp(head, .5).project(cam), feet = base.clone().project(cam), top = head.clone().add(new T.Vector3(0, .14, 0)).project(cam);
     if (mid.z > 1) return; const k = Math.min(1, dt * 2.2), tx = Math.sign(mid.x || 1) * .32;
