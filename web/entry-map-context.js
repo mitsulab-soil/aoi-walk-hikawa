@@ -49,11 +49,11 @@ export function createEntryMapContext(C,map,host,{places=[]}={}){
  /* 2026-10-19：記録 48 件を、その地点に立つ光の柱で（層ごとの高さと色）。初回描画の 2 秒後に読む */
  const LC={nature:[.56,.92,.74],history:[.98,.8,.52],culture:[.72,.84,1]},LH={nature:34,history:56,culture:78},LOF={ecology:'nature',environment:'nature',body:'nature',history:'history',folk:'culture',social:'culture',art:'culture',events:'culture',fiction:'culture'};
  let pillars=null,caps=null;state.pillars=0;
- setTimeout(()=>fetch(new URL('./place-perspectives-data.json',import.meta.url)).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;const items=(d.items||[]).filter(x=>x.publicEligible&&x.place?.dRange);const n=items.length;if(!n)return;
+ setTimeout(()=>fetch(new URL('./entry-map-records.json',import.meta.url)).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;const items=(d.items||[]).map(([id,layer,dd])=>({id,layer,dd}));const n=items.length;if(!n)return;
   const geo=new T.CylinderGeometry(2.2,2.2,1,6,1,true);geo.translate(0,.5,0);
   pillars=new T.InstancedMesh(geo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),n);
   const cp=new Float32Array(n*3),cc=new Float32Array(n*3),m=new T.Object3D(),c=new T.Color();
-  items.forEach((it,i)=>{const L=LOF[it.categories?.[0]||it.category]||'culture',dd=(it.place.dRange[0]+it.place.dRange[1])/2,q=C.pointAt(Math.max(line[0].d,Math.min(line.at(-1).d,dd))),side=((i*37)%7-3)*7,h=LH[L];
+  items.forEach((it,i)=>{const L=LC[it.layer]?it.layer:'culture',dd=it.dd,q=C.pointAt(Math.max(line[0].d,Math.min(line.at(-1).d,dd))),side=((i*37)%7-3)*7,h=LH[L];
    m.position.set(q[0]+side,q[1],q[2]+((i*53)%5-2)*5);m.scale.set(1,h,1);m.updateMatrix();pillars.setMatrixAt(i,m.matrix);c.setRGB(...LC[L]);pillars.setColorAt(i,c);cp.set([m.position.x,q[1]+h,m.position.z],i*3);cc.set(LC[L],i*3);});
   pillars.instanceColor.needsUpdate=true;pillars.renderOrder=3;group.add(pillars);
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(cp,3));g.setAttribute('color',new T.Float32BufferAttribute(cc,3));
