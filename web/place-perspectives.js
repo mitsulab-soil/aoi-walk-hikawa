@@ -1,5 +1,5 @@
 /* 場の手がかり。資料の記載、mitsulabの見方、創作を区別し、既存地点へ結ぶ。 */
-export const CATEGORIES=Object.freeze({folk:'民俗',social:'社会',history:'歴史',ecology:'生態',environment:'環境',art:'芸術',events:'催事',fiction:'創作'});
+export const CATEGORIES=Object.freeze({folk:'民俗',social:'社会',history:'歴史',ecology:'生態',environment:'環境',art:'芸術',events:'催事',body:'感じ方',fiction:'創作'});
 const clean=s=>String(s??'').replace(/\s+/g,' ').trim();
 const safeUrl=s=>{try{const u=new URL(s);return /^https?:$/.test(u.protocol)?u.href:null;}catch{return null;}};
 export function publicPerspectives(raw){
