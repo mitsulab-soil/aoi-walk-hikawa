@@ -2893,7 +2893,24 @@ setInterval(() => { if (!trees.visible) return; camera.getWorldDirection(_fw2); 
 const ponds = new THREE.Group(); ponds.name = "ponds"; world.add(ponds);
 const PONDS = FOREST?.ponds ?? [];
 const inRing = (x, z, r) => { let c = false; for (let i = 0, j = r.length / 2 - 1; i < r.length / 2; j = i++) { const xi = r[2 * i], zi = r[2 * i + 1], xj = r[2 * j], zj = r[2 * j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
-function pondAt(x, z) { for (const p of PONDS) if (p.ring.some(r => inRing(x, z, r)) && !(p.holes ?? []).some(h => inRing(x, z, h))) return p; return null; }
+// Build conservative ring bounds once; retain the original polygon test at every possible boundary.
+// Neither ring vertices nor the pond order/holes are changed.
+const POND_RING_BOUNDS = new WeakMap();
+for (const p of PONDS) for (const r of [...p.ring, ...(p.holes ?? [])]) {
+  if (POND_RING_BOUNDS.has(r)) continue;
+  let loX = Infinity, hiX = -Infinity, loZ = Infinity, hiZ = -Infinity, valid = r.length > 0 && r.length % 2 === 0;
+  for (let i = 0; i < r.length; i += 2) {
+    const x = r[i], z = r[i + 1]; if (!Number.isFinite(x) || !Number.isFinite(z)) { valid = false; break; }
+    loX = Math.min(loX, x); hiX = Math.max(hiX, x); loZ = Math.min(loZ, z); hiZ = Math.max(hiZ, z);
+  }
+  const padX = Math.max(1, Math.abs(loX), Math.abs(hiX)) * Number.EPSILON * 8, padZ = Math.max(1, Math.abs(loZ), Math.abs(hiZ)) * Number.EPSILON * 8;
+  POND_RING_BOUNDS.set(r, { valid, loX: loX - padX, hiX: hiX + padX, loZ: loZ - padZ, hiZ: hiZ + padZ });
+}
+function pondRingContains(x, z, r) {
+  const b = POND_RING_BOUNDS.get(r);
+  return (!Number.isFinite(x) || !Number.isFinite(z) || !b?.valid || !(x < b.loX || x > b.hiX || z < b.loZ || z > b.hiZ)) && inRing(x, z, r);
+}
+function pondAt(x, z) { for (const p of PONDS) if (p.ring.some(r => pondRingContains(x, z, r)) && !(p.holes ?? []).some(h => pondRingContains(x, z, h))) return p; return null; }
 function lowerPondBeds(o) {    /* 地形の 5 m 格子のうち、池の中の点を水面の 0.8 m 下へ（高さの表示・等高線は元の DEM のまま） */
   if (!PONDS.length) return 0;
   o.updateMatrixWorld(true); const pos = o.geometry.attributes.position, inv = o.matrixWorld.clone().invert(), v = new THREE.Vector3(); let n = 0;
