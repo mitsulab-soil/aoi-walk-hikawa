@@ -31,7 +31,7 @@
   const panel = document.createElement('section');
   panel.id = 'qualiumPanel'; panel.setAttribute('aria-label', '場の手がかり');
   panel.innerHTML = `<p>街歩きをアップデートする</p><p>同じ場所に、自然・歴史・暮らしと文化の手がかりを重ねます。時代と身体は、となりのつまみで替えられます。</p><div class="qBulk"><button type="button" id="qualiumAll">すべてON</button><button type="button" id="qualiumReset">すべてOFF</button></div><div class="qualiumChoices">${LAYERS.map(l => `<label><input type="checkbox" data-layer="${l.id}" aria-label="${l.name}の層">${l.name}<small data-count="${l.id}"></small></label>`).join('')}</div><p class="qMarks">記録ごとの印：資料の記載／mitsulabの見方／創作</p><p id="qualiumMeaning" role="status"></p><label class="qStill"><input type="checkbox" id="qualiumStill">動きを止める</label><details><summary>この場所の文化記録</summary><p id="qualiumCultureRecord">近くの記録は、歩いた場所に合わせて表示します。</p></details><details><summary>表示の意味と出どころ</summary><div id="qualiumExplanations"></div><p>${baseText} 点・波・関係線は模式です。木の根や水質・生息・心を測定した表示ではありません。地形線は3D模型から抽出。典拠は各地点の解説で確かめてください。</p><a class="qAR" href="field-ar.html">実景ARへ ↗</a></details>`;
-  panel.querySelector('#qualiumExplanations').innerHTML=[...LAYERS.map(l=>l.desc),'どの層でも：木や石の位置から立ち上がる点群と目盛り、離れた手がかりを結ぶ線、既存の案内名の札を出します。記録を重ねる模式で、心の測定ではありません。距離は3D模型内の直線距離です。'].map(t=>`<p>${t}</p>`).join('');
+  panel.querySelector('#qualiumExplanations').innerHTML=[...LAYERS.map(l=>l.desc),'どの層でも：木や石の位置から立ち上がる点群と目盛り、離れた手がかりを結ぶ線、既存の案内名の札を出します（すべてOFFにすると、これも消えます）。記録を重ねる模式で、心の測定ではありません。距離は3D模型内の直線距離です。'].map(t=>`<p>${t}</p>`).join('');
   const rail = document.createElement('details');
   rail.id = 'qualiumControl'; rail.hidden = true;
   rail.innerHTML='<summary>レイヤー</summary>';rail.append(panel);document.body.append(rail);
@@ -50,7 +50,7 @@
   }
   panel.addEventListener('change', event => {
     const id = event.target.dataset.layer;
-    if (id in layerOn) { layerOn[id] = event.target.checked; nearbyAt=0; nearbyKey=''; sync(); }
+    if (id in layerOn) { layerOn[id] = event.target.checked; nearbyAt=0; nearbyKey=''; sync(); const l=LAYERS.find(x=>x.id===id); panel.querySelector('#qualiumMeaning').textContent += `　${l.name}の手がかりを${layerOn[id]?'出しました':'隠しました'}`; }
   });
   panel.querySelector('#qualiumAll').onclick=()=>{Object.keys(layerOn).forEach(id=>layerOn[id]=true);nearbyAt=0;nearbyKey='';sync();};
   panel.querySelector('#qualiumReset').onclick = () => { Object.keys(layerOn).forEach(id => {layerOn[id] = false;}); nearbyAt=0;nearbyKey='';sync(); };
@@ -58,7 +58,7 @@
   const records=document.createElement('section');records.id='placePerspectiveRecords';records.hidden=true;records.setAttribute('aria-label','この周辺の資料と見方');panel.append(records);
   const extraStyle=document.createElement('style');extraStyle.textContent=`#placePerspectiveRecords{border-top:1px solid #638c9766;margin-top:12px;padding-top:8px}#placePerspectiveRecords h3{font-size:13px;letter-spacing:.06em;color:#baded7;font-weight:400}#placePerspectiveRecords article{padding:9px 0;border-top:1px solid #5e808433}#placePerspectiveRecords h4{font-size:14px;line-height:1.6;font-weight:400;color:#e3ebe5;margin:2px 0}#placePerspectiveRecords p{font-size:13px;line-height:1.8;margin:4px 0;color:#d0dedb}#placePerspectiveRecords small{display:block;font-size:11.5px;line-height:1.7;color:#b3c3ba}#placePerspectiveRecords a{display:block;min-height:44px;color:#a7d7d0;text-decoration:underline;text-underline-offset:3px;font-size:12px;line-height:1.7;padding:5px 0}.qPerspectiveGroup label small{font:10px ui-monospace,monospace;color:#9fbfb4;margin-left:auto}.qBodyTry{display:flex;align-items:center;min-height:44px;margin:6px 0;padding:0 12px;border:1px solid #6e9b8b;background:#254a3d55;color:#e4f2eb;font:inherit;font-size:13px;letter-spacing:.06em;cursor:pointer}.qPerspectiveHint{font-size:12px;color:#b7cac1}#placePerspectiveRecords .qRecordsFoot{font-size:12px;color:#b3c3ba;border-top:1px solid #5e808433;padding-top:8px}`;document.head.append(extraStyle);
   function mountPerspectiveChoices(){const api=window.__placePerspectives,st=api?.status();if(!st?.ready)return;const key=String(st.items);if(key===perspectiveChoices)return;perspectiveChoices=key;
-   for(const l of LAYERS){const c=api.countFor?api.countFor(l.ids):0,el=panel.querySelector(`[data-count="${l.id}"]`);if(el){el.textContent=c?String(c):'';el.setAttribute('aria-label','資料と見方 '+c+' 件');}}
+   for(const l of LAYERS){const c=api.countFor?api.countFor(l.ids):0,el=panel.querySelector(`[data-count="${l.id}"]`);if(el){el.textContent=c?c+'件':'';el.setAttribute('aria-label','資料と見方 '+c+' 件');}}
    panel.querySelectorAll('.qPerspectiveHint').forEach(e=>e.remove());const hint=document.createElement('p');hint.className='qPerspectiveHint';hint.textContent='数は、その層の資料と見方の件数。いくつかの層にまたがる記録は、どれかの層がONなら一度だけ出ます。生きものの感じ方は研究の要約で、この参道で測った値や主観の再現ではありません。';records.before(hint);sync();nearbyKey='';
   }
   // Retry only from the existing visible/start frame; no timer or additional loop.
