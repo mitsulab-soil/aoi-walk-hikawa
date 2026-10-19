@@ -25,7 +25,7 @@ export function createEntryMapContext(C,map,host,{places=[]}={}){
  const labels=geo.map(g=>{const el=document.createElement('span');el.className='entryStation';el.textContent=g.name;el.dataset.station=g.name;ui.append(el);return {el,p:[g.world[0],65,g.world[2]],wide:true};});
  const actors=[];const north=document.createElement('span');north.className='entryNorth';north.textContent='N ↑ 北';host.append(north);
  const levels=document.createElement('div');levels.className='entryMapLevels';levels.setAttribute('role','group');levels.setAttribute('aria-label','地図の範囲');levels.innerHTML='<button type="button" data-map-level="wide" aria-pressed="true">駅と参道</button><button type="button" data-map-level="sando" aria-pressed="false">選んだ場所</button>';host.parentElement.querySelector('.ovH').append(levels);
- const note=document.createElement('p');note.className='entryGeoNote';note.textContent='点線は位置関係（徒歩経路ではありません）。鳥居・神社は見やすく拡大、高さは強調。光の柱は記録の場所（自然・歴史・暮らしと文化）。';host.append(note);
+ const note=document.createElement('p');note.className='entryGeoNote';note.textContent='点線は位置関係（徒歩経路ではありません）。鳥居・神社は見やすく拡大、高さは強調。光の柱は記録の場所（緑＝自然・橙＝歴史・青＝暮らしと文化）。';host.append(note);
  function applyK(){K=level==='wide'?2.4:1.6;for(const o of scene.children)if(o.isGroup)o.scale.y=K;}
  function setView(v){level=v==='sando'?'sando':'wide';applyK();state.level=level;size='';revision++;levels.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mapLevel===level)));ui.dataset.level=level;for(const a of actors)a.copy.scale.copy(a.scale).multiplyScalar(level==='wide'?3:6);}
  levels.querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.mapLevel));
@@ -51,14 +51,14 @@ export function createEntryMapContext(C,map,host,{places=[]}={}){
  let pillars=null,caps=null;state.pillars=0;
  setTimeout(()=>fetch(new URL('./entry-map-records.json',import.meta.url)).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;const items=(d.items||[]).map(([id,layer,dd])=>({id,layer,dd}));const n=items.length;if(!n)return;
   const geo=new T.CylinderGeometry(2.2,2.2,1,6,1,true);geo.translate(0,.5,0);
-  pillars=new T.InstancedMesh(geo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),n);
+  pillars=new T.InstancedMesh(geo,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.78,depthWrite:false,toneMapped:false}),n);
   const cp=new Float32Array(n*3),cc=new Float32Array(n*3),m=new T.Object3D(),c=new T.Color();
   items.forEach((it,i)=>{const L=LC[it.layer]?it.layer:'culture',dd=it.dd,q=C.pointAt(Math.max(line[0].d,Math.min(line.at(-1).d,dd))),side=((i*37)%7-3)*7,h=LH[L];
    m.position.set(q[0]+side,q[1],q[2]+((i*53)%5-2)*5);m.scale.set(1,h,1);m.updateMatrix();pillars.setMatrixAt(i,m.matrix);c.setRGB(...LC[L]);pillars.setColorAt(i,c);cp.set([m.position.x,q[1]+h,m.position.z],i*3);cc.set(LC[L],i*3);});
   pillars.instanceColor.needsUpdate=true;pillars.renderOrder=3;group.add(pillars);
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(cp,3));g.setAttribute('color',new T.Float32BufferAttribute(cc,3));
   const gc=document.createElement('canvas');gc.width=gc.height=32;const gx=gc.getContext('2d'),gr=gx.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#fff');gr.addColorStop(.35,'rgba(255,255,255,.6)');gr.addColorStop(1,'rgba(255,255,255,0)');gx.fillStyle=gr;gx.fillRect(0,0,32,32);
-  caps=new T.Points(g,new T.PointsMaterial({map:new T.CanvasTexture(gc),size:14,sizeAttenuation:true,vertexColors:true,transparent:true,opacity:.95,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));caps.renderOrder=4;group.add(caps);state.pillars=n;
+  caps=new T.Points(g,new T.PointsMaterial({map:new T.CanvasTexture(gc),size:12,sizeAttenuation:true,vertexColors:true,transparent:true,opacity:.95,depthWrite:false,toneMapped:false}));caps.renderOrder=4;group.add(caps);state.pillars=n;
  }).catch(()=>{}),2000);
  const baseSelect=map.select.bind(map);map.select=q=>{selectedD=q.dd;revision++;baseSelect(q);};
  map.project=project;map.render=renderer=>{sync();fit();baseRender(renderer);for(const l of labels){l.el.hidden=l.wide&&level!=='wide';const q=project(l.p);l.el.style.left=q.x+'px';l.el.style.top=q.y+'px';}host.dataset.mapLevel=level;};

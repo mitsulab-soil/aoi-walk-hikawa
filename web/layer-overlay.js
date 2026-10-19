@@ -70,7 +70,7 @@
     const title = String(r.title || '').replace(/^(mitsulabの見方|創作)[：:]/, ''); g.fillText(title.length > 13 ? title.slice(0, 12) + '…' : title, 26, 94, W - 50);
     g.font = '20px "Hiragino Sans","Noto Sans JP",sans-serif'; g.fillStyle = '#b9d2c8';
     const src = (r.sourceInfo || []).map(x => x.publisher).filter(Boolean)[0] || (r.category === 'fiction' ? 'mitsulab の創作' : 'mitsulab');
-    g.fillText((r.time?.dateLabel ? String(r.time.dateLabel).slice(0, 16) + '　' : '') + src.slice(0, 18), 26, 138, W - 50);
+    g.font = '24px "Hiragino Sans","Noto Sans JP",sans-serif'; g.fillText((slot.ahead ? 'この周辺の記録　' : '') + src.slice(0, 16), 26, 140, W - 50);
     slot.tex.needsUpdate = true;
   }
 
@@ -125,14 +125,14 @@
     // 碧の語りの文字（字幕の上の一行。いまの字幕と重ならないときだけ）
     const cap = document.createElement('div'); cap.id = 'layerAoiLine'; cap.setAttribute('role', 'status'); cap.hidden = true;
     const chips = document.createElement('div'); chips.id = 'layerNowChips'; chips.setAttribute('aria-label', 'いま重なっている層');
-    chips.innerHTML = Object.entries(LAYER_STYLE).map(([id, s]) => `<span data-chip="${id}" style="--c:${s.css}">${s.name}</span>`).join('');
+    chips.innerHTML = Object.entries(LAYER_STYLE).map(([id, s]) => `<span data-chip="${id}" style="--c:${s.css}">${s.name}</span>`).join('') + '<em>線と粒は模式</em>';
     document.body.append(cap, chips);
     const css = document.createElement('style'); css.dataset.source = 'layer-overlay';
     css.textContent = `#layerAoiLine{box-sizing:border-box;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 96px);width:min(560px,calc(100vw - 32px));z-index:6;padding:10px 14px 11px;background:linear-gradient(180deg,#06191dd9,#071b1ff0);border:1px solid #6fb4a466;border-left:3px solid var(--c,#8eeabd);color:#e7f3ee;font:400 14px/1.75 "Hiragino Mincho ProN","Yu Mincho",serif;letter-spacing:.04em;pointer-events:none;box-shadow:0 0 22px #4fd6b322}
 #layerAoiLine b{display:block;font:500 11px/1.6 "Hiragino Sans",sans-serif;color:var(--c,#8eeabd);letter-spacing:.12em}#layerAoiLine small{display:block;font:11px/1.6 "Hiragino Sans",sans-serif;color:#a9c4ba;margin-top:2px}
 #layerNowChips{position:fixed;left:max(10px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 60px);z-index:5;display:flex;gap:6px;pointer-events:none}
 #layerNowChips span{font:500 11px/1 "Hiragino Sans",sans-serif;letter-spacing:.1em;color:#d9ece5;padding:6px 8px;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);background:#05181c99;opacity:.82;transition:opacity .5s,box-shadow .5s}
-#layerNowChips span.off{opacity:.25;text-decoration:line-through}#layerNowChips span.focus{opacity:1;box-shadow:0 0 12px color-mix(in srgb,var(--c) 70%,transparent)}
+#layerNowChips em{font:10px/1 "Hiragino Sans",sans-serif;font-style:normal;color:#a7c0b7;align-self:center;opacity:.8}#layerNowChips span.off{opacity:.25;text-decoration:line-through}#layerNowChips span.focus{opacity:1;box-shadow:0 0 12px color-mix(in srgb,var(--c) 70%,transparent)}
 body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}body.ovOn #layerNowChips,body.ovOn #layerAoiLine,body:has(#menu:not([hidden])) #layerNowChips{display:none}
 @media(max-width:520px){#layerAoiLine{bottom:calc(env(safe-area-inset-bottom,0px) + 84px);font-size:13.5px}}
 @media(prefers-reduced-motion:reduce){#layerNowChips span{transition:none}}`;
@@ -150,9 +150,9 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
     if (p.dRange) d = (p.dRange[0] + p.dRange[1]) / 2;
     if (d == null) { const s = talk.SEGX?.(p.segmentIds?.[0]); d = s?.at?.d ?? (Number.isFinite(s?.d0) ? (s.d0 + s.d1) / 2 : talk.d); }
     const dir = talk.dir || 1;   /* 記録はこの周辺（65 m 以内）のもの。見える所に並べるため、近い記録はその地点、離れた記録は行く手に置く */
-    if (!(Number.isFinite(d) && Math.abs(d - talk.d) < 10)) d = talk.d + dir * (7 + i * 5.5);
+    let ahead = false; if (!(Number.isFinite(d) && Math.abs(d - talk.d) < 10)) { d = talk.d + dir * (7 + i * 5.5); ahead = true; }
     const side = (i % 2 ? 1 : -1) * (2.7 + (i >> 1) * .6), w = talk.toWorld(d, side), gy = C.groundY(w.x, w.z);
-    return { x: w.x, z: w.z, y: Number.isFinite(gy) ? gy : C.camera.position.y - 1.6 };
+    return { x: w.x, z: w.z, y: Number.isFinite(gy) ? gy : C.camera.position.y - 1.6, ahead };
   }
 
   function refresh(talk, now) {
@@ -165,7 +165,7 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
       if (!slot) return;
       const layer = layerOf(r);
       if (slot.id !== r.id) { slot.id = r.id; slot.layer = layer; slot.rec = r; slot.reveal = 0; drawCard(slot, r, layer); slot.mat.uniforms.uColor.value.setRGB(...LAYER_STYLE[layer].color); }
-      slot.target = 1; const a = anchorOf(r, i, talk); slot.base.set(a.x, a.y + .02, a.z); slot.top.set(a.x, a.y + LAYER_STYLE[layer].h, a.z);
+      slot.target = 1; const a = anchorOf(r, i, talk); if (slot.ahead !== a.ahead) { slot.ahead = a.ahead; drawCard(slot, r, layer); } slot.base.set(a.x, a.y + .02, a.z); slot.top.set(a.x, a.y + LAYER_STYLE[layer].h, a.z);
     });
     st.cards = cardPool.filter(s => s.target > 0).length;
   }
@@ -220,10 +220,10 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
     const chest = boneWorld(vrm, 'chest', new T.Vector3()) || base.clone().add(new T.Vector3(0, 1.15, 0));
     ghost.halo.position.copy(chest); ghost.halo.position.y -= .25; ghost.halo.material.opacity = .22 * env * Math.min(1, Math.max(0, (t - 1.2) / .8));
     const head = boneWorld(vrm, 'head', new T.Vector3()); const le = boneWorld(vrm, 'leftEye', new T.Vector3()), re = boneWorld(vrm, 'rightEye', new T.Vector3());
-    const eyeA = Math.max(0, Math.min(1, (t - 1.9) / .4)) * Math.max(0, 1 - Math.max(0, t - 3.0) / .9);
+    const eyeA = Math.max(0, Math.min(1, (t - 1.7) / .4)) * Math.max(0, 1 - Math.max(0, t - 3.4) / .8);
     if (head) { const fwd = new T.Vector3(0, 0, 1).applyQuaternion(A.aoi.getWorldQuaternion(new T.Quaternion())), rt = new T.Vector3(1, 0, 0).applyQuaternion(A.aoi.getWorldQuaternion(new T.Quaternion()));
       const eyesP = [le || head.clone().addScaledVector(rt, .032).add(new T.Vector3(0, .055, 0)).addScaledVector(fwd, .08), re || head.clone().addScaledVector(rt, -.032).add(new T.Vector3(0, .055, 0)).addScaledVector(fwd, .08)];
-      ghost.eyes.forEach((s, i) => { s.position.copy(eyesP[i]).addScaledVector(fwd, .012); s.material.opacity = .85 * eyeA; }); }
+      ghost.eyes.forEach((s, i) => { s.position.copy(eyesP[i]).addScaledVector(fwd, .012); s.material.opacity = eyeA; s.scale.setScalar(LITE ? .075 : .055); }); }
     if (!ghost.n) return;
     const P = ghost.pts.geometry.attributes.position, a = new T.Vector3(), b = new T.Vector3(), q = new T.Vector3(); const cache = {};
     const bw = name => cache[name] ?? (cache[name] = boneWorld(vrm, name, new T.Vector3()));
@@ -236,7 +236,7 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
       const sw = Math.sin(t * 1.3 + f.a0) * .02 * (u >= 1 ? 1 : 0);
       P.setXYZ(i, sx + (q.x - sx) * e + sw, sy + (q.y - sy) * e, sz + (q.z - sz) * e);
     }
-    P.needsUpdate = true; ghost.pts.material.opacity = .9 * env; ghost.pts.material.size = .055 + .03 * Math.max(0, 1 - t / 2);
+    P.needsUpdate = true; ghost.pts.material.opacity = .9 * env; ghost.pts.material.size = (LITE ? .075 : .055) + .03 * Math.max(0, 1 - t / 2);
   }
 
   function updateLines(now, camera) {
@@ -302,19 +302,20 @@ body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}bo
       shown++;
       slot.mesh.position.copy(slot.top); slot.mesh.position.y += reduced.matches ? 0 : Math.sin(now * .0011 + slot.top.x) * .04;
       slot.mesh.rotation.set(0, Math.atan2(cp.x - slot.top.x, cp.z - slot.top.z), 0);
-      const s = .8 + Math.min(1.4, dist / 18) * .6; slot.mesh.scale.setScalar(s);
+      const s = (.8 + Math.min(1.4, dist / 18) * .6) * (LITE ? 1.2 : 1); slot.mesh.scale.setScalar(s);
       const u = slot.mat.uniforms; u.uTime.value = now / 1000; u.uReveal.value = Math.min(1, slot.reveal * 1.15); u.uOpacity.value = slot.fade * focusMix * Math.min(1, slot.reveal * 1.4) * (focus?.id === slot.id ? 1.15 : 1);
       u.uFocus.value += ((focus?.id === slot.id ? 1 : 0) - u.uFocus.value) * Math.min(1, dt * 3);
-      { const pl = slot.pillar, hgt = slot.mesh.position.y - .3 * slot.mesh.scale.y - slot.base.y; pl.visible = hgt > .2; pl.position.set(slot.base.x, slot.base.y + hgt / 2, slot.base.z); pl.scale.set(1, Math.max(.2, hgt), 1);
+      { const pl = slot.pillar, hgt = slot.mesh.position.y - .3 * slot.mesh.scale.y - slot.base.y; pl.visible = hgt > .2 && !slot.ahead;   /* 離れた記録は地面に柱を立てない（その場所の記録と読ませない） */ pl.position.set(slot.base.x, slot.base.y + hgt / 2, slot.base.z); pl.scale.set(1, Math.max(.2, hgt), 1);
         pl.material.uniforms.uC.value.setRGB(...LAYER_STYLE[slot.layer].color); pl.material.uniforms.uA.value = .9 * slot.fade * focusMix * slot.reveal; pl.material.uniforms.uT.value = reduced.matches ? 0 : now / 1000; }
-      slot.glow.position.copy(slot.base); slot.glow.position.y += .05; slot.glow.material.color.setRGB(...LAYER_STYLE[slot.layer].color); slot.glow.material.opacity = .55 * slot.fade * focusMix * slot.reveal;
+      slot.glow.position.copy(slot.base); slot.glow.position.y += .05; slot.glow.material.color.setRGB(...LAYER_STYLE[slot.layer].color); slot.glow.material.opacity = slot.ahead ? 0 : .55 * slot.fade * focusMix * slot.reveal;
     }
     st.cards = shown;
   }
 
   function updateThread(now, dt) {
     const slot = focus && cardPool.find(s => s.id === focus.id && s.mesh.visible), A = window.__aoi;
-    const near = slot && Math.hypot(slot.top.x - C.camera.position.x, slot.top.z - C.camera.position.z) < 24;
+    let near = slot && Math.hypot(slot.top.x - C.camera.position.x, slot.top.z - C.camera.position.z) < 18;
+    if (near) { const q = slot.mesh.position.clone().project(C.camera); near = Math.abs(q.x) < .92 && Math.abs(q.y) < .92 && q.z < 1; }   /* 札が画面の中にあるときだけ糸を出す */
     const goal = near && A?.aoi?.visible ? .32 : 0; thread.material.opacity += (goal - thread.material.opacity) * Math.min(1, dt * 3); thread.visible = thread.material.opacity > .01;
     if (!thread.visible || !slot) return;
     const hand = boneWorld(A.vrm, 'rightHand', new T.Vector3()) || A.aoi.getWorldPosition(new T.Vector3()).add(new T.Vector3(0, 1.1, 0));
