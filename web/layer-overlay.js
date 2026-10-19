@@ -133,7 +133,7 @@
 #layerNowChips{position:fixed;left:max(10px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 60px);z-index:5;display:flex;gap:6px;pointer-events:none}
 #layerNowChips span{font:500 11px/1 "Hiragino Sans",sans-serif;letter-spacing:.1em;color:#d9ece5;padding:6px 8px;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);background:#05181c99;opacity:.82;transition:opacity .5s,box-shadow .5s}
 #layerNowChips span.off{opacity:.25;text-decoration:line-through}#layerNowChips span.focus{opacity:1;box-shadow:0 0 12px color-mix(in srgb,var(--c) 70%,transparent)}
-body.layerTalk #sub{visibility:hidden}body.ovOn #layerNowChips,body.ovOn #layerAoiLine,body:has(#menu:not([hidden])) #layerNowChips{display:none}
+body.layerTalk #sub{visibility:hidden}body.layerTalk #layerNowChips{opacity:0}body.ovOn #layerNowChips,body.ovOn #layerAoiLine,body:has(#menu:not([hidden])) #layerNowChips{display:none}
 @media(max-width:520px){#layerAoiLine{bottom:calc(env(safe-area-inset-bottom,0px) + 84px);font-size:13.5px}}
 @media(prefers-reduced-motion:reduce){#layerNowChips span{transition:none}}`;
     document.head.append(css);
