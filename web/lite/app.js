@@ -689,7 +689,6 @@ function wearLayer(id, opts = {}) {   // 層は重ねられる（重ねた順に
   if (g) { LAYER.rippleR = 0; LAYER.ripple.visible = QW.mode !== "sky"; LAYER.ripple.material.color.set(g.color); LAYER.ripple.position.set(camera.position.x, groundY(camera.position.x, camera.position.z) + .06, camera.position.z); LAYER.rippleLayer = g.id; }
   for (const L of LAYER.objs) { L.want = W.includes(L.o.layer); if (!L.want) L.arr = false; if (L.label) { L.glyph.remove(L.label); L.label.material.map.dispose(); L.label.material.dispose(); L.label = null; } }
   if (g) putOnAnim(g);
-  if (g?.id === "touch") loadTouch();
   if (!W.includes("sight") && SIGHT.sp) exitSight();
   updateStack();
 }
@@ -723,7 +722,7 @@ function stepLayer(dt) {
     if (L.open > .01) L.glyph.rotation.y += dt * 1.2 * L.open;
     else L.glyph.rotation.y = Math.atan2(cp.x - L.o.x, cp.z - L.o.z);   // 見る人へ正面を向ける（その場で回るだけ）
     const op = L.show * (PANEL.cur && PANEL.cur !== L ? .35 : 1);
-    L.lm.opacity = .95 * op; L.fm.opacity = .12 * op; L.bm.opacity = .5 * op; L.tm.opacity = .75 * op;
+    L.lm.opacity = .95 * op; L.fm.opacity = .12 * op; L.bm.opacity = .5 * op * (sky ? 1 : Math.min(1, Math.max(0, (dist - 1.5) / 4))); L.tm.opacity = .75 * op;   // すぐそばでは光の柱を消す（目の前をふさがない）
     L.glow.material.opacity = (.42 + .14 * Math.sin(t * 1.6 + L.o.x)) * op; L.glow.scale.setScalar(.5 + L.open * .3);
     // 名札：近くに来たら（歩く・生きものの高さ）
     const near = !sky && !flyish && dist < LABEL_R;
@@ -944,9 +943,9 @@ function enterSight(sp, L) {
   if (!LAYER.worn.includes("sight")) wearLayer("sight", { noChooser: true });
   // その生きものがいる所へ（記録の区間）。犬は見る人のそばで
   let px = CAM.pos.x, pz = CAM.pos.z, yaw = CAM.yaw + CAM.look;
-  if (sp.x != null && (QW.mode === "sky" || !QW.walked || Math.hypot(sp.x - CAM.pos.x, sp.z - CAM.pos.z) > 160)) { px = sp.x; pz = sp.z; yaw = yawAlong(sp.d + 5); }
+  if (sp.x != null && (sp.move === "swim" || QW.mode === "sky" || !QW.walked || Math.hypot(sp.x - CAM.pos.x, sp.z - CAM.pos.z) > 160)) { px = sp.x; pz = sp.z; yaw = yawAlong(sp.d + 5); }
   if (QW.mode === "sky" && sp.x == null) { const s = D.starts[Math.max(0, START.sel)], a = atD(s.d); px = a.x; pz = a.z; yaw = yawAlong(s.d + 5); }
-  const y = groundY(px, pz) + sp.eye;
+  let y = groundY(px, pz) + sp.eye; if (sp.move === "swim") { let m = 1e9; for (const [x, z] of sp.pond) m = Math.min(m, groundY(x, z)); y = m + .24; }
   hideSkyUI(); hideFlyUI(); loadLate(); if (AOI.root) AOI.root.visible = false;
   const from = QW.mode; TWFOG = [from === "sky" ? FOGS.sky() : from === "fly" ? FOGS.fly() : FOGS.walk(), FOGS.walk()]; setMode("descend");
   SIGHT.pending = sp;
@@ -959,7 +958,7 @@ function enterSight(sp, L) {
   }, from === "sky" ? 0 : 3));
 }
 function exitSight(quiet = false) {
-  const sp = SIGHT.sp; if (!sp) return; SIGHT.sp = null; delete document.body.dataset.sp; hideSightUI(); stopEcho();
+  const sp = SIGHT.sp; if (!sp) return; SIGHT.sp = null; SIGHT.surf = null; delete document.body.dataset.sp; hideSightUI(); stopEcho();
   teardownSightLook(); camera.fov = MOBILE ? 62 : 55; camera.updateProjectionMatrix();
   if (quiet) return;
   const n = nearestOnLine(CAM.pos.x, CAM.pos.z), d = Math.min(1985, Math.max(-20, n.d)), a = atD(d), y = groundY(a.x, a.z) + EYE;
@@ -968,7 +967,7 @@ function exitSight(quiet = false) {
 }
 /* 見え方の模式（人の目への置きかえ）：画面を一度べつの面へ描き、色・ぼけ・明るさだけを置きかえる */
 function setupSightLook(sp) {
-  const mode = { hiyo: 1, aosuji: 3, mimizu: 4, inu: 5 }[sp.id] || 0;   // コウモリは夕方の暗さと反響の点だけ（画面の置きかえはしない）
+  const mode = { hiyo: 1, aosuji: 3, mimizu: 4, inu: 5, kaitsuburi: 6 }[sp.id] || 0;   // コウモリは夕方の暗さと反響の点だけ（画面の置きかえはしない）
   if (sp.id === "koumori") {   // 夕方の暗さ：目の手がかりはほとんど使わない模式
     renderer.toneMappingExposure = .24; scene.background = new THREE.Color("#0b1226"); applyFog({ c: new THREE.Color("#0b1226"), n: 20, f: 160 });
   } else if (sp.id === "mimizu") { applyFog({ c: FOG_SKY, n: 4, f: 60 }); }
@@ -978,9 +977,9 @@ function setupSightLook(sp) {
   const s = renderer.getDrawingBufferSize(new THREE.Vector2());
   const rt = new THREE.WebGLRenderTarget(s.x, s.y, { type: THREE.HalfFloatType, samples: MOBILE ? 0 : 4 });
   const mat = new THREE.ShaderMaterial({
-    uniforms: { tDiffuse: { value: rt.texture }, mode: { value: mode }, res: { value: s.clone() }, time: { value: 0 } },
+    uniforms: { tDiffuse: { value: rt.texture }, mode: { value: mode }, res: { value: s.clone() }, time: { value: 0 }, under: { value: 0 } },
     vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }",
-    fragmentShader: `uniform sampler2D tDiffuse; uniform int mode; uniform vec2 res; uniform float time; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform int mode; uniform vec2 res; uniform float time; uniform float under; varying vec2 vUv;
       vec3 blur(vec2 uv, float r){ vec3 c=vec3(0.); float w=0.; for(int i=-2;i<=2;i++) for(int j=-2;j<=2;j++){ float k=1.-length(vec2(i,j))/3.2; c+=texture2D(tDiffuse, uv+vec2(i,j)*r/res).rgb*k; w+=k; } return c/w; }
       void main(){
         vec2 uv=vUv; vec3 c;
@@ -993,6 +992,9 @@ function setupSightLook(sp) {
           c=blur(uv, 6.); float l=dot(c,vec3(.2126,.7152,.0722)); l=smoothstep(.05,.9,l); c=vec3(l*l*1.1)*vec3(1.,.95,.88);
         } else if(mode==5){   // 犬：二種類の錐体（二色型）の模式。赤と緑の差がなくなる。像は人よりあらい
           c=blur(uv, 1.6); c=max(vec3(0.),vec3(dot(vec3(.367,.861,-.228),c),dot(vec3(.280,.673,.047),c),dot(vec3(-.012,.043,.969),c)));   // Machado ほか（2009）の二色型の置きかえ
+        } else if(mode==6){   // カイツブリ：水面と水の中。もぐると、水の色と濁りと、ゆれる光（模式）
+          vec2 w=uv+under*vec2(sin(uv.y*40.+time*2.)*.004,cos(uv.x*36.+time*1.7)*.004); c=mix(texture2D(tDiffuse,w).rgb, blur(w,5.), under*.8);
+          float l=dot(c,vec3(.33)); c=mix(c, vec3(.05,.16,.14)+l*vec3(.25,.42,.36), under*.85); c+=under*.05*smoothstep(.6,1.,sin(uv.x*30.+time*1.3+sin(uv.y*9.+time))*.5+.5)*(1.-uv.y*.6);
         } else c=texture2D(tDiffuse,uv).rgb;
         float v=smoothstep(.95,.35,length(vUv-.5)); c*=mix(.72,1.,v);
         gl_FragColor=vec4(c,1.);
@@ -1028,6 +1030,7 @@ function stepSight(dt) {
     if (sp.move === "crawl") camera.position.y = groundY(camera.position.x, camera.position.z) + sp.eye + Math.sin(t * 2.2) * .004;
     return;
   }
+  if (sp.move === "swim") { stepSwim(dt, sp); return; }
   // 飛ぶ身体：参道に沿って前へ。なぞると曲がり、上下する
   let turn = (K.has("a") || K.has("arrowleft") ? 1 : 0) - (K.has("d") || K.has("arrowright") ? 1 : 0), climb = (K.has("w") || K.has("arrowup") || FLY.up ? 1 : 0) - (K.has("s") || K.has("arrowdown") || FLY.down ? 1 : 0);
   if (FLY.drag) { turn += -FLY.drag.dx * 2.4; climb += -FLY.drag.dy * 2.4; }
@@ -1055,6 +1058,21 @@ function stepSight(dt) {
   camera.position.copy(CAM.pos); camera.position.y += bob;
   camera.quaternion.setFromEuler(_eu.set(-.06 + FLY.climb * .03, CAM.yaw, FLY.roll));
   if (sp.move === "echo") stepEcho(dt);
+}
+/* カイツブリ：神池の水面を泳ぎ、「下へ」でもぐる（池の形から出ない） */
+function inPoly(x, z, P) { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const a = P[i], b = P[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / ((b[1] - a[1]) || 1e-9) + a[0]) c = !c; } return c; }
+function stepSwim(dt, sp) {
+  const P = sp.pond, K = WALK.keys; if (SIGHT.surf == null) { let y = 1e9; for (const [x, z] of P) y = Math.min(y, groundY(x, z)); SIGHT.surf = y + .12; SIGHT.dive = 0; }
+  let turn = (K.has("a") || K.has("arrowleft") ? 1 : 0) - (K.has("d") || K.has("arrowright") ? 1 : 0); if (FLY.drag) turn += -FLY.drag.dx * 2;
+  turn += Math.sin(SIGHT.t * .7) * .25; FLY.yawRate += (Math.max(-1, Math.min(1, turn)) * .8 - FLY.yawRate) * Math.min(1, dt * 2); CAM.yaw += FLY.yawRate * dt;
+  const want = FLY.down || K.has("s") || K.has("arrowdown") ? 1 : FLY.up || K.has("w") || K.has("arrowup") ? 0 : SIGHT.dive > .5 && SIGHT.t - (SIGHT.dT || 0) > 6 ? 0 : SIGHT.dive;
+  if (want > SIGHT.dive && SIGHT.dive < .05) SIGHT.dT = SIGHT.t; SIGHT.dive += (want - SIGHT.dive) * Math.min(1, dt * 1.6);
+  const sp2 = sp.speed * (1 + SIGHT.dive * .6), nx = CAM.pos.x - Math.sin(CAM.yaw) * sp2 * dt, nz = CAM.pos.z - Math.cos(CAM.yaw) * sp2 * dt;
+  if (inPoly(nx, nz, P)) { CAM.pos.x = nx; CAM.pos.z = nz; } else CAM.yaw += Math.PI * .6 * dt * 3;
+  if (!inPoly(CAM.pos.x, CAM.pos.z, P)) { CAM.pos.x += (sp.x - CAM.pos.x) * dt; CAM.pos.z += (sp.z - CAM.pos.z) * dt; }
+  CAM.pos.y = SIGHT.surf + .12 - SIGHT.dive * .85 + Math.sin(SIGHT.t * 2.4) * .01 * (1 - SIGHT.dive);
+  camera.position.copy(CAM.pos); camera.quaternion.setFromEuler(_eu.set(-.04 - SIGHT.dive * .25, CAM.yaw, FLY.yawRate * .05));
+  if (SIGHT.post) SIGHT.post.mat.uniforms.under.value = Math.min(1, Math.max(0, (SIGHT.surf - CAM.pos.y) / .2));
 }
 /* コウモリ：前へ音を出し、はね返りの点が戻る時間の順に灯る（16 倍に引きのばした模式） */
 function emitEcho() {
@@ -1095,58 +1113,64 @@ function chirp() {   // 9〜11 ミリ秒の、高さがゆるやかに変わる�
 function showSightUI(sp) {
   $("#sightUI").hidden = false; $("#sName").textContent = sp.name; $("#sEn").textContent = sp.en; $("#sLead").textContent = sp.lead;
   $("#walkUI").hidden = !(sp.move === "trot" || sp.move === "crawl"); $("#flyUI").hidden = true; $("#sUpDn").hidden = sp.move === "trot" || sp.move === "crawl";
+  $("#sUp").textContent = sp.move === "swim" ? "水面へ" : "上へ"; $("#sDown").textContent = sp.move === "swim" ? "もぐる" : "下へ";
 }
 function hideSightUI() { $("#sightUI").hidden = true; $("#sUpDn").hidden = true; }
 $("#sBack").addEventListener("click", () => exitSight());
 $("#sWhy").addEventListener("click", () => {
   const sp = SIGHT.sp; if (!sp) return; const g = GL.sight;
-  openPanel({ color: g.color, layer: `${String(layerNo("sight")).padStart(2, "0")}　Qualia/sight`, title: sp.name + "の手がかり", lines: [], more: sp.body, src: sp.src, note: sp.note, how: "研究の知見（ほかの場所で調べられたこと）", figs: EXP_FIG[sp.fig] || "" });
+  openPanel({ color: g.color, layer: `${String(layerNo("sight")).padStart(2, "0")}　Qualia/sight`, title: sp.name + "の手がかり", lines: [], more: [...sp.body, ...(sp.place?.length ? ["── この参道とのつながり", ...sp.place] : [])], src: [...sp.src, ...(sp.psrc || []).filter(x => !sp.src.some(y => y.t === x.t))], note: sp.note, how: "研究の知見（ほかの場所で調べられたこと）", figs: EXP_FIG[sp.fig] || "" });
 });
 
-/* ---------- Qualia/sound：参道の音を、その場所に重ね、形にする ----------
-   録音（CC・商用可）は近づくと小さく鳴り、離れると消える（場所に固定）。神池のしずくと境内の玉砂利は、その場で組み立てる音。
-   どれも、この層を重ねて、近くに来たときにだけ読む（起動を遅らせない）。碧が話しているあいだは小さくする。 */
-const SND = { ac: null, out: null, an: null, buf: {}, loading: {}, live: {}, viz: null, step: 0, freq: null, wave: null, lastStep: 0 };
+/* ---------- Qualia/sound：参道の時代ごとの音を、その場所に重ね、形にする ----------
+   どの音も、この作品の中で組み立てる（録音は使わない）。葉ずれと神池のしずくは近づくと小さく鳴り、境内では一歩ごとに玉砂利が鳴る。
+   元往還の人と馬・中の区間の車は、物に触れたときに、その時代の音として鳴る。碧が話しているあいだは小さくする。 */
+const SND = { ac: null, out: null, an: null, live: {}, viz: null, step: 0, freq: null, wave: null, seq: [], buf: {}, loading: {}, tag: null, tagUntil: 0 };
+function sndBuf(it) {   // 録音（ほかの場所で録った同じ種類の音）は、近づいたときに一本ずつ読む
+  if (SND.buf[it.id] || SND.loading[it.id]) return SND.buf[it.id] || null; const ac = sndCtx(); if (!ac) return null;
+  SND.loading[it.id] = fetch(it.f).then(r => r.arrayBuffer()).then(ab => new Promise((ok, ng) => ac.decodeAudioData(ab, ok, ng))).then(b => { SND.buf[it.id] = b; return b; }).catch(e => console.warn("snd", it.id, e));
+  return null;
+}
+function showTag(it, sec) { SND.tag = it; SND.tagUntil = performance.now() + sec * 1000; }
 function sndCtx() {
   if (SND.ac) { if (SND.ac.state !== "running") SND.ac.resume().catch(() => { }); return SND.ac; }
   const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
   const ac = SND.ac = AC = AC || new C(); SND.out = ac.createGain(); SND.out.gain.value = .9;
   SND.an = ac.createAnalyser(); SND.an.fftSize = 512; SND.an.smoothingTimeConstant = .7;
-  SND.out.connect(SND.an); SND.an.connect(ac.destination);
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 6;
+  SND.out.connect(comp); comp.connect(SND.an); SND.an.connect(ac.destination);
   try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { }
   return ac;
 }
-function sndBuf(it) {
-  if (SND.buf[it.id]) return SND.buf[it.id]; if (SND.loading[it.id]) return null; const ac = sndCtx(); if (!ac) return null;
-  SND.loading[it.id] = fetch(it.f).then(r => r.arrayBuffer()).then(ab => new Promise((ok, ng) => ac.decodeAudioData(ab, ok, ng))).then(b => { SND.buf[it.id] = b; }).catch(e => console.warn("snd", it.id, e));
-  return null;
-}
+let NOISE = null;
+function noise() { const ac = SND.ac; if (!NOISE) { NOISE = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } const s = ac.createBufferSource(); s.buffer = NOISE; s.loop = true; return s; }
+function burst(dest, t, f, q, a, dec, len = .04) { const ac = SND.ac, s = noise(), bp = ac.createBiquadFilter(), g = ac.createGain(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = q; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + .002); g.gain.exponentialRampToValueAtTime(.0005, t + dec); s.connect(bp).connect(g).connect(dest); s.start(t, Math.random() * 1.5); s.stop(t + Math.max(len, dec) + .02); }
 function sndOn() { return soundOn && LAYER.worn.includes("sound") && (QW.mode === "walk" || QW.mode === "sight"); }
 function stepSoundscape(dt) {
   const on = sndOn(), cp = camera.position, vy = CAM.yaw + CAM.look, duck = voiceQ ? .35 : 1;
   for (const it of D.sound) {
-    if (it.kind === "gravel") continue;
+    if (!it.r) continue;
     const dist = Math.hypot(it.x - cp.x, it.z - cp.z), near = on && dist < it.r, L = SND.live[it.id];
     if (near && !L) {
       const ac = sndCtx(); if (!ac || ac.state !== "running") continue;
-      if (it.kind === "rec") { const b = sndBuf(it); if (!b) continue; const s = ac.createBufferSource(); s.buffer = b; s.loop = true; const g = ac.createGain(); g.gain.value = 0; const pn = ac.createStereoPanner ? ac.createStereoPanner() : null; s.connect(g); (pn ? (g.connect(pn), pn) : g).connect(SND.out); s.start(); SND.live[it.id] = { s, g, pn, it }; }
-      else if (it.kind === "water") { const g = ac.createGain(); g.gain.value = 0; const pn = ac.createStereoPanner ? ac.createStereoPanner() : null; (pn ? (g.connect(pn), pn) : g).connect(SND.out); SND.live[it.id] = { g, pn, it, next: 0 }; }
+      const g = ac.createGain(); g.gain.value = 0; const pn = ac.createStereoPanner ? ac.createStereoPanner() : null; (pn ? (g.connect(pn), pn) : g).connect(SND.out);
+      const L2 = SND.live[it.id] = { g, pn, it, next: 0 };
+      if (it.kind === "rec") { const b = sndBuf(it); if (!b) { g.disconnect(); delete SND.live[it.id]; continue; } const s = ac.createBufferSource(); s.buffer = b; s.loop = true; s.connect(g); s.start(); L2.s = s; }
+      if (it.kind === "leaves") { const s = noise(), hp = ac.createBiquadFilter(), bp = ac.createBiquadFilter(), am = ac.createGain(); hp.type = "highpass"; hp.frequency.value = 1400; bp.type = "peaking"; bp.frequency.value = 4200; bp.gain.value = 6; am.gain.value = .0; s.connect(hp).connect(bp).connect(am).connect(g); s.start(); L2.s = s; L2.am = am; L2.gust = 0; }
     } else if (L && !near) {
       const t = SND.ac.currentTime; L.g.gain.setTargetAtTime(0, t, .25); setTimeout(() => { try { L.s?.stop(); L.g.disconnect(); } catch { } }, 1200); delete SND.live[it.id];
     }
-    if (SND.live[it.id]) {
-      const L2 = SND.live[it.id], k = Math.max(0, 1 - dist / it.r), ang = Math.atan2(it.x - cp.x, it.z - cp.z);
-      L2.g.gain.setTargetAtTime((it.kind === "rec" ? .55 : .7) * k * k * duck, SND.ac.currentTime, .3);
-      if (L2.pn) L2.pn.pan.setTargetAtTime(Math.max(-.9, Math.min(.9, -Math.sin(ang - vy - Math.PI) * .9)), SND.ac.currentTime, .1);
-      if (it.kind === "water") { L2.next -= dt; if (L2.next <= 0) { drop(L2.g); L2.next = .12 + Math.random() * .7; } }
-    }
+    const L2 = SND.live[it.id]; if (!L2) continue;
+    const k = Math.max(0, 1 - dist / it.r), ang = Math.atan2(it.x - cp.x, it.z - cp.z), t = SND.ac.currentTime;
+    L2.g.gain.setTargetAtTime((it.kind === "rec" ? .6 : .75) * k * k * duck, t, .3); if (k > .25) showTag(it, .5);
+    if (L2.pn) L2.pn.pan.setTargetAtTime(Math.max(-.9, Math.min(.9, -Math.sin(ang - vy - Math.PI) * .9)), t, .1);
+    if (it.kind === "water") { L2.next -= dt; if (L2.next <= 0) { drop(L2.g); L2.next = .12 + Math.random() * .7; } }
+    if (it.kind === "leaves") { L2.next -= dt; if (L2.next <= 0) { L2.gust = .25 + Math.random() * .75; L2.next = 1.5 + Math.random() * 3.5; } L2.am.gain.setTargetAtTime(.05 + .32 * L2.gust, t, .9); L2.gust *= Math.exp(-dt * .5); SND.pulse = Math.max(SND.pulse || 0, L2.gust * .5); }
   }
-  // 境内の玉砂利：歩くと一歩ごとに鳴る
-  if (on && WALK.moving && QW.mode === "walk") {
-    const n = nearestOnLine(cp.x, cp.z);
-    if (n.d > 1897) { SND.step += dt; if (SND.step > .56) { SND.step = 0; gravelStep(); } }
-  }
+  if (on && WALK.moving && QW.mode === "walk") { const n = nearestOnLine(cp.x, cp.z); if (n.d > 1897) { SND.step += dt; if (SND.step > .56) { SND.step = 0; gravelStep(); SND.stepRing = { x: CAM.pos.x, z: CAM.pos.z, t: 0 }; } } }
   stepViz(dt);
+  const tg = $("#sndTag"), show = SND.tag && performance.now() < SND.tagUntil && LAYER.worn.includes("sound");
+  if (show) { if (tg.dataset.id !== SND.tag.id) { tg.dataset.id = SND.tag.id; tg.textContent = SND.tag.label || ""; tg.dataset.k = SND.tag.kind === "rec" ? "rec" : /^poem/.test(SND.tag.kind) ? "poem" : "re"; } tg.hidden = false; } else if (!tg.hidden) { tg.hidden = true; tg.dataset.id = ""; }
 }
 function drop(dest, big = 1) {   // しずく：泡がふるえて鳴る音（Minnaert の共鳴 f≈3.26/半径。半径 1〜4 mm で 0.8〜3.3 kHz）。泡が水面へ上がるにつれて高さが少し上がる
   const ac = SND.ac, t = ac.currentTime + .01, r = (1 + Math.random() * 3) / 1000, f = 3.26 / r, o = ac.createOscillator(), g = ac.createGain();
@@ -1154,24 +1178,47 @@ function drop(dest, big = 1) {   // しずく：泡がふるえて鳴る音（Mi
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.25 * big, t + .003); g.gain.exponentialRampToValueAtTime(.0005, t + .04 + r * 12);
   o.connect(g).connect(dest); o.start(t); o.stop(t + .12); SND.pulse = Math.max(SND.pulse || 0, .6 * big);
 }
-let NOISE = null;
-function gravelStep(gain = .5) {   // 玉砂利：たくさんの小石がぶつかる短い音の粒を、一歩の 0.12 秒に重ねる（PhISM の考え方）
+function gravelStep(gain = .5, dest) {   // 玉砂利：たくさんの小石がぶつかる短い音の粒を、一歩の 0.12 秒に重ねる（PhISM の考え方）
   const ac = sndCtx(); if (!ac || ac.state !== "running") return;
-  if (!NOISE) { NOISE = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-  const t0 = ac.currentTime + .01, N = 18 + (Math.random() * 10 | 0), vg = ac.createGain(); vg.gain.value = gain * (voiceQ ? .5 : 1); vg.connect(SND.out);
-  for (let i = 0; i < N; i++) {
-    const t = t0 + Math.pow(Math.random(), 1.6) * .13, s = ac.createBufferSource(); s.buffer = NOISE; const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800 + Math.random() * 4200; bp.Q.value = 2 + Math.random() * 4;
-    const g = ac.createGain(), a = .3 + Math.random() * .7; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + .001); g.gain.exponentialRampToValueAtTime(.001, t + .006 + Math.random() * .012);
-    s.connect(bp).connect(g).connect(vg); s.start(t, Math.random() * .9, .03);
-  }
-  SND.pulse = 1; SND.stepRing = { x: CAM.pos.x, z: CAM.pos.z, t: 0 };
+  const t0 = ac.currentTime + .01, N = 18 + (Math.random() * 10 | 0), vg = ac.createGain(); vg.gain.value = gain * (voiceQ ? .5 : 1); vg.connect(dest || SND.out);
+  for (let i = 0; i < N; i++) burst(vg, t0 + Math.pow(Math.random(), 1.6) * .13, 1800 + Math.random() * 4200, 2 + Math.random() * 4, .3 + Math.random() * .7, .006 + Math.random() * .012, .03);
+  SND.pulse = 1;
 }
-function playItem(it) {   // 物に触れたとき：その音を、はっきり一度
-  const ac = sndCtx(); if (!ac) return;
-  if (it.kind === "gravel") { for (let i = 0; i < 4; i++) setTimeout(() => gravelStep(.6), i * 560); return; }
-  if (it.kind === "water") { for (let i = 0; i < 14; i++) setTimeout(() => drop(SND.out, 1), i * 180 + Math.random() * 120); return; }
-  const go = () => { const b = SND.buf[it.id]; if (!b) return; const s = ac.createBufferSource(); s.buffer = b; const g = ac.createGain(); g.gain.value = .8; s.connect(g).connect(SND.out); s.start(); SND.one = s; };
-  if (SND.buf[it.id]) go(); else { sndBuf(it); SND.loading[it.id]?.then(go); }
+function hoof(t, dest, a = .5) {   // 土の道の蹄：低いどすっ（120〜200 Hz）と、砂のこすれ
+  const ac = SND.ac, o = ac.createOscillator(), g = ac.createGain(); o.type = "sine"; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(95, t + .07);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + .004); g.gain.exponentialRampToValueAtTime(.0005, t + .12); o.connect(g).connect(dest); o.start(t); o.stop(t + .15);
+  burst(dest, t, 900, 1.2, a * .5, .06);
+}
+function step(t, dest, a = .35) { burst(dest, t, 500, .9, a, .08); burst(dest, t + .03, 1600, 1.5, a * .35, .05); }
+function playItem(it) {   // 物に触れたとき：その音を、はっきり（鳴るあいだ、音の札を出す）
+  const ac = sndCtx(); if (!ac) return; stopSound(); const bus = ac.createGain(); bus.gain.value = 1; bus.connect(SND.out); SND.bus = bus; const t0 = ac.currentTime + .05;
+  showTag(it, { ourai: 8.5, kuruma: 13, rec: 9, poem: 10, poem2: 10 }[it.kind] || 5);
+  if (it.kind === "rec") { const go = b => { if (!b || SND.bus !== bus) return; const s = ac.createBufferSource(); s.buffer = b; s.connect(bus); s.start(); }; const b = SND.buf[it.id]; if (b) go(b); else { sndBuf(it); SND.loading[it.id]?.then(go); } return; }
+  if (it.kind === "poem") {   // 詩の音：山の千年が、参道に立っている音（木の胴の響き＝ゆっくり減る低い倍音と、高い所の風）
+    const base = 98; for (let k = 0; k < 5; k++) { const t = t0 + k * 1.7; for (const [m, a] of [[1, .22], [2.76, .1], [5.4, .05], [8.9, .025]]) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = base * m * (1 + k * .002); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + .01); g.gain.exponentialRampToValueAtTime(.0005, t + 3.5 / m + .4); o.connect(g).connect(bus); o.start(t); o.stop(t + 4); } }
+    const s = noise(), bp = ac.createBiquadFilter(), g = ac.createGain(); bp.type = "bandpass"; bp.frequency.value = 3600; bp.Q.value = .7; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.08, t0 + 3); g.gain.linearRampToValueAtTime(0, t0 + 9.5); s.connect(bp).connect(g).connect(bus); s.start(t0); s.stop(t0 + 9.6);
+    SND.seq.push(setInterval(() => { SND.pulse = 1; }, 1700)); setTimeout(() => SND.seq.forEach(clearInterval), 9000); return;
+  }
+  if (it.kind === "poem2") {   // 詩の音：台地の水が、見沼へ向かっていた音（湧くしずくが、低い流れへ集まり、右へ流れていく）
+    const pn = ac.createStereoPanner ? ac.createStereoPanner() : null; const dst = pn ? (pn.connect(bus), pn) : bus; if (pn) { pn.pan.setValueAtTime(-.8, t0); pn.pan.linearRampToValueAtTime(.8, t0 + 9); }
+    for (let i = 0; i < 22; i++) SND.seq.push(setTimeout(() => drop(dst, .8), i * 260 + Math.random() * 200));
+    const s = noise(), lp = ac.createBiquadFilter(), g = ac.createGain(); lp.type = "lowpass"; lp.frequency.setValueAtTime(300, t0); lp.frequency.linearRampToValueAtTime(900, t0 + 6); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.18, t0 + 5); g.gain.linearRampToValueAtTime(0, t0 + 9.5); s.connect(lp).connect(g).connect(dst); s.start(t0); s.stop(t0 + 9.6); return;
+  }
+  if (it.kind === "gravel") { for (let i = 0; i < 6; i++) SND.seq.push(setTimeout(() => gravelStep(.6, bus), i * 560)); return; }
+  if (it.kind === "water") { for (let i = 0; i < 16; i++) SND.seq.push(setTimeout(() => drop(bus, 1), i * 180 + Math.random() * 120)); return; }
+  if (it.kind === "leaves") { const s = noise(), hp = ac.createBiquadFilter(), g = ac.createGain(); hp.type = "highpass"; hp.frequency.value = 1400; g.gain.setValueAtTime(0, t0); for (let k = 0; k < 6; k++) g.gain.linearRampToValueAtTime(.12 + .3 * Math.random(), t0 + .8 + k * 1.1); g.gain.linearRampToValueAtTime(0, t0 + 8); s.connect(hp).connect(g).connect(bus); s.start(t0); s.stop(t0 + 8.2); SND.pulse = 1; return; }
+  if (it.kind === "ourai") {   // 人の歩み（およそ 1.8 歩／秒）と、馬の並足（四拍子・一周およそ 1.1 秒）
+    for (let k = 0; k < 14; k++) step(t0 + k * .55, bus, .3);
+    for (let c = 0; c < 7; c++) for (let j = 0; j < 4; j++) hoof(t0 + .3 + c * 1.1 + j * .275 + (Math.random() - .5) * .02, bus, j % 2 ? .38 : .45);
+    SND.seq.push(setInterval(() => { SND.pulse = 1; }, 275)); setTimeout(() => SND.seq.forEach(clearInterval), 8200); return;
+  }
+  if (it.kind === "kuruma") {   // およそ 19 秒に 1 台を、6 倍に縮めて（約 3.2 秒に 1 台）。近づいて遠ざかる音
+    for (let k = 0; k < 4; k++) { const t = t0 + k * 3.2, s = noise(), lp = ac.createBiquadFilter(), g = ac.createGain(), o = ac.createOscillator(), og = ac.createGain();
+      lp.type = "lowpass"; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(2200, t + 1.2); lp.frequency.linearRampToValueAtTime(400, t + 2.6);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.55, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 2.7); s.connect(lp).connect(g).connect(bus); s.start(t); s.stop(t + 2.8);
+      o.type = "sawtooth"; o.frequency.setValueAtTime(62, t); o.frequency.linearRampToValueAtTime(58, t + 1.2); o.frequency.linearRampToValueAtTime(48, t + 2.6); og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.05, t + 1.2); og.gain.linearRampToValueAtTime(0, t + 2.7); o.connect(og).connect(bus); o.start(t); o.stop(t + 2.8); }
+    SND.seq.push(setInterval(() => { SND.pulse = .8; }, 400)); setTimeout(() => SND.seq.forEach(clearInterval), 13000); return;
+  }
 }
 /* 音の形：いちばん近い鳴っている所のまわりに、64 本の光の柱（周波数ごとの大きさ）と、音の大きさでひろがる輪 */
 const _sm = new THREE.Matrix4(), _sq = new THREE.Quaternion(), _ss = new THREE.Vector3(), _sp = new THREE.Vector3();
@@ -1203,47 +1250,56 @@ function stepViz(dt) {
 }
 function openSound(L) {
   const it = L.o.snd, g = GL.sound;
-  openPanel({ color: g.color, layer: `${String(layerNo("sound")).padStart(2, "0")}　Qualia/sound`, title: it.title, lines: [], more: [it.what, it.rec], src: it.src, ll: it.ll,
-    how: it.kind === "rec" ? "録音（クリエイティブ・コモンズ。録った場所は上のとおり）" : "その場で組み立てた音（作り方の典拠は下）",
+  openPanel({ color: g.color, layer: `${String(layerNo("sound")).padStart(2, "0")}　Qualia/sound　${it.era}`, title: it.title, lines: it.lines, more: [it.label, it.how], src: it.src, ll: it.ll,
+    how: it.kind === "rec" ? "ほかの場所で録った同じ種類の音（録音の出どころは下）" : /^poem/.test(it.kind) ? "詩の音（実在の音ではありません）" : "再現音（記録にもとづいて組み立てた音）",
     buttons: [{ label: "もう一度鳴らす", primary: true, run: () => playItem(it) }] });
-  stopVoice(); playItem(it);
+  speakLines(it.lines, L); playItem(it);
 }
-function stopSound() { try { SND.one?.stop(); } catch { } SND.one = null; }
+function stopSound() { SND.seq.forEach(x => { clearTimeout(x); clearInterval(x); }); SND.seq.length = 0; if (SND.bus) { try { SND.bus.gain.setTargetAtTime(0, SND.ac.currentTime, .1); const b = SND.bus; setTimeout(() => b.disconnect(), 600); } catch { } SND.bus = null; } }
 
-/* ---------- Qualia/touch：参道の物に触れる（振動と音で手ざわり。iPhone は光の輪と音） ---------- */
-const TCH = { mod: null, loading: null, model: null, vibe: null, sonic: null, h: null, cur: null };
-function loadTouch() {
-  if (TCH.loading) return TCH.loading;
-  return TCH.loading = Promise.all([import("./touch/haptics.js"), import("./touch/sounds.js")]).then(([H, S]) => { TCH.mod = H; TCH.model = new H.TouchModel(); TCH.vibe = new H.Vibe(); TCH.sonic = new H.Sonic(S.SOUNDS, BASE + "touch/"); TCH.vibe.onPulse = (ms, amp) => { TCH.sonic.grain(ms, amp, TCH.model.speed); touchRing(amp); }; }).catch(e => console.warn("touch", e));
-}
-const TP = { bark: { hard: .78, rough: .8, depth: 3.5, fric: .7, spring: .15, warm: .65 }, soil: { hard: .22, rough: .55, depth: 3.5, fric: .6, spring: .06, warm: .5 }, stone: { hard: .98, rough: .5, depth: 2.5, fric: .5, spring: .02, warm: .12 },
-  moss: { hard: .25, rough: .35, depth: 1.6, fric: .5, spring: .55, warm: .6 }, wood: { hard: .7, rough: .25, depth: 1.2, fric: .35, spring: .1, warm: .72 }, leaves: { hard: .4, rough: .9, depth: 4, fric: .75, spring: .35, warm: .55 } };
-function heightMap(m) {   // 面の高さ（Poly Haven の高さの地図から 128×128 に）
-  return new Promise(res => { const im = new Image(); im.onload = () => { const N = 128, cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"); x.drawImage(im, 0, 0, N, N); const d = x.getImageData(0, 0, N, N).data, h = new Float32Array(N * N); let mn = 1, mx = 0; for (let i = 0; i < N * N; i++) { h[i] = d[i * 4] / 255; mn = Math.min(mn, h[i]); mx = Math.max(mx, h[i]); } for (let i = 0; i < N * N; i++) h[i] = (h[i] - mn) / ((mx - mn) || 1);
-    res((xm, ym) => { const u = Math.min(N - 1.001, Math.max(0, xm / 100 * (N - 1))), v = Math.min(N - 1.001, Math.max(0, ym / 100 * (N - 1))), i = u | 0, j = v | 0, fu = u - i, fv = v - j; return (h[j * N + i] * (1 - fu) + h[j * N + i + 1] * fu) * (1 - fv) + (h[(j + 1) * N + i] * (1 - fu) + h[(j + 1) * N + i + 1] * fu) * fv; }); };
-    im.onerror = () => res(() => 0); im.src = BASE + "touch/" + m + "_h.webp"; });
+/* ---------- Qualia/touch：参道の足もとと物に触れる（振動と音で手ざわり。iPhone は光の輪と音） ----------
+   面の写真の凹凸（法線の地図）を指でなぞり、凹凸が変わるところで震え、その物らしい音の粒が鳴る。手ざわりの値は模式。 */
+const TMAT = {   // 硬さ（音の高さと短さ）・粒（小石のかちかち）・強さ
+  gravel: { f: 3200, q: 3, dec: .012, grain: .8, gain: 1.2, tap: "click" }, granite: { f: 4200, q: 2, dec: .008, grain: .05, gain: .7, tap: "stone" },
+  pervious: { f: 3600, q: 2.5, dec: .01, grain: .45, gain: 1, tap: "stone" }, stone: { f: 2600, q: 2, dec: .012, grain: .15, gain: .9, tap: "stone" },
+  soil: { f: 700, q: .8, dec: .04, grain: .1, gain: .9, tap: "thud" }, bark: { f: 1600, q: 1.2, dec: .025, grain: .2, gain: 1, tap: "wood" }, leaves: { f: 5200, q: .9, dec: .03, grain: .9, gain: 1.1, tap: "crackle" } };
+const TCH = { cur: null, map: null };
+function loadNormal(it) {
+  const N = 128, use = (src, lum) => new Promise(res => { const im = new Image(); im.onload = () => { const cv = document.createElement("canvas"); cv.width = cv.height = N; const x = cv.getContext("2d"); x.drawImage(im, 0, 0, N, N); const d = x.getImageData(0, 0, N, N).data, h = new Float32Array(N * N);
+      for (let i = 0; i < N * N; i++) h[i] = lum ? (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 765 : Math.hypot(d[i * 4] - 128, d[i * 4 + 1] - 128) / 128; res({ N, h }); }; im.onerror = () => res(null); im.src = src; });
+  return it.tex === "leaves" ? use(BASE + "touch/leaves_c.webp", true) : use(BASE + "touch/" + it.tex + "_n.webp", false);
 }
 function openTouch(L) {
   const it = L.o.tch, g = GL.touch;
-  openPanel({ color: g.color, layer: `${String(layerNo("touch")).padStart(2, "0")}　Qualia/touch`, title: it.title, lines: [], more: [it.what],
-    src: [{ t: "面：" + it.surf }, { t: "音：" + it.snd }], ll: it.ll, how: "触れ心地（硬さ・粗さ・凹凸）は模式。面と音は、その物に近い素材の写真と録音です（この場所で測ったものではありません）" });
+  openPanel({ color: g.color, layer: `${String(layerNo("touch")).padStart(2, "0")}　Qualia/touch`, title: it.title, lines: it.lines, src: it.src, ll: it.ll,
+    how: "手ざわり（硬さ・凹凸・粒）と音は、面の写真の凹凸から、この作品の中で組み立てた模式です" });
   const ex = $("#pExp"); ex.hidden = false;
-  ex.insertAdjacentHTML("afterbegin", `<div class="tpad" id="tpad" style="background-image:url(${BASE}touch/${it.m}_c.webp)"><span>指（マウス）でなでる・押す</span><i id="tring"></i></div>`);
-  TCH.cur = it; stopVoice();
-  loadTouch().then(async () => {
-    if (TCH.cur !== it || !TCH.model) return; const h = await heightMap(it.m); TCH.model.setSurface(h, TP[it.m]); TCH.sonic.setSurface(TP[it.m]); TCH.sonic.setMaterial(it.m); bindPad(it);
-  });
+  ex.insertAdjacentHTML("afterbegin", `<div class="tpad" id="tpad" style="background-image:url(${BASE}touch/${it.tex}_c.webp)"><span>指（マウス）でなでる・押す</span><i id="tring"></i></div>`);
+  TCH.cur = it; speakLines(it.lines, L); loadNormal(it).then(m => { if (TCH.cur === it) { TCH.map = m; bindPad(it); } });
 }
 function bindPad(it) {
-  const pad = $("#tpad"); if (!pad) return; let last = null, raf = 0, down = false;
-  const pos = e => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100, performance.now()]; };
-  const loop = () => { if (!down) return; const r = TCH.model.measure(); TCH.vibe.tick(performance.now(), r.amp); raf = requestAnimationFrame(loop); };
-  pad.addEventListener("pointerdown", e => { e.preventDefault(); pad.setPointerCapture(e.pointerId); TCH.sonic.wake(); TCH.sonic.load(it.m); down = true; last = pos(e); TCH.vibe.tap(); TCH.sonic.tap(); touchRing(.8); cancelAnimationFrame(raf); loop(); });
-  pad.addEventListener("pointermove", e => { if (!down || !last) return; const p = pos(e), dt = Math.max(1, p[2] - last[2]); TCH.model.move(last[0], last[1], p[0], p[1], dt); last = p; const tr = $("#tring"); if (tr) { tr.style.left = (p[0]) + "%"; tr.style.top = (p[1]) + "%"; } });
-  const up = () => { down = false; cancelAnimationFrame(raf); TCH.vibe.stop(); };
+  const pad = $("#tpad"), M = TMAT[it.m] || TMAT.stone; if (!pad) return; let last = null, down = false, prevH = 0, lastPulse = 0;
+  const vib = ms => { try { navigator.vibrate?.(ms); } catch { } };
+  const hAt = (u, v) => { const m = TCH.map; if (!m) return 0; const N = m.N, i = ((u * 2 % 1 + 1) % 1 * (N - 1)) | 0, j = ((v * 2 % 1 + 1) % 1 * (N - 1)) | 0; return m.h[j * N + i]; };
+  const grain = (amp, spd) => { const ac = sndCtx(); if (!ac || !soundOn) return; const t = ac.currentTime + .005, f = M.f * (.75 + Math.min(1, spd / 600) * .6) * (.9 + Math.random() * .2);
+    burst(SND.out, t, f, M.q, Math.min(.9, amp * M.gain * .7), M.dec * (1.4 - Math.min(1, spd / 800) * .5));
+    if (Math.random() < M.grain) burst(SND.out, t + Math.random() * .02, f * 1.4, 4, amp * .5, .006); };
+  const tap = () => { const ac = sndCtx(); if (!ac || !soundOn) return; const t = ac.currentTime + .005;
+    if (M.tap === "stone" || M.tap === "click") { for (const [f, a, d] of [[1900, .4, .05], [3100, .25, .03], [4700, .15, .02]]) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f * (.9 + Math.random() * .2); g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(.0005, t + d); o.connect(g).connect(SND.out); o.start(t); o.stop(t + d + .02); } if (M.tap === "click") gravelStep(.5); }
+    else if (M.tap === "wood") { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(260, t + .08); g.gain.setValueAtTime(.45, t); g.gain.exponentialRampToValueAtTime(.0005, t + .12); o.connect(g).connect(SND.out); o.start(t); o.stop(t + .14); burst(SND.out, t, 1500, 1, .2, .03); }
+    else if (M.tap === "thud") { hoof(t, SND.out, .4); }
+    else { for (let i = 0; i < 12; i++) burst(SND.out, t + Math.random() * .12, 3000 + Math.random() * 4000, 1.5, .3, .01); } };
+  const pos = e => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, performance.now()]; };
+  pad.addEventListener("pointerdown", e => { e.preventDefault(); pad.setPointerCapture(e.pointerId); sndCtx(); down = true; last = pos(e); prevH = hAt(last[0], last[1]); vib(14); tap(); touchRing(.9, last); });
+  pad.addEventListener("pointermove", e => { if (!down || !last) return; const p = pos(e), dt = Math.max(1, p[2] - last[2]), px = Math.hypot(p[0] - last[0], p[1] - last[1]) * pad.clientWidth, spd = px / dt * 1000;
+    let acc = 0; const n = Math.min(12, Math.max(1, px / 3 | 0)); for (let k = 1; k <= n; k++) { const h = hAt(last[0] + (p[0] - last[0]) * k / n, last[1] + (p[1] - last[1]) * k / n); acc += Math.abs(h - prevH); prevH = h; }
+    const amp = Math.min(1, acc * 2.2 * (.4 + Math.min(1, spd / 400)));
+    if (amp > .05 && p[2] - lastPulse > 42) { lastPulse = p[2]; vib(Math.round(6 + 26 * amp)); grain(amp, spd); touchRing(amp, p); }
+    last = p; });
+  const up = () => { down = false; try { navigator.vibrate?.(0); } catch { } };
   pad.addEventListener("pointerup", up); pad.addEventListener("pointercancel", up);
 }
-function touchRing(amp) { const r = $("#tring"); if (!r) return; r.style.opacity = Math.min(1, .3 + amp); r.style.transform = `translate(-50%,-50%) scale(${.6 + amp * 1.4})`; clearTimeout(r._t); r._t = setTimeout(() => { r.style.opacity = 0; }, 160); }
+function touchRing(amp, p) { const r = $("#tring"); if (!r) return; if (p) { r.style.left = (p[0] * 100) + "%"; r.style.top = (p[1] * 100) + "%"; } r.style.opacity = Math.min(1, .3 + amp); r.style.transform = `translate(-50%,-50%) scale(${.6 + amp * 1.4})`; clearTimeout(r._t); r._t = setTimeout(() => { r.style.opacity = 0; }, 160); }
 
 /* ---------- 画面の部品 ---------- */
 function toast(t) { const e = $("#toast"); e.textContent = t; e.hidden = false; clearTimeout(e._t); e._t = setTimeout(() => { e.hidden = true; }, 5200); }
@@ -1296,7 +1352,7 @@ QW.sky = SKY;
 
 function fillMenu() {
   $("#about").textContent = D.about; $("#aoiNote").textContent = "碧（あおい）は、この作品の案内役です。歩くあいだ、いまいる所に結びついた記録を話しつづけます（字幕の「出典」から典拠を開けます）。碧の姿：mitsulab（VRoid）／声：VOICEVOX:冥鳴ひまり。";
-  $("#credit").textContent = "地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工（形と高さ。窓と階の並びは模式）／道・木・鳥居・池の位置と、地図の道・公園・社寺の名前：© OpenStreetMap contributors（ODbL）／等高線：国土地理院 DEM5A から mitsulab が計算／舗装・樹皮・葉の質感：Poly Haven・ambientCG（CC0）／樹木の話：さいたま市・氷川の杜まちづくり協議会『氷川参道の樹木調査』・環境省 巨樹・巨木林データベース・日本語版 Wikipedia（CC BY-SA 4.0）／歴史と文化の話：武蔵一宮氷川神社「由緒・歴史」「境内のご案内」「年間の祭典」・さいたま市・さいたま市立博物館・埼玉県立歴史と民俗の博物館・与野郷土資料館・埼玉県・国土地理院（それぞれの物と碧の話の「出典」に）／生きものの話：日本語版 Wikipedia（CC BY-SA 4.0）・iNaturalist の投稿者のみなさん（種の名前）・研究論文（それぞれの「出典」に）／Qualia/sound の音：風に鳴る葉（Gravity Sound・CC BY 4.0）・スズメ（Derek Paulo・CC BY-SA 4.0・フィリピンで録音）・アブラゼミ（Cory・CC BY 2.1 JP）・ハシブトガラス（Zeimusu・CC BY-SA 2.5）はいずれも Wikimedia Commons の録音で、氷川参道の録音ではありません／神池のしずくと玉砂利は端末の中で合成／Qualia/touch：面＝Poly Haven（CC0）・触れた音＝Freesound の CC0 の録音（Qualia/touch と同じ）／層の物とグラスの形：mitsulab（three.js の基本形で作成）";
+  $("#credit").textContent = "地形：国土地理院 標高タイル（DEM5A）・全国最新写真（シームレス）を mitsulab が加工／建物：国土交通省 PLATEAU さいたま市 2022（CC BY 4.0）を加工（形と高さ。窓と階の並びは模式）／道・木・鳥居・池の位置と、地図の道・公園・社寺の名前：© OpenStreetMap contributors（ODbL）／等高線：国土地理院 DEM5A から mitsulab が計算／舗装・樹皮・葉の質感：Poly Haven・ambientCG（CC0）／樹木の話：さいたま市・氷川の杜まちづくり協議会『氷川参道の樹木調査』・環境省 巨樹・巨木林データベース・日本語版 Wikipedia（CC BY-SA 4.0）／歴史と文化の話：武蔵一宮氷川神社「由緒・歴史」「境内のご案内」「年間の祭典」・さいたま市・さいたま市立博物館・埼玉県立歴史と民俗の博物館・与野郷土資料館・埼玉県・国土地理院（それぞれの物と碧の話の「出典」に）／生きものの話：日本語版 Wikipedia（CC BY-SA 4.0）・iNaturalist の投稿者のみなさん（種の名前）・研究論文（それぞれの「出典」に）／Qualia/sound の音：［ほかの場所で録った同じ種類の音］風に鳴る葉（Gravity Sound・CC BY 4.0・録音地の記載なし）・スズメ（Derek Paulo・CC BY-SA 4.0・フィリピン）・アブラゼミ（Cory・CC BY 2.1 JP・日本）・ハシブトガラス（Zeimusu・CC BY-SA 2.5・日本）＝いずれも Wikimedia Commons／［再現音］元往還の人と馬・中の区間の車・玉砂利・神池のしずく＝記録にもとづいて端末の中で組み立てた音／［詩の音］mitsulab のことばから組み立てた音／Qualia/touch：面＝この作品の路面と同じ Poly Haven・ambientCG の写真（CC0）、手ざわりと音は端末の中で組み立てた模式／層の物とグラスの形：mitsulab（three.js の基本形で作成）";
   $("#music").textContent = "";
 }
 /* 左の層の板：一枚が一つの情報の層。触れると表示・非表示。板の色＝風景に重ねた物の色 */
