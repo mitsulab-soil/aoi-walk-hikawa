@@ -905,7 +905,14 @@ function stepAoi(dt) {
     if ((AOI.v > .02 || want > 0) && dist > .01) { const st = Math.min(dist, AOI.v * dt); AOI.m.drive(P.x + dx / dist * st, P.z + dz / dist * st); }
     else { if (AOI.v !== 0 || AOI.m.driven) AOI.m.walkTo(null); AOI.v = 0; AOI.m.faceTo(AOI.focus ? Math.atan2(AOI.focus.x - P.x, AOI.focus.z - P.z) * .4 + Math.atan2(CAM.pos.x - P.x, CAM.pos.z - P.z) * .6 : Math.atan2(CAM.pos.x - P.x, CAM.pos.z - P.z)); }
   }
-  if (!AOI.focus) AOI.m.lookAt(null);
+  // 話していないときは、ときどき近くの物（層の目じるし・木）へ目をやり、また見る人へ戻す（ずっと正面で立ちつくさない）
+  AOI.gT = (AOI.gT ?? 5) - dt;
+  if (!AOI.focus && AOI.gT <= 0) {
+    if (AOI.glance) { AOI.glance = null; AOI.gT = 5 + Math.random() * 6; }
+    else { let best = null, bd = 1e9; for (const L of LAYER.objs) { if (!L.root.visible) continue; const d = Math.hypot(L.o.x - P.x, L.o.z - P.z); if (d > 3 && d < 22 && d < bd) { bd = d; best = L; } }
+      AOI.glance = best ? best.glyph.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(P.x - Math.sin(CAM.yaw) * 12, P.y + 6 + Math.random() * 4, P.z - Math.cos(CAM.yaw) * 12); AOI.gT = 1.6 + Math.random() * 1.4; }
+  }
+  if (!AOI.focus) AOI.m.lookAt(AOI.glance || null);
   AOI.m.update(dt, camera);
 }
 
