@@ -7,6 +7,7 @@ import * as THREE from "three";
 export const QLAYERS = [
   { id: "sight", name: "Qualia/sight", en: "UMWELT", color: "#c4b2ff", lead: "生きものを選んで、その身体の高さと手がかりへ入る", q: true },
   { id: "sound", name: "Qualia/sound", en: "SOUND", color: "#78b8ec", lead: "参道の音（葉ずれ・鳥と蟬の声・玉砂利・池の水）を、場所に重ねて形にする", q: true },
+  { id: "sho", name: "Qualia/sho", en: "SHO", color: "#9aa3b8", lead: "上原光瑛の書が参道に浮かび、近づくと粒にほどけ、音が鳴る", q: true },
   { id: "touch", name: "Qualia/touch", en: "TOUCH", color: "#c2c7cc", lead: "樹皮・石・土・木に触れると、振動と音で手ざわりが返る", q: true },
 ];
 
@@ -63,6 +64,11 @@ function headShape(id) {
   } else if (id === "sound") {   // 音：三重の輪（縦）
     ring(.1, 40); ring(.19, 56); ring(.28, 64);
     F.push(new THREE.CircleGeometry(.1, 32));
+  } else if (id === "sho") {   // 書：入りから払いへ、太さの変わる一画
+    const p = Array.from({ length: 33 }, (_, i) => { const t = i / 32; return V(-.26 + t * .52, .18 - Math.sin(t * Math.PI * .9) * .3 + t * .05); });
+    for (let i = 0; i < 32; i++) { L.push([p[i], p[i + 1]]); const w = .05 * Math.sin(i / 32 * Math.PI) + .008; L.push([p[i].clone().add(V(0, w)), p[i + 1].clone().add(V(0, w))]); }
+    L.push([V(-.26, .18), V(-.24, .26)]);
+    F.push(new THREE.CircleGeometry(.03, 12));
   } else if (id === "touch") {   // 触れる：指の腹の渦（三つの弧）
     for (const r of [.1, .18, .26]) { const p = Array.from({ length: 29 }, (_, i) => { const a = Math.PI * (.15 + 1.7 * i / 28); return V(Math.cos(a) * r, Math.sin(a) * r * 1.2 - .04); }); for (let i = 0; i < 28; i++) L.push([p[i], p[i + 1]]); }
     F.push(new THREE.CircleGeometry(.07, 24));

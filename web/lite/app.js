@@ -665,7 +665,7 @@ const LAYER = { worn: [], objs: [], ripple: null, rippleR: 0, wear: null, thumbs
 function layerNo(id) { return ALL.findIndex(l => l.id === id) + 1; }
 function buildObjs() {
   ALL = [...D.layers, ...QLAYERS]; GL = Object.fromEntries(ALL.map(l => [l.id, l]));
-  const list = [...D.objs, ...D.sound.map(s => ({ id: s.id, x: s.x, y: s.y, z: s.z, ll: s.ll, layer: "sound", title: s.title, h: 2.0, lines: [], snd: s })), ...D.touch.map(t => ({ id: t.id, x: t.x, y: t.y, z: t.z, ll: t.ll, layer: "touch", title: t.title, h: 1.25, lines: [], tch: t }))];
+  const list = [...D.objs, ...D.sound.map(s => ({ id: s.id, x: s.x, y: s.y, z: s.z, ll: s.ll, layer: "sound", title: s.title, h: 2.0, lines: [], snd: s })), ...D.touch.map(t => ({ id: t.id, x: t.x, y: t.y, z: t.z, ll: t.ll, layer: "touch", title: t.title, h: 1.25, lines: [], tch: t })), ...(D.sho || []).map(t => ({ id: t.id, x: t.x, y: t.y, z: t.z, ll: t.ll, layer: "sho", title: t.title, h: .7, lines: [], sho: t }))];
   for (const o of list) {
     const L0 = GL[o.layer]; if (!L0) continue;
     const m = makeMarker(o.layer, L0.color, o.h, MOBILE); m.root.position.set(o.x, o.y, o.z); m.root.visible = false; m.root.name = o.id;
@@ -765,6 +765,7 @@ function openObj(L) {
   const o = L.o, g = GL[o.layer]; PANEL.cur = L;
   if (o.snd) return openSound(L);
   if (o.tch) return openTouch(L);
+  if (o.sho) return openSho(L);
   const sp = o.sp ? D.sight.find(s => s.id === o.sp) : null;
   openPanel({ color: g.color, layer: `${String(layerNo(o.layer)).padStart(2, "0")}　${g.name}`, title: o.title, lines: o.lines, more: o.more, src: o.src, ll: o.ll, note: o.note,
     how: o.how === "研究の知見" ? "研究の知見（ほかの場所で調べられたこと）" : "記録（公的な資料・神社の由緒・樹木調査など）",
@@ -1301,6 +1302,49 @@ function bindPad(it) {
 }
 function touchRing(amp, p) { const r = $("#tring"); if (!r) return; if (p) { r.style.left = (p[0] * 100) + "%"; r.style.top = (p[1] * 100) + "%"; } r.style.opacity = Math.min(1, .3 + amp); r.style.transform = `translate(-50%,-50%) scale(${.6 + amp * 1.4})`; clearTimeout(r._t); r._t = setTimeout(() => { r.style.opacity = 0; }, 160); }
 
+/* ---------- Qualia/sho：上原光瑛の書を参道に浮かべる（共通部品 sho3d.js）。近づくと粒にほどけ、音が鳴り、触れると震える ----------
+   書は層を重ねていて、60 m 以内に来たときにだけ読む・描く（遠い書は描かない）。題と場所の結びつけは作品としての解釈。 */
+const SHO = { mod: null, loading: null, live: {}, near: null };
+function loadShoMod() { return SHO.loading ||= import("./sho/sho3d.js").then(m => { SHO.mod = m; return m; }).catch(e => console.warn("sho", e)); }
+function stepSho(dt) {
+  const list = D.sho || [], on = LAYER.worn.includes("sho") && (QW.mode === "walk" || QW.mode === "sight" || QW.mode === "fly"), cp = camera.position, t = performance.now() / 1000;
+  for (const it of list) {
+    const dist = Math.hypot(it.x - cp.x, it.z - cp.z), want = on && dist < 60, S = SHO.live[it.id];
+    if (want && !S) {
+      if (!SHO.mod) { loadShoMod(); continue; }
+      if (SHO.live[it.id] === undefined) { SHO.live[it.id] = null; SHO.mod.loadShoMap(it.src).then(map => {
+        const sho = SHO.mod.createSho(THREE, map, { width: 2.2, particleMode: "ink", mobile: MOBILE });
+        const n = nearestOnLine(it.x, it.z), a = atD(n.d); sho.group.position.set(it.x, it.y + 1.6, it.z); sho.group.rotation.y = Math.atan2(a.x - it.x, a.z - it.z);   // 参道の方を向く
+        sho.setScale(innerHeight * renderer.getPixelRatio() * .9); world.add(sho.group);
+        const ac = sndCtx(); const snd = ac ? SHO.mod.createShoSound(it.preset, { context: ac, destination: SND.out, volume: .45 }) : null;
+        SHO.live[it.id] = { sho, snd, it, hold: 0 };
+      }).catch(e => console.warn("sho map", e)); }
+      continue;
+    }
+    if (!S) continue;
+    S.sho.group.visible = want;
+    if (!want) { S.snd?.stop(); continue; }
+    if (S.snd && soundOn && !S.snd.running && SND.ac?.state === "running") S.snd.start();
+    if (S.snd && !soundOn && S.snd.running) S.snd.stop();
+    S.hold = Math.max(0, S.hold - dt);
+    S.sho.target = S.hold > 0 ? 1 : dist < 7 ? .85 : 0;   // 近づくとほどける
+    S.sho.update(dt, t); if (S.snd) { S.snd.update(S.sho.state, dt); S.sho.setLevel(S.snd.level); S.snd.gain(Math.max(0, 1 - dist / 40) * (voiceQ ? .4 : 1)); }
+  }
+}
+function openSho(L) {
+  const it = L.o.sho, g = GL.sho;
+  openPanel({ color: g.color, layer: `${String(layerNo("sho")).padStart(2, "0")}　Qualia/sho`, title: `《${it.title}》`, lines: [],
+    more: ["上原光瑛の書。墨の形を 3D の起伏にし、近づくと筆の向きに沿って粒にほどけ、また集まります。音は、ほどける速さに合わせて、その場で組み立てています。", "置いた場所：" + it.why + "（題と場所の結びつけは、作品としての解釈です）"],
+    src: [{ t: "書：上原光瑛（© mitsulab. All rights reserved.）" }], ll: it.ll, how: "作品（mitsulab）",
+    buttons: [{ label: "ほどく・集める", primary: true, run: () => touchSho(it) }] });
+  touchSho(it);
+}
+function touchSho(it) {   // 触れる：書がほどけ、端末が震える（iPhone は震えない）
+  const S = SHO.live[it.id]; sndCtx(); try { navigator.vibrate?.([18, 50, 30, 60, 14]); } catch { }
+  if (S) S.hold = S.hold > 0 ? 0 : 4.5;
+}
+addEventListener("resize", () => { for (const k in SHO.live) SHO.live[k]?.sho.setScale(innerHeight * renderer.getPixelRatio() * .9); });
+
 /* ---------- 画面の部品 ---------- */
 function toast(t) { const e = $("#toast"); e.textContent = t; e.hidden = false; clearTimeout(e._t); e._t = setTimeout(() => { e.hidden = true; }, 5200); }
 const showSkyUI = () => { $("#skyUI").hidden = false; $("#pinLabels").hidden = false; };
@@ -1358,7 +1402,7 @@ function fillMenu() {
 /* 左の層の板：一枚が一つの情報の層。触れると表示・非表示。板の色＝風景に重ねた物の色 */
 function buildTray() {
   const mk = (L, box, i) => {
-    const n = L.id === "sight" ? D.sight.length : L.id === "sound" ? D.sound.length : L.id === "touch" ? D.touch.length : D.objs.filter(o => o.layer === L.id).length;
+    const n = L.id === "sight" ? D.sight.length : L.id === "sound" ? D.sound.length : L.id === "touch" ? D.touch.length : L.id === "sho" ? (D.sho || []).length : D.objs.filter(o => o.layer === L.id).length;
     const li = document.createElement("li"); li.className = "ly";
     const b = document.createElement("button"); b.type = "button"; b.className = "lyBtn" + (L.q ? " q" : ""); b.dataset.id = L.id; b.setAttribute("aria-pressed", "false"); b.style.setProperty("--gc", L.color);
     b.title = L.lead; b.setAttribute("aria-label", `${L.name}（${L.lead}）`);
@@ -1396,7 +1440,7 @@ function frame() {
   updateTrees();
   if (BLD.length) { const cp = camera.position, far = QW.mode === "walk" || QW.mode === "sight" ? (MOBILE ? 320 : 430) : 1e9; for (const b of BLD) { const s = b.userData.ws; b.visible = Math.hypot(s.center.x - cp.x, s.center.z - cp.z) - s.radius < far; } }
   if (STONES.length && QW.mode !== "sky") { const cp = camera.position; for (const r of STONES) { const s = r.userData.ws; r.visible = s.center.distanceTo(cp) - s.radius < 160; } }
-  stepLayer(dt); stepSoundscape(dt); stepTalk();
+  stepLayer(dt); stepSoundscape(dt); stepSho(dt); stepTalk();
   if (QW.mode === "walk") stepAoi(dt);
   if (SIGHT.post && QW.mode === "sight") {
     SIGHT.post.mat.uniforms.time.value += dt;
