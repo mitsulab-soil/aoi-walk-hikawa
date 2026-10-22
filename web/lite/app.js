@@ -791,7 +791,7 @@ function playNext() {
   if (!l) { voiceQ = null; AOI.focus = null; hideCaption(1200); v.done?.(); return; }
   const idx = v.L ? v.L.o.lines.indexOf(l) : -1;
   document.querySelectorAll("#pBody .line").forEach(e => e.classList.toggle("now", +e.dataset.i === idx));
-  if (!v.L) caption(l.t, v.talk);
+  if (!v.L) caption(l.tc || l.t, v.talk);
   const next = gap => setTimeout(() => { if (voiceQ === v) { v.i++; playNext(); } }, gap);
   if (!soundOn || !l.f) { next(Math.max(2200, (l.dur || l.t.length * .16) * 1000 + 600)); return; }
   audio.src = l.f; audio.currentTime = 0;
