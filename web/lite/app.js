@@ -1367,7 +1367,7 @@ function loadKasane() {
   if (KASA.p) return KASA.p;
   return KASA.p = (async () => {
     await loadLate(); if (!roadGroup || !COLL) return;
-    const M = await import("../kit/envAgents/kasane.js?v=20261023k");
+    const M = await import("../kit/envAgents/kasane.js?v=20261023m");
     KASA.ok = new Uint8Array(COLL.nx * COLL.nz); roadGroup.traverse(o => { if (o.isMesh && /^(roots|bed|lawn)\|/.test(o.name)) kasaRaster(o, 2); }); roadGroup.traverse(o => { if (o.isMesh && KASA_SURF.test(o.name)) kasaRaster(o, 1); });
     await VEG.p?.catch(() => { });
     for (const S of VEG.sp) if (S.s <= 2 || S.s === 7) for (let i = 0; i < S.m; i++) { const x = S.xs[i * 6], z = S.xs[i * 6 + 2], r = S.xs[i * 6 + 3] * .55 + .2, c = COLL.c; for (let dz = -r; dz <= r; dz += c) for (let dx = -r; dx <= r; dx += c) if (dx * dx + dz * dz <= r * r) { const k = kasaCell(x + dx, z + dz); if (k >= 0 && KASA.ok[k] === 2) KASA.ok[k] = 4; } }   // 低木の株のまわり
@@ -1380,20 +1380,18 @@ function loadKasane() {
     for (const s of D.structs) if (/^(ishidoro|mokutoro|komainu|hyoseki|shagohi)/.test(s.id)) covers.push({ x: s.p[0], z: s.p[2], r: /^(ishidoro|mokutoro)/.test(s.id) ? .42 : .36 });
     const coverNear = (x, z) => { let best = null, bd = 12; for (const c of covers) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd && d > .8 && [0, 1, 2, 3, 4, 5, 6, 7].filter(i => { const px = c.x + Math.cos(i * .785) * (c.r + .1), pz = c.z + Math.sin(i * .785) * (c.r + .1), L = Math.hypot(px - x, pz - z); if (!kasaPeek(px, pz)) return false; for (let u = 0; u <= L; u += .25) if (!kasaPeek(x + (px - x) * u / L, z + (pz - z) * u / L)) return false; return true; }).length >= 2) { bd = d; best = c; } } return best; };
     // 道のり 34 m ごとに、その区間の層の地点のそばへ 3〜4 体の小さな群れ（近くでは 3〜5 体が見える）。層は、少ない層を先に（sight・touch・sound も混ざる）
-    const BIN = 34, bins = new Map();
+    const BIN = 40, bins = new Map();
     for (const L of LAYER.objs) { const o = L.o; if (o.sho) continue; const n = nearestOnLine(o.x, o.z); if (n.dist > 40) continue; const b = Math.floor(n.d / BIN); if (!bins.has(b)) bins.set(b, []); bins.get(b).push(L); }
     const used = { sight: 0, touch: 0, sound: 0, nature: 0, culture: 0 }; let k = 0;
     const pickL = (list, not = []) => { let best = null, bs = 1e9; for (const L of list) { if (not.includes(L) || L._kmiss) continue; const ly = top5(L.o.layer); if (!(ly in used)) continue; const sc = used[ly] + R() * .9; if (sc < bs) { bs = sc; best = L; } } return best; };
     const place = (list, not) => { for (let tries = 0; tries < 6; tries++) { const L = pickL(list, not); if (!L) return null; const p = near(L.o.x, L.o.z); if (p) { used[top5(L.o.layer)]++; return { L, p }; } L._kmiss = 1; } return null; };
     const add = (L, p, o = {}) => { const a = herd.add(top5(L.o.layer), { x: p[0], z: p[1], radius: 1.6, data: L, target: { x: L.o.x, z: L.o.z }, ...o }); a.d = nearestOnLine(p[0], p[1]).d; return a; };
     KASA.bins = bins.size;
-    for (const b of [...bins.keys()].sort((a, c) => a - c)) {
+    for (const b of [...bins.keys()].sort((a, c) => a - c)) {   // 2026-10-23 本人「一人より、群れでわちゃわちゃしている方が可愛い」＝区間ごとに 3〜5 体の群れ（色は混ざってよい）
       const list = bins.get(b), A = place(list, []); if (!A) { KASA.miss++; continue; } k++;
-      const cover = k % 2 === 1 ? coverNear(A.p[0], A.p[1]) : null; if (k % 2 === 1 && !cover) KASA.noCover++;
-      add(A.L, A.p, cover ? { role: "watch" } : {});   // 木や燈籠のそばで、こちらをじっと見つめる子
-      const B = place(list, [A.L]) || A, pB = near(B.p[0] + 1.2, B.p[1] - .8, 3);   // 二体で話す組
-      if (pB) { const C = pickL(list, [A.L, B.L]) || B.L, pC = near(pB[0] + .9, pB[1] + .4, 2); const b1 = add(B.L, pB); if (pC) { used[top5(C.o.layer)]++; herd.pairUp(b1, add(C, pC, { radius: 1.2 })); } }
-      if (cover || list.length >= 3) { const D = place(list, [A.L, B.L]) || A, pD = near(D.p[0] - 1.5, D.p[1] + 1.5, 4); if (pD) add(D.L, pD); }
+      const n = 3 + (k % 3), mem = [{ layer: top5(A.L.o.layer), data: A.L, target: { x: A.L.o.x, z: A.L.o.z } }], not = [A.L];
+      while (mem.length < n) { const L = pickL(list, not) || A.L; not.push(L); used[top5(L.o.layer)]++; mem.push({ layer: top5(L.o.layer), data: L, target: { x: L.o.x, z: L.o.z } }); }
+      const G = herd.addGroup(mem, { x: A.p[0], z: A.p[1], radius: 2.6, role: k % 3 === 0 ? "watch" : "" }); for (const a of G.members) a.d = nearestOnLine(A.p[0], A.p[1]).d;
     }
     KASA.n = herd.agents.length; QW.KASA = KASA; herd.setLayers(LAYER.worn);
     await herd.load();

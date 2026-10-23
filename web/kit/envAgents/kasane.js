@@ -114,6 +114,78 @@ export class KasaneHerd {
   add(layer, o) { const a = new Kasane(this, layer, o, (this._seed += 7919)); this.agents.push(a); return a; }
   /** 二体を組にする（ときどき向き合って話す） */
   pairUp(a, b) { a.pair = b; b.pair = a; a.role = b.role = "pair"; }
+  /** 小さな群れ（3〜7 体）。members＝[{ layer, data, target }]、o＝{ x, z, radius, role: "watch"（そろって見つめることが多い） }。
+      群れの中では、押し合う・跳ね合う・追いかけっこ・輪になって話す・一体がつまずいて周りが寄る・そろってこちらを見つめる。案内は先頭の一体が先導し、ほかはぞろぞろついてくる。 */
+  addGroup(members, o = {}) {
+    const G = { members: [], c: new THREE.Vector2(o.x, o.z), anchor: new THREE.Vector2(o.x, o.z), radius: o.radius ?? 2.4, role: o.role || "", mode: "idle", t: 0, dur: 1 + Math.random() * 2, rot: Math.random() * 6.28, goal: null, vi: 0 };
+    members.forEach((m, i) => { const ang = i / members.length * Math.PI * 2 + G.rot, r = .35 * this.scale; const a = this.add(m.layer, { x: o.x + Math.cos(ang) * r, z: o.z + Math.sin(ang) * r, radius: 1, data: m.data, target: m.target }); a.flock = G; a.slot = i; a.jx = 0; a.jz = 0; a.role = "flock"; G.members.push(a); });
+    (this.flocks ||= []).push(G); return G;
+  }
+  _flock(G, dt, busy) {
+    const s = this.scale, P = this.P, F = this.F, M = G.members, L = M[0], pd = Math.hypot(P.x - G.c.x, P.y - G.c.y), R = L.R;
+    G.t += dt;
+    for (let i = 0; i < M.length; i++) for (let j = i + 1; j < M.length; j++) {   // 重ならない（めり込まない）
+      const a = M[i], b = M[j], dx = b.pos.x - a.pos.x, dz = b.pos.y - a.pos.y, d = Math.hypot(dx, dz), mn = .27 * s;
+      if (d < mn && d > 1e-4) { const k = (mn - d) / 2 / d; a.pos.x -= dx * k; a.pos.y -= dz * k; b.pos.x += dx * k; b.pos.y += dz * k; }
+    }
+    if (G.mode === "follow") {
+      if (!L.state.startsWith("g")) { G.mode = "jostle"; G.t = 0; G.dur = 2.5; G.c.set(0, 0); for (const a of M) G.c.add(a.pos); G.c.multiplyScalar(1 / M.length); G.anchor.copy(G.c); for (const a of M) a.happy = .34; }
+      else G.c.copy(L.pos);
+      return;
+    }
+    // 案内：先頭の子が寄ってきて手まねきし、ほかはぞろぞろついてくる
+    if (!busy && !this.guiding && this.guideCool <= 0 && !L.guided && L.layerOn && L.target && L.state === "flock" && pd < 9 && pd > 2.2 && G.mode !== "stumble" && !G.noGuide) {
+      const tg = this._targetFor(L), td = tg ? Math.hypot(tg.x - P.x, tg.y - P.y) : 0;
+      if (tg && td > 4 && td < 30 && ((tg.x - P.x) * F.x + (tg.y - P.y) * F.y) / td > .2 && this.pv < .6) { this.guiding = L; L.tgt = tg; L.state = "gCome"; L.t = 0; L.goal = null; G.mode = "follow"; return; }
+      G.noGuide = true;
+    }
+    if (G.mode === "move" && G.goal) {
+      const dx = G.goal.x - G.c.x, dz = G.goal.y - G.c.y, d = Math.hypot(dx, dz), v = .2 * s * dt;
+      if (d < .1 || G.t > 14) { G.mode = G.after || "idle"; G.after = null; G.t = 0; G.dur = G.mode === "watch" ? 4 + R() * 3 : 1.5 + R() * 2; } else { G.c.x += dx / d * Math.min(d, v); G.c.y += dz / d * Math.min(d, v); }
+    }
+    if (pd < .7 * s + .5 && G.mode !== "move") {   // 人がすぐそばへ来たら、群れごと少し離れる
+      const n = pd || 1, x = G.c.x + (G.c.x - P.x) / n * 1.4, z = G.c.y + (G.c.y - P.y) / n * 1.4;
+      if (!this.walkable || this.walkable(x, z)) { G.goal = new THREE.Vector2(x, z); G.mode = "move"; G.t = 0; }
+    }
+    if (G.t < G.dur || G.mode === "move") return;
+    // つぎに何をするか
+    const watchP = pd > 4 && pd < 24 ? (G.role === "watch" ? .55 : .2) : 0, r = R();
+    if (pd > 5 && pd < 18 && R() < .4) {   // 気になって、群れごと人の見ている前のほうへ出てきて、そろって見つめる（碧の側はよける）
+      const k = this.mobile ? 5.5 + R() * 3 : 4.5 + R() * 3, rx = -F.y, rz = F.x, av = this.avoid?.(); let side = (R() - .5) * (this.mobile ? 1.2 : 3);
+      if (av) { const as = (av.x - P.x) * rx + (av.z - P.y) * rz; side = -Math.sign(as || 1) * (this.mobile ? .4 + Math.abs(side) * .4 : .8 + Math.abs(side)); }
+      const x = P.x + F.x * k + rx * side, z = P.y + F.y * k + rz * side;
+      if (!this.walkable || this.walkable(x, z)) { G.goal = new THREE.Vector2(x, z); G.mode = "move"; G.t = 0; G.after = "watch"; return; }
+    }
+    let m = r < watchP ? "watch" : ["move", "move", "circle", "circle", "jostle", "chase", "stumble", "idle"][Math.floor(R() * 8)];
+    if (m === "chase" && M.length < 3) m = "jostle";
+    G.mode = m; G.t = 0; G.rot += (R() - .5) * 2;
+    G.dur = { watch: 4 + R() * 4, circle: 4 + R() * 2.5, jostle: 2.5 + R() * 1.5, chase: 3 + R() * 2, stumble: 2.4, idle: 1.5 + R() * 2.5, move: 99 }[m];
+    if (m === "move") { for (let k = 0; k < 6; k++) { const a = R() * 6.28, rr = Math.sqrt(R()) * G.radius, x = G.anchor.x + Math.cos(a) * rr, z = G.anchor.y + Math.sin(a) * rr; if (!this.walkable || this.walkable(x, z)) { G.goal = new THREE.Vector2(x, z); break; } } if (!G.goal) { G.mode = "idle"; } }
+    if (m === "stumble") { G.vi = Math.floor(R() * M.length); const v = M[G.vi]; v.squash = .55; v.tiltGoal = (R() < .5 ? -1 : 1) * .35; v.tiltT = 3; v.tiltHold = .9; }
+    if (m === "jostle" || m === "watch") for (const a of M) a.happy = R() < .5 ? .34 : 0;
+  }
+  _member(a, dt, pd) {
+    const G = a.flock, s = this.scale, P = this.P, M = G.members, n = M.length, i = a.slot, R = a.R;
+    const ang = i / n * Math.PI * 2 + G.rot, r0 = .3 * s * (1 + .22 * Math.sqrt(n));
+    let tx = G.c.x + Math.cos(ang) * r0 + a.jx, tz = G.c.y + Math.sin(ang) * r0 + a.jz, face = null, spd = .24 * s;
+    switch (G.mode) {
+      case "circle": { const r = .45 * s * (1 + .12 * n); tx = G.c.x + Math.cos(ang) * r; tz = G.c.y + Math.sin(ang) * r; face = G.c;
+        if (Math.floor(G.t / 1.15) % n === i) { a.say = Math.max(a.say, .4); a.sayT = (a.sayT || 0) + dt; a.nod = 0; } else a.nod = Math.max(0, Math.sin(G.t * 5 + i)) * .1; break; }
+      case "chase": { if (i < 2) { const w = G.t * 1.9 + (i ? 0 : -.9), r = .75 * s; tx = G.c.x + Math.cos(w) * r; tz = G.c.y + Math.sin(w) * r; spd = .55 * s; } else face = M[0].pos; break; }
+      case "stumble": { const v = M[G.vi]; if (a === v) { tx = a.pos.x; tz = a.pos.y; } else { const dx = a.pos.x - v.pos.x, dz = a.pos.y - v.pos.y, d = Math.hypot(dx, dz) || 1; tx = v.pos.x + dx / d * .36 * s; tz = v.pos.y + dz / d * .36 * s; face = v.pos; spd = .3 * s; } break; }
+      case "follow": { const L = M[0], fy = L.yaw, k = Math.max(1, i), back = .42 * s * (1 + (k - 1) * .5), lat = (k % 2 ? 1 : -1) * .2 * s;
+        tx = L.pos.x - Math.sin(fy) * back + Math.cos(fy) * lat; tz = L.pos.y - Math.cos(fy) * back - Math.sin(fy) * lat; spd = Math.max(.3 * s, (L.mv || 0) * 1.1); face = L.state === "gWait" || L.state === "gGreet" ? P : null; break; }
+      case "watch": face = P; if (R() < dt * .2) a.happy = Math.max(a.happy, .34); break;
+      case "jostle": { if ((a.jt = (a.jt || 0) - dt) < 0) { a.jt = .45 + R() * .5; a.jx = (R() - .5) * .25 * s; a.jz = (R() - .5) * .25 * s; if (R() < .5) a.happy = .34; } face = R() < .5 ? null : G.c; break; }
+      default: if (pd < 6 * s) face = P;
+    }
+    if (G.mode !== "jostle") { a.jx *= .9; a.jz *= .9; }
+    if (this.walkable && !this.walkable(tx, tz)) { tx = G.c.x; tz = G.c.y; }
+    const d = Math.hypot(tx - a.pos.x, tz - a.pos.y);
+    if (d > .06 * s) { a.goal = a.goal || new THREE.Vector2(); a.goal.set(tx, tz); a.spd = spd * (d > .8 * s ? 1.4 : 1); a.stuck = 0; a.step(dt, 9); }
+    else if (face) a.faceTo(face.x, face.y, dt, 4);
+    if (G.mode === "stumble" && a === M[G.vi] && G.t > 1.4) a.happy = Math.max(a.happy, .34);
+  }
   setLayers(on) { this.on = new Set(on); for (const a of this.agents) a.layerOn = this.on.has(a.layer); }
   load() {
     if (this._lp) return this._lp;
@@ -166,7 +238,8 @@ export class KasaneHerd {
     this.t += dt; const t = this.t, cam = this.camera, s = this.scale;
     this.P.set(cam.position.x, cam.position.z); cam.getWorldDirection(_v); this.F.set(_v.x, _v.z); if (this.F.lengthSq() > 1e-6) this.F.normalize();
     if (this.prevP) { const v = this.P.distanceTo(this.prevP) / Math.max(dt, 1e-3); this.pv = lerp(this.pv, v, 1 - Math.exp(-dt * 4)); this.prevP.copy(this.P); } else this.prevP = this.P.clone();
-    this.guideCool -= dt;
+    this.guideCool -= dt; this._busy = busy;
+    for (const G of this.flocks || []) if (Math.hypot(this.P.x - G.c.x, this.P.y - G.c.y) < this.maxDist + 12) this._flock(G, dt, busy);
     const live = [];
     for (const a of this.agents) {
       a.idx = -1; if (!a.layerOn) { if (this.guiding === a) this._endGuide(a); continue; }
@@ -218,7 +291,9 @@ export class KasaneHerd {
       const n = Math.hypot(a.pos.x - P.x, a.pos.y - P.y) || 1, d = (.5 + R() * .3) * s + .3;
       a.goTo(a.pos.x + (a.pos.x - P.x) / n * d, a.pos.y + (a.pos.y - P.y) / n * d, "shy", .95 * s * .5 + .5);
     }
+    if (a.flock && a.state === "idle") a.state = "flock";
     switch (a.state) {
+      case "flock": this._member(a, dt, pd); break;
       case "idle": {
         if (a.lookAt > 0 || pd < 6 * s) a.faceTo(P.x, P.y, dt, 1.8);
         // 案内（見どころが前の方にあり、人が立ち止まっているか、ゆっくりのとき）：層の地点の近くで、まだ案内していない子が、とことこ寄ってくる（一度に一体・一度したらしばらく来ない）
