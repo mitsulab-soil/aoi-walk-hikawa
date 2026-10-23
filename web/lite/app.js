@@ -14,7 +14,7 @@ const MOBILE = matchMedia("(pointer:coarse)").matches || innerWidth < 820;
 const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const T0 = performance.now();
 const QW = window.__qw = { ready: false, mode: "boot", renderer: null };
-const BASE = "web/lite/", VER = "20261023u";   // データの版の印（公開直後に古いデータが出ないように）
+const BASE = "web/lite/", VER = "20261023k";   // データの版の印（公開直後に古いデータが出ないように）
 const status = t => { const e = $("#bootStatus"); if (e) e.textContent = t; };
 
 /* ---------- 描画 ---------- */
@@ -260,7 +260,7 @@ function loadMimi() {
     const sp = D.sight.find(q => q.id === "mimizu"), d = sp ? nearestOnLine(sp.x, sp.z).d : 640, { x, z } = clearSpot(d);
     const gy = surfaceY(x, z);
     m.object.position.set(x, gy + .012, z); m.object.scale.setScalar(4); m.play("crawl", 0, .8);
-    const lb = makeLabel(layerNo("sight"), "Qualia/sight", "ミミズ（4 倍で見せています）", GL.sight?.color || "#b9b0dc"); lb.position.set(0, .06, 0); lb.scale.set(.16, .04, 1); lb.material.depthTest = false; lb.renderOrder = 9; m.object.add(lb); MIMI.lb = lb;
+    const lb = makeLabel(layerNo("sight"), "Qualia/sight", "ミミズ（4 倍で見せています）", GL.sight?.color || "#c9abe0"); lb.position.set(0, .06, 0); lb.scale.set(.16, .04, 1); lb.material.depthTest = false; lb.renderOrder = 9; m.object.add(lb); MIMI.lb = lb;
     m.object.visible = false; world.add(m.object); MIMI.m = m;
   }).catch(e => console.warn("mimizu", e));
 }
@@ -277,7 +277,7 @@ function loadHiyo() {
     let x = p.x - p.tz * side, z = p.z + p.tx * side, top = groundY(x, z) + 1.0; HIYO.c = { x, z, y: groundY(x, z) };
     await (VEG.p || Promise.resolve()); ({ x, z } = clearSpot(d)); top = surfaceY(x, z) + .02;   // とまる所＝参道の縁の植え込みの地面（落ち葉の上で餌をさがす横の姿）
     n.object.position.set(x, top, z); n.object.scale.setScalar(2.5); n.play("perch", 0);   // 見つけやすいよう 2.5 倍（札に書く）
-    const lb = makeLabel(layerNo("sight"), "Qualia/sight", "ヒヨドリ（2.5 倍で見せています）", GL.sight?.color || "#b9b0dc"); lb.position.set(0, .22, 0); lb.scale.set(.44, .11, 1); lb.material.depthTest = false; lb.renderOrder = 9; n.object.add(lb); HIYO.lb = lb; n.object.visible = false; world.add(n.object);
+    const lb = makeLabel(layerNo("sight"), "Qualia/sight", "ヒヨドリ（2.5 倍で見せています）", GL.sight?.color || "#c9abe0"); lb.position.set(0, .22, 0); lb.scale.set(.44, .11, 1); lb.material.depthTest = false; lb.renderOrder = 9; n.object.add(lb); HIYO.lb = lb; n.object.visible = false; world.add(n.object);
     f.play("fly", 0, .7); f.object.visible = false; world.add(f.object);
     n.object.traverse(o => { if (o.isMesh) o.renderOrder = 3; }); HIYO.near = n; HIYO.far = f;
   }).catch(e => console.warn("hiyo", e));
@@ -889,7 +889,7 @@ QW.startAt = i => { if (QW.mode === "sky") descendTo(i ?? 0); };
 const WALK = { goal: null, keys: new Set(), hold: false, auto: false, speed: 1.35, ring: null, moving: false }; QW.WALK = WALK;
 function enterWalk() {
   setMode("walk"); showWalkUI();
-  aoiArrive();
+  aoiArrive(); loadKasane();
   if (!sessionStorageGet("hk_tip2")) { toast(MOBILE ? "なぞると見回せます。「歩きつづける」で参道を進み、地面に触れるとその向きへ数歩すすみます。" : "ドラッグで見回し、W で見ている方へ、「歩きつづける」で参道に沿って進みます。地面を押すとその向きへ数歩すすみます。"); sessionStorageSet("hk_tip2", 1); }
 }
 function corridorClamp(p) {
@@ -1041,6 +1041,7 @@ function tap(x, y) {
     if (best >= 0) selectStart(best); return;
   }
   if (QW.mode !== "walk" && QW.mode !== "sight") return;
+  if (QW.mode === "walk" && KASA.herd) { const k = KASA.herd.pick(x, y); if (k) { touchKasane(k); return; } }   // かさねっこに触れる
   const o = pickObj(x, y); if (o) { openObj(o); return; }
   if (QW.mode !== "walk") return;
   // 2026-10-23 本人「押した位置からは方向だけを読み取り、一度に進む距離は一定の距離を超えないように」＝押した向きへ、最大 STEP m だけ進んで止まる
@@ -1064,7 +1065,7 @@ const LAYER = { worn: [], objs: [], ripple: null, rippleR: 0, wear: null, thumbs
 /* 2026-10-23 本人「sight, touch, sound, nature, culture です」→ 層は 5 つ。Qualia/sho は sound の中、Qualia/rakugo と歴史は culture の中（中身はそのまま・どの層で重ねるかだけを付け替える） */
 const PARENT = { sho: "sound", rakugo: "culture", history: "culture" };
 const top5 = id => PARENT[id] || id;
-const COLOR5 = { sight: "#b9b0dc", touch: "#f0d19d", sound: "#9eaad6", nature: "#88b68f", culture: "#e79592" };   // 2026-10-23 層の 5 色（案 10：藤鼠・砥粉・藍鉄・老竹・小豆。体の色を抑えた組の、夜の地の HUD の線と字の列＝ここ）
+const COLOR5 = { sight: "#c9abe0", touch: "#f0d19d", sound: "#8fb6dc", nature: "#88b68f", culture: "#e79592" };   // 2026-10-23 本人「案１０で採用」：層の 5 色＝案 10（体の色：藤鼠 #a59fc3・砥粉 #d6c09b・藍鉄 #3a4360・老竹 #6c8d71・小豆 #864e4c）の、夜の地の HUD の線と字の列。sight と sound は夜の地で色相が近かったので、HUD の色だけ紫と青へ少し離した（体の色は変えない）
 const SUBNAME = { sho: "sho", rakugo: "rakugo", history: "history" };
 const LEAD5 = {
   sound: "参道の音（葉ずれ・鳥と蟬の声・玉砂利・池の水）と、上原光瑛の書（Qualia/sho）。書に近づくと、音が鳴る",
@@ -1103,6 +1104,7 @@ function wearLayer(id, opts = {}) {   // 層は重ねられる（重ねた順に
   for (const L of LAYER.objs) { L.want = W.includes(top5(L.o.layer)); if (!L.want) L.arr = false; if (L.label) { L.glyph.remove(L.label); L.label.material.map.dispose(); L.label.material.dispose(); L.label = null; } }
   if (g) putOnAnim(g);
   if (!W.includes("sight") && SIGHT.sp) exitSight();
+  KASA.herd?.setLayers(W);
   updateStack();
 }
 function putOnAnim() { }   // 2026-10-22 本人「グラスで分ける案はやめて」→ 層は左の板で切りかえる
@@ -1189,7 +1191,7 @@ function openObj(L) {
   if (o.seg) TALK.spoken.add(o.seg);
   speakLines(o.lines, L);
 }
-function hidePanel() { try { $("#pExp video")?.pause(); } catch { } if ($("#panel").hidden) return; $("#panel").hidden = true; document.body.classList.remove("pOpen"); if (AOI.hidP) { AOI.hidP = false; if (AOI.root && QW.mode === "walk") AOI.root.visible = true; } PANEL.cur = null; TCH.cur = null; stopVoice(); stopSound(); }
+function hidePanel() { if (KASA.cur) { KASA.herd?.release(KASA.cur); KASA.cur = null; } try { $("#pExp video")?.pause(); } catch { } if ($("#panel").hidden) return; $("#panel").hidden = true; document.body.classList.remove("pOpen"); if (AOI.hidP) { AOI.hidP = false; if (AOI.root && QW.mode === "walk") AOI.root.visible = true; } PANEL.cur = null; TCH.cur = null; stopVoice(); stopSound(); }
 $("#pClose").addEventListener("click", hidePanel);
 
 /* ---------- 声（碧） ---------- */
@@ -1337,6 +1339,69 @@ function stepAoi(dt) {
   }
   if (!AOI.focus) AOI.m.lookAt(AOI.glance || null);
   AOI.m.update(dt, camera);
+}
+
+/* ---------- かさねっこ（小さな環境エージェント）：層の地点のそばに、その層の色の子がいる（2026-10-23 本人「かさねっこを、川越と氷川にたくさん入れてください」）
+   触れると、点の吹き出しで応え、碧がその地点の典拠つきの記録を訳して読む（いまの札と声の仕組み）。遠くの物陰から覗く・層の地点へ案内する（一度したら、しばらく来ない）。
+   歩くのは歩道・石畳・砂利の上だけ（車道・植え込み・幹・池・燈籠には入らない）。遠くは描かず、起動のあと（道を読み終えてから）読む。部品＝web/kit/envAgents/kasane.js */
+const KASA = { herd: null, p: null, cur: null, ok: null, n: 0, miss: 0, noCover: 0, bins: 0 };
+const KASA_SURF = /^(sidewalk|granite_light|granite_plaza|granite_black|granite_band|washed|sand|gravel)\|/;   // stone（縁石・石垣）の上には乗らない
+function kasaCell(x, z) { if (!COLL) return -1; const i = Math.floor((x - COLL.x0) / COLL.c), j = Math.floor((z - COLL.z0) / COLL.c); return i >= 0 && j >= 0 && i < COLL.nx && j < COLL.nz ? j * COLL.nx + i : -1; }
+function kasaSurf(x, z) { const k = kasaCell(x, z); return k >= 0 && KASA.ok[k] === 1; }
+function kasaPeek(x, z) { const k = kasaCell(x, z); return k >= 0 && KASA.ok[k] >= 1 && KASA.ok[k] <= 3; }   // 覗く所：歩ける面と、並木の根もと・植え込みの縁（低木の株のある所は除く。縁石の陰から体の半分が出る。そこを歩きまわりはしない）
+function kasaSee(x, z) {   // その点から人の方へ 5 m、低木の株（4）がなければ見える
+  const c = camera.position, dx = c.x - x, dz = c.z - z, L = Math.hypot(dx, dz) || 1; for (let u = .3; u < Math.min(5, L); u += .25) { const k = kasaCell(x + dx / L * u, z + dz / L * u); if (k >= 0 && KASA.ok[k] === 4) return false; } return true; }
+function kasaOk(x, z) { return kasaSurf(x, z) && !blocked(x, z); }
+function kasaRaster(o, val = 1) {   // 歩ける面（歩道・石畳・砂利）を真上から塗る
+  const g = o.geometry, P = g.attributes.position, I = g.index, n = I ? I.count : P.count, v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], c = COLL.c;
+  for (let t = 0; t < n; t += 3) {
+    for (let k = 0; k < 3; k++) v[k].fromBufferAttribute(P, I ? I.getX(t + k) : t + k).applyMatrix4(o.matrixWorld);
+    const [A, B, C] = v, ar = (B.x - A.x) * (C.z - A.z) - (C.x - A.x) * (B.z - A.z); if (Math.abs(ar) < 1e-6) continue;
+    for (let z = Math.floor(Math.min(A.z, B.z, C.z) / c) * c + c / 2; z < Math.max(A.z, B.z, C.z); z += c) for (let x = Math.floor(Math.min(A.x, B.x, C.x) / c) * c + c / 2; x < Math.max(A.x, B.x, C.x); x += c) {
+      const w0 = ((B.x - x) * (C.z - z) - (C.x - x) * (B.z - z)) / ar, w1 = ((C.x - x) * (A.z - z) - (A.x - x) * (C.z - z)) / ar;
+      if (w0 >= 0 && w1 >= 0 && 1 - w0 - w1 >= 0) { const k = kasaCell(x, z); if (k >= 0) KASA.ok[k] = Math.max(KASA.ok[k], val); }
+    }
+  }
+}
+function loadKasane() {
+  if (KASA.p) return KASA.p;
+  return KASA.p = (async () => {
+    await loadLate(); if (!roadGroup || !COLL) return;
+    const M = await import("../kit/envAgents/kasane.js?v=20261023k");
+    KASA.ok = new Uint8Array(COLL.nx * COLL.nz); roadGroup.traverse(o => { if (o.isMesh && /^(roots|bed|lawn)\|/.test(o.name)) kasaRaster(o, 2); }); roadGroup.traverse(o => { if (o.isMesh && KASA_SURF.test(o.name)) kasaRaster(o, 1); });
+    await VEG.p?.catch(() => { });
+    for (const S of VEG.sp) if (S.s <= 2 || S.s === 7) for (let i = 0; i < S.m; i++) { const x = S.xs[i * 6], z = S.xs[i * 6 + 2], r = S.xs[i * 6 + 3] * .55 + .2, c = COLL.c; for (let dz = -r; dz <= r; dz += c) for (let dx = -r; dx <= r; dx += c) if (dx * dx + dz * dz <= r * r) { const k = kasaCell(x + dx, z + dz); if (k >= 0 && KASA.ok[k] === 2) KASA.ok[k] = 4; } }   // 低木の株のまわり
+    for (let pass = 0; pass < 2; pass++) { const g = KASA.ok, nx = COLL.nx, h = g.slice(); for (let k = nx; k < g.length - nx; k++) if (h[k] === 1 && (h[k - 1] !== 1 || h[k + 1] !== 1 || h[k - nx] !== 1 || h[k + nx] !== 1)) g[k] = [h[k - 1], h[k + 1], h[k - nx], h[k + nx]].some(v => v >= 2) ? 3 : 0; }   // 縁から 2 こま（約 1 m）は歩かない（縁石の上や陰に入らない）   // 縁は 1 こま削る（縁石の外へはみ出さない）
+    const herd = KASA.herd = new M.KasaneHerd({ scene: world, camera, groundAt: groundY, walkable: kasaOk, walkSurface: kasaPeek, canSee: kasaSee, hud: COLOR5, avoid: () => AOI.root?.visible ? AOI.root.position : null, scale: MOBILE ? 3.2 : 2.9, mobile: MOBILE, maxDist: MOBILE ? 32 : 40, max: 28 });
+    const R = (() => { let s = 20261023; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+    const near = (x, z, Rm = 7) => { if (kasaOk(x, z)) return [x, z]; for (let r = .5; r <= Rm; r += .5) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2 + r, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (kasaOk(px, pz)) return [px, pz]; } return null; };
+    // 物陰：並木の幹と、石・木の燈籠（見かけの太さ）
+    const covers = []; for (const t of D.trees) covers.push({ x: t[0], z: t[2], r: Math.max(.24, .3 * t[4]) });
+    for (const s of D.structs) if (/^(ishidoro|mokutoro|komainu|hyoseki|shagohi)/.test(s.id)) covers.push({ x: s.p[0], z: s.p[2], r: /^(ishidoro|mokutoro)/.test(s.id) ? .42 : .36 });
+    const coverNear = (x, z) => { let best = null, bd = 12; for (const c of covers) { const d = Math.hypot(c.x - x, c.z - z); if (d < bd && d > .8 && [0, 1, 2, 3, 4, 5, 6, 7].filter(i => { const px = c.x + Math.cos(i * .785) * (c.r + .1), pz = c.z + Math.sin(i * .785) * (c.r + .1), L = Math.hypot(px - x, pz - z); if (!kasaPeek(px, pz)) return false; for (let u = 0; u <= L; u += .25) if (!kasaPeek(x + (px - x) * u / L, z + (pz - z) * u / L)) return false; return true; }).length >= 2) { bd = d; best = c; } } return best; };
+    // 道のり 34 m ごとに、その区間の層の地点のそばへ 3〜4 体の小さな群れ（近くでは 3〜5 体が見える）。層は、少ない層を先に（sight・touch・sound も混ざる）
+    const BIN = 34, bins = new Map();
+    for (const L of LAYER.objs) { const o = L.o; if (o.sho) continue; const n = nearestOnLine(o.x, o.z); if (n.dist > 40) continue; const b = Math.floor(n.d / BIN); if (!bins.has(b)) bins.set(b, []); bins.get(b).push(L); }
+    const used = { sight: 0, touch: 0, sound: 0, nature: 0, culture: 0 }; let k = 0;
+    const pickL = (list, not = []) => { let best = null, bs = 1e9; for (const L of list) { if (not.includes(L) || L._kmiss) continue; const ly = top5(L.o.layer); if (!(ly in used)) continue; const sc = used[ly] + R() * .9; if (sc < bs) { bs = sc; best = L; } } return best; };
+    const place = (list, not) => { for (let tries = 0; tries < 6; tries++) { const L = pickL(list, not); if (!L) return null; const p = near(L.o.x, L.o.z); if (p) { used[top5(L.o.layer)]++; return { L, p }; } L._kmiss = 1; } return null; };
+    const add = (L, p, o = {}) => { const a = herd.add(top5(L.o.layer), { x: p[0], z: p[1], radius: 1.6, data: L, target: { x: L.o.x, z: L.o.z }, ...o }); a.d = nearestOnLine(p[0], p[1]).d; return a; };
+    KASA.bins = bins.size;
+    for (const b of [...bins.keys()].sort((a, c) => a - c)) {
+      const list = bins.get(b), A = place(list, []); if (!A) { KASA.miss++; continue; } k++;
+      const cover = k % 2 === 1 ? coverNear(A.p[0], A.p[1]) : null; if (k % 2 === 1 && !cover) KASA.noCover++;
+      add(A.L, A.p, cover ? { role: "watch" } : {});   // 木や燈籠のそばで、こちらをじっと見つめる子
+      const B = place(list, [A.L]) || A, pB = near(B.p[0] + 1.2, B.p[1] - .8, 3);   // 二体で話す組
+      if (pB) { const C = pickL(list, [A.L, B.L]) || B.L, pC = near(pB[0] + .9, pB[1] + .4, 2); const b1 = add(B.L, pB); if (pC) { used[top5(C.o.layer)]++; herd.pairUp(b1, add(C, pC, { radius: 1.2 })); } }
+      if (cover || list.length >= 3) { const D = place(list, [A.L, B.L]) || A, pD = near(D.p[0] - 1.5, D.p[1] + 1.5, 4); if (pD) add(D.L, pD); }
+    }
+    KASA.n = herd.agents.length; QW.KASA = KASA; herd.setLayers(LAYER.worn);
+    await herd.load();
+  })().catch(e => console.warn("かさねっこ：", e?.message ?? e));
+}
+function touchKasane(a) {
+  KASA.cur = a; KASA.herd.touch(a, () => { if (KASA.cur !== a || QW.mode !== "walk") return; openObj(a.data); KASA.cur = a; a.state = "focus"; a.focusTo = new THREE.Vector2(camera.position.x, camera.position.z);
+    if (AOI.m) { const p = a.center(new THREE.Vector3()); AOI.focus = p; AOI.m.lookAt(p); setTimeout(() => { if (AOI.focus === p) { AOI.focus = null; AOI.m?.lookAt(camera.position.clone()); } }, 1600); } });   // 碧は、触れた子へ目をやってから、見る人へ向きなおって訳す
 }
 
 /* ---------- Qualia/sight：生きものを選んで、その身体へ ---------- */
@@ -1773,7 +1838,7 @@ function stepSho(dt) {
         const n = nearestOnLine(it.x, it.z), a = atD(n.d); sho.group.position.set(it.x, it.y + 1.6, it.z); sho.group.rotation.y = Math.atan2(a.x - it.x, a.z - it.z);   // 参道の方を向く
         sho.setScale(innerHeight * renderer.getPixelRatio() * .9); world.add(sho.group);
         const ac = sndCtx(); const snd = ac ? SHO.mod.createShoSound(it.preset, { context: ac, destination: SND.out, volume: .45 }) : null;
-        const lb = makeLabel(layerNo("sho"), GL.sho?.name || "Qualia/sound", it.title, GL.sho?.color || "#9eaad6"); lb.position.set(it.x, it.y + 3.4, it.z); lb.scale.set(4, 1, 1); lb.material.depthTest = false; lb.renderOrder = 9; world.add(lb);   // 層の物だと分かるように、層の名札を添える
+        const lb = makeLabel(layerNo("sho"), GL.sho?.name || "Qualia/sound", it.title, GL.sho?.color || "#8fb6dc"); lb.position.set(it.x, it.y + 3.4, it.z); lb.scale.set(4, 1, 1); lb.material.depthTest = false; lb.renderOrder = 9; world.add(lb);   // 層の物だと分かるように、層の名札を添える
         SHO.live[it.id] = { sho, snd, it, hold: 0, lb };
       }).catch(e => console.warn("sho map", e)); }
       continue;
@@ -1915,7 +1980,7 @@ function frame() {
   updateTrees(); VEG.time.value += dt; updateVeg(); if (!RM) BLDU.t.value += dt; BLDU.g.value = QW.mode === "walk" || QW.mode === "sight" ? groundY(camera.position.x, camera.position.z) : -1e4; stepEdges(); stepHiyo(dt); stepMimi(dt); stepBats(dt); stepBody(dt);
   if (BLD.length) { const cp = camera.position, far = QW.mode === "walk" || QW.mode === "sight" ? (MOBILE ? 320 : 430) : 1e9; for (const b of BLD) { const s = b.userData.ws; b.visible = Math.hypot(s.center.x - cp.x, s.center.z - cp.z) - s.radius < far; } }
   if (STONES.length && QW.mode !== "sky") { const cp = camera.position; for (const r of STONES) { const s = r.userData.ws; r.visible = s.center.distanceTo(cp) - s.radius < 160; } }
-  stepLayer(dt); stepSoundscape(dt); stepSho(dt); stepTalk();
+  stepLayer(dt); stepSoundscape(dt); stepSho(dt); stepTalk(); KASA.herd?.update(dt, { active: QW.mode === "walk", busy: !!PANEL.cur });
   if (QW.mode === "walk") stepAoi(dt);
   if (SIGHT.post && QW.mode === "sight") {
     SIGHT.post.mat.uniforms.time.value += dt;
@@ -1944,7 +2009,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { ren
     QW.ready = true; QW.tReady = performance.now() - T0;
     // 歩く前に要るものを、上空で選んでいるあいだに読む（地図の線と名前 → 道・木・構造物 → 碧 → 話）
     setTimeout(() => { fetch(BASE + "map.json?v=" + VER).then(r => r.json()).then(buildMap).catch(e => console.warn("map", e)); }, 120);
-    setTimeout(() => { loadAoi(); loadLate(); setTimeout(loadTalk, 900); }, 300);   // 2026-10-23：碧を道・木・構造物と同時に読みはじめる（前は 0.4 秒あと）
+    setTimeout(() => { loadAoi(); loadLate(); setTimeout(loadTalk, 900); setTimeout(loadKasane, 2600); }, 300);   // 2026-10-23：碧を道・木・構造物と同時に読みはじめる（前は 0.4 秒あと）
     const s0 = Q.get("start"); if (s0 != null && D.starts[+s0]) { selectStart(+s0); descendTo(+s0); }
     if (Q.get("layer")) setTimeout(() => wearLayer(Q.get("layer")), 200);
     if (Q.get("sight")) setTimeout(() => QW.sight(Q.get("sight")), 300);
