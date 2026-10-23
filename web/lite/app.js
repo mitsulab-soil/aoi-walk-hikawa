@@ -143,7 +143,8 @@ function weather(m, o = {}) {   // o: moss・grime・lichen（0〜1）、scale�
 const pData = fetch(BASE + "data.json?v=" + VER).then(r => r.json());
 const pDem = fetch(BASE + "dem.bin").then(r => r.arrayBuffer());
 const pTerrain = glb("web/lite/terrain.glb");
-const pPhoto = texP(BASE + "tex/" + (MOBILE ? "photo_1k.webp" : "photo_2k.webp"));
+let pPhoto = null; const photoP = () => pPhoto || (pPhoto = texP(BASE + "tex/" + (MOBILE ? "photo_1k.webp" : "photo_2k.webp")));   // 2026-10-23 夕：空中写真は 3D 地図では使わない（電脳の地図に）。歩くときの遠くの地面のためだけに、起動のあとで読む
+const CYBER = { v: { value: 1 }, scan: { value: 0 } };   // 3D 地図の地面：暗い地に細い格子・等高線・ゆっくり流れる光の走査（1＝地図・0＝歩く）
 const pSky = texP(BASE + "tex/sky.webp");
 const pBld = glb(BASE + "buildings.glb");
 
@@ -153,18 +154,20 @@ const pickables = [];   // 地面を押して歩くときに当たる面
 
 async function buildBase() {
   status("参道の地形を読み込んでいます");
-  const [data, dem, tg, photo, sky] = await Promise.all([pData, pDem, pTerrain, pPhoto, pSky]);
+  const [data, dem, tg, sky] = await Promise.all([pData, pDem, pTerrain, pSky]);
   D = data; DEM = new Int16Array(dem);
   sky.mapping = THREE.EquirectangularReflectionMapping;
   scene.background = sky; QW.skyTex = sky;
   const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromEquirectangular(sky).texture; pm.dispose();
   scene.environment = env; QW.env = env;
-  photo.anisotropy = MOBILE ? 4 : 8; photo.flipY = false; photo.needsUpdate = true;
   const grass = tex(BASE + "tex/grass5.webp"), litter = tex(BASE + "tex/litter.webp?v=" + VER);
   terrainMesh = tg.scene.getObjectByProperty("isMesh", true); if (!terrainMesh.geometry.attributes.normal) terrainMesh.geometry.computeVertexNormals();
-  const tm = new THREE.MeshStandardMaterial({ map: photo, roughness: 1, metalness: 0, envMapIntensity: .35 });
+  const tm = new THREE.MeshStandardMaterial({ color: 0x55604a, roughness: 1, metalness: 0, envMapIntensity: .35 });
+  setTimeout(() => photoP().then(photo => { photo.anisotropy = MOBILE ? 4 : 8; photo.flipY = false; photo.needsUpdate = true; tm.map = photo; tm.color.set(0xffffff); tm.needsUpdate = true; }).catch(() => { }), 1800);
   tm.onBeforeCompile = sh => {   // 近くだけ、草と土の細かい絵を重ねる（遠くは写真のまま）
-    sh.uniforms.detail = { value: grass }; sh.uniforms.litter = { value: litter };
+    sh.uniforms.detail = { value: grass }; sh.uniforms.litter = { value: litter }; sh.uniforms.uCy = CYBER.v; sh.uniforms.uScan = CYBER.scan;
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uCy; uniform float uScan;\nfloat gridL(vec2 p, float s){ vec2 q=abs(fract(p/s+.5)-.5)*s; vec2 w=fwidth(p)*1.3; vec2 l=1.-smoothstep(vec2(0.),w,q); return max(l.x,l.y); }")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\nif(uCy>.001){ vec2 p=vWp.xz; float fw=length(fwidth(p)); float g1=gridL(p,100.), g2=gridL(p,20.)*(1.-smoothstep(1.5,5.,fw)); float hh=vWp.y; float cq=abs(fract(hh+.5)-.5); float cl=1.-smoothstep(0.,fwidth(hh)*1.3,cq); float sc=exp(-pow((p.y-uScan)/60.,2.)); vec3 ln=vec3(.32,.78,.9); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.01,.025,.045),uCy); totalEmissiveRadiance+=uCy*(ln*(g1*.32+g2*.1+cl*.18)+ln*sc*(.05+g1*.4+cl*.3)); }");
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWp;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;");
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D detail; uniform sampler2D litter; varying vec3 vWp;")
       .replace("#include <map_fragment>", "#include <map_fragment>\n{ float dist=length(vWp-cameraPosition); float k=1.-smoothstep(25.,140.,dist); vec3 dt=texture2D(detail,vWp.xz*.33).rgb; float l=dot(dt,vec3(.333)); diffuseColor.rgb*=mix(1.,.55+l*1.1,k*.85); float l0=dot(diffuseColor.rgb,vec3(.333)); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(l0),.45)*vec3(.86,.83,.76); float lu=dot(diffuseColor.rgb,vec3(.333)); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.37,.36,.34)*(.8+lu*.25),smoothstep(.28,.52,lu)*.92);"
@@ -836,7 +839,8 @@ function setMode(m) {
   if (pathLine) { pathLine.visible = sky || fly; pathLine.material.depthTest = !sky; }
   if (START.group) START.group.visible = sky;
   showMapLayer(sky);
-  if (QW.skyTex && !sight) scene.background = QW.skyTex;
+  if (QW.skyTex && !sight) scene.background = sky ? NAVY : QW.skyTex;   // 3D 地図は暗い地（電脳の地図）
+  if (sky && scene.fog) scene.fog.color.copy(NAVY);
   updateTrees(true);
   $("#modeWalk").setAttribute("aria-pressed", walk || sight); $("#modeFly").setAttribute("aria-pressed", fly); $("#modeSky").setAttribute("aria-pressed", sky);
   if (AOI.root) AOI.root.visible = walk && AOI.ready;
@@ -1978,6 +1982,7 @@ function frame() {
   updateTrees(); VEG.time.value += dt; updateVeg(); if (!RM) BLDU.t.value += dt; BLDU.g.value = QW.mode === "walk" || QW.mode === "sight" ? groundY(camera.position.x, camera.position.z) : -1e4; stepEdges(); stepHiyo(dt); stepMimi(dt); stepBats(dt); stepBody(dt);
   if (BLD.length) { const cp = camera.position, far = QW.mode === "walk" || QW.mode === "sight" ? (MOBILE ? 320 : 430) : 1e9; for (const b of BLD) { const s = b.userData.ws; b.visible = Math.hypot(s.center.x - cp.x, s.center.z - cp.z) - s.radius < far; } }
   if (STONES.length && QW.mode !== "sky") { const cp = camera.position; for (const r of STONES) { const s = r.userData.ws; r.visible = s.center.distanceTo(cp) - s.radius < 160; } }
+  { const m = QW.mode, want = m === "sky" || m === "boot" ? 1 : m === "descend" ? CYBER.v.value : 0; CYBER.v.value += (want - CYBER.v.value) * Math.min(1, dt * 2.2); CYBER.scan.value = (performance.now() / 1000 * 70) % 2600 - 1300; if (QW.skirt) { const sm = QW.skirt.material; (sm.userData.c0 ||= sm.color.clone()); sm.color.copy(sm.userData.c0).lerp(NAVY, CYBER.v.value * .97); } }   // 3D 地図の電脳の地面
   stepLayer(dt); stepSoundscape(dt); stepSho(dt); stepTalk(); KASA.herd?.update(dt, { active: QW.mode === "walk", busy: !!PANEL.cur });
   if (QW.mode === "walk") stepAoi(dt);
   if (SIGHT.post && QW.mode === "sight") {
