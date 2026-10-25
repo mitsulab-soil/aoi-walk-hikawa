@@ -1,6 +1,6 @@
-# Qualium 氷川
+# Qualium 大宮
 
-mitsulab の作品《Qualium 氷川》（旧名 Qualia/walk 氷川・2026-10-23 改名）です。氷川参道と境内という場に、Qualia/sight・touch・sound・nature・culture の五つの層（sound に書の Qualia/sho、culture に歴史と噺の Qualia/rakugo を含む・2026-10-23 に 8 つから 5 つに整理）を重ねて歩きます（リポジトリの名前と URL は変えていません）。
+mitsulab の作品《Qualium 大宮》（英 Qualium Omiya。旧名 Qualium 氷川・2026-10-26 改名＝大宮公園を入れ、大宮東口へ広げるため。その前は Qualia/walk 氷川）です。氷川参道と境内という場に、Qualia/sight・touch・sound・nature・culture の五つの層（sound に書の Qualia/sho、culture に歴史と噺の Qualia/rakugo を含む・2026-10-23 に 8 つから 5 つに整理）を重ねて歩きます（リポジトリの名前と URL は変えていません）。
 
 ## 2026-10-23 の版
 
