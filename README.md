@@ -43,3 +43,22 @@ mitsulab の作品《Qualium 大宮》（英 Qualium Omiya。旧名 Qualium 氷�
 © 2026 mitsulab. All rights reserved. Copyright in the text, images, audio, 3D and software of this work belongs to mitsulab, except third-party materials credited separately. Copying, reposting or modifying them without permission, and using them for AI training or generation, are not permitted. Text and data mining rights are reserved. [Terms](https://mitsulab.jp/terms/#ai-en)
 
 他者の素材（CC BY・ODbL・CC0・VOICEVOX など）は、それぞれの条件に従います。
+
+## 始める場所の印と名札（共通部品 `web/lite/startpins.js`・2026-10-27）
+
+始めの 3D 地図の上に、始める場所を 3D の小さな印と明朝の名札で置く部品です。ほかの Qualium（川越・渋谷）でも同じ形で使えます。
+
+```js
+import { makeStartPins } from "./startpins.js";
+const SP = makeStartPins({ THREE, parent: world, camera, groundY, mobile,
+  items: [{ name: "一の鳥居", x, z, kind: "torii" }, { name: "大宮駅 西口", x, z, kind: "area" }, { name: "現在地から歩く", x, z, kind: "here" }],
+  note: { text: "説明の一文", x, z }, goBtn: document.querySelector("#goDown"),
+  onSelect: i => {}, onGo: i => {} });
+// 毎こま：const rects = SP.update(t, { x: 避ける右端, y: 避ける下端 }); ／ 見せる：SP.show(true) ／ 地図を押した所：SP.pick(x, y) → i か -1
+// 現在地の位置が出たら：SP.movePin(i, x, z)
+```
+
+- 名前は省略しない（「二」でなく「二の鳥居」）。名札が重なれば上下・左右へずらし、細い線で印とつなぐ。上の見出しと層の一覧には重ねない。
+- 選んだ印はオレンジに光り、「ここから歩く」（goBtn）はその印のそばに出る。印が画面の外なら下の真ん中に出す。
+- kind：`torii`・`shrine`・`area`（町。砂色）・`here`（現在地。白い下向きの三角。押したときだけ位置を使い、位置が出たらその場所へ移す）。
+- `update` が返す名札の位置を、地図のほかの札（地名・地区名）の側で避ける。
