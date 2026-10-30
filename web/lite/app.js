@@ -1246,7 +1246,7 @@ function tap(x, y) {
   if (QW.mode === "walk" && KASA.herd) { const k = KASA.herd.pick(x, y); if (k) { touchKasane(k); return; } }   // かさねっこに触れる
   if (QW.mode === "walk") { for (const h of AREA.herds) { if (h.pickView(x, y)) return; const k = h.pick(x, y); if (k) { touchKasane(k); return; } } const L = pickAreaMark(x, y); if (L) { openObj(L); return; } }   // エリアのかさねっこと地点
   if (QW.mode === "walk" && YO.y && YO.y.pick(x, y, renderer.domElement)) return;   // 依代に触れる
-  const o = pickObj(x, y) || (QW.mode === "walk" ? QA?.pick(x, y) : null); if (o) { QA?.touch(o); const again = LASTM.L === o && performance.now() - LASTM.t < 25000 && !(NARR.L === o && NARR.sp) && !o.o.tch && !o.o.snd;   // 10-29 設計：印を 1 回＝碧が語る、もう 1 回＝そちらへ歩く
+  const o = pickObj(x, y) || (QW.mode === "walk" ? QA?.pick(x, y) : null); if (o) { QA?.touch(o); { const k = QAK(o); if (k && QW.mode === "walk") toast(QAN(k)); } const again = LASTM.L === o && performance.now() - LASTM.t < 25000 && !(NARR.L === o && NARR.sp) && !o.o.tch && !o.o.snd;   // 10-29 設計：印を 1 回＝碧が語る、もう 1 回＝そちらへ歩く
     LASTM.L = o; LASTM.t = performance.now(); if (again && QW.mode === "walk") { o.glyph.getWorldPosition(_v3); const dx = _v3.x - CAM.pos.x, dz = _v3.z - CAM.pos.z, l = Math.hypot(dx, dz); if (l > 2) { const sx = (_v3.clone().project(camera).x + 1) / 2 * innerWidth; const g = goalAt(sx, innerHeight * .8); if (g) { WALK.goal = g; showGoalRing(g); } } return; } openObj(o); return; }
   if (QW.mode !== "walk") return;
   const g = goalAt(x, y, true); if (g) { WALK.goal = g; showGoalRing(g); }
@@ -1546,11 +1546,21 @@ function aoiFootY(x, z) {   // 10-29：碧の足もと＝描いている面の�
 }
 const FOOT = { m: new Map(), list: null, t: 0, last: 0, off: 0 }, _fr = new THREE.Raycaster(), _fd = new THREE.Vector3(0, -1, 0), _fo = new THREE.Vector3();
 let WL = null, QA = null;
-const QAK = L => { const o = L.o; if (!o) return null; if (o.sp) return "x"; if (o.snd || o.rk || top5(o.layer) === "sound") return "sound"; if (o.tch || top5(o.layer) === "touch") return "touch"; const t = top5(o.layer); return t === "culture" || t === "nature" ? "memory" : t === "sight" ? "x" : null; };
-const QAC = { sound: COLOR5.sound, touch: COLOR5.touch, memory: COLOR5.culture, x: "#c9a8ff" };
+// 10-30 本人（確定）：層は 6 つ＝Qualia/x・sound（リズムを含む）・touch・sight・taste・smell。五感を超えるものはすべて x に入れ、x の中を小分類する（名前は下の XSUB で差し替える）
+const XSUB = { umwelt: "umwelt", beyond: "beyond", memory: "memory", link: "link", soil: "soil", scale: "scale" };
+const QA_TXT = L => (L.o.title || "") + " " + (L.o.lines || []).map(l => l.t || "").join(" ");
+const QAK = L => { const o = L.o; if (!o) return null; const t = top5(o.layer), tx = QA_TXT(L);
+  if (o.sp) { const sp = D.sight.find(x => x.id === o.sp); return /紫外|超音波|偏光|赤外|磁気|電気/.test((sp?.name || "") + JSON.stringify(sp?.lines || "") + tx) ? "x.beyond" : "x.umwelt"; }
+  if (o.snd || o.rk || t === "sound") return "sound"; if (o.tch || t === "touch") return "touch";
+  if (/匂い|におい|香り|香る/.test(tx)) return "smell"; if (/団子|菓子|酒|料理|名物|茶屋|米を|醤油|食べ/.test(tx)) return "taste";
+  if (o.sho || t === "sight") return "sight";
+  if (/土壌|地中|根が|根は|菌|ミミズ|土の中|腐葉土/.test(tx)) return "x.soil"; if (/水路|流れ|街道|運ば|行き来|つなが/.test(tx)) return "x.link";
+  return t === "culture" || t === "nature" ? "x.memory" : null; };
+const QAC = { "x.umwelt": "#7f8cff", "x.beyond": "#a07cff", "x.memory": "#b98be8", "x.link": "#8fb0ff", "x.soil": "#9184c4", "x.scale": "#b0a2ff", sound: COLOR5.sound, touch: COLOR5.touch, sight: COLOR5.sight, taste: "#e3a76c", smell: "#b7d58a" };
+const QAN = k => k.startsWith("x.") ? `Qualia/x ── ${XSUB[k.slice(2)]}` : "Qualia/" + k;
 let QAP = null;
 function startQA() { if (QA || QAP) return; QAP = import("./qaurora.js?v=a1").then(({ makeQAurora }) => { QA = QW.QA = makeQAurora(THREE, world, { camera, mobile: MOBILE, marks: () => LAYER.objs.filter(L => L.root?.visible && !L.qHide), kind: QAK, color: k => QAC[k], ground: (x, z) => groundY(x, z) }); }).catch(e => console.warn("qaurora", e));
-  setTimeout(() => { try { if (sessionStorage.getItem("q.h.qa")) return; sessionStorage.setItem("q.h.qa", "1"); } catch { } if (QW.mode === "walk") toast("漂う色の層に触れると、その感覚がひらきます。音は青、手ざわりは黄、記憶は紅、人にない感覚は紫。"); }, 9000); }
+  setTimeout(() => { try { if (sessionStorage.getItem("q.h.qa")) return; sessionStorage.setItem("q.h.qa", "1"); } catch { } if (QW.mode === "walk") toast("漂う色の層に触れると、その感覚がひらきます。離れると、もとの景色に戻ります。"); }, 9000); }
 function startWL() { if (WL) return; for (const L of LAYER.objs) { const sp = L.o.sp ? D.sight.find(x => x.id === L.o.sp) : null; L.qSight = !!(sp && BODY_D[sp.id]); }   /* 生きものの受けとり方へ入れる印の目印 */ WL = QW.WL = makeWorldLayers(THREE, world, { marks: () => [...LAYER.objs.filter(L => L.root?.visible && L.show > .5), ...(AREA.marks || []).filter(L => L.mark?.visible)], pitch: () => CAM.pitch, narrate: (L, k, from) => narrate(L, null, k, from), color: L => (GL[L.o.layer] || GL[top5(L.o.layer)])?.color || COLOR5[top5(L.o.layer)] || "#bfe3ee", busy: () => !$("#panel").hidden, speaking: () => !!voiceQ, senses: () => { const cp = camera.position, v = { see: 0, hear: 0, touch: 0, x: 0 }; for (const L of LAYER.objs) { if (!L.root?.visible) continue; const d = Math.hypot(L.o.x - cp.x, L.o.z - cp.z); if (d > 120) continue; const k = 1 - d / 120, t = top5(L.o.layer); if (t === "sight" || L.o.sho) v.see = Math.max(v.see, k); if (t === "sound" || L.o.snd || L.o.rk) v.hear = Math.max(v.hear, k); if (t === "touch" || L.o.tch) v.touch = Math.max(v.touch, k); if (L.o.sp) v.x = Math.max(v.x, k); } return v; }, senseColors: { see: COLOR5.sight, hear: COLOR5.sound, touch: COLOR5.touch, x: "#c9a8ff" },   /* 五感＋X 感の帯：視・聴・触と、人にない感覚（紫外など、出典のある生きものの受けとり方の印） */ skip: M => THIN.test((M.o.title || "") + (M.o.lines || []).map(l => l.t || "").join("")), quietFor: () => { const cp = camera.position; let nd = 1e9; for (const M of [...LAYER.objs, ...(AREA.marks || [])]) { if (M.qHide || (M.mark ? !M.mark.visible : !M.root?.visible)) continue; const d = Math.hypot(M.o.x - cp.x, M.o.z - cp.z); if (d > 6 && d < nd) nd = d; } return Math.max(8, Math.min(16, nd / 1.4 * .45)); },   /* 10-29：間合いを次の印までの距離で（川越・渋谷と同じ） */ ask: () => { if (!WL_HINT.done) { const h = "足もとを見下ろすと小さなものの話を、見上げると土地の大きな形の話をします。"; speakLines([{ t: h, tc: h, hint: true }], null); return; } const q = nextMarkAsk(null) || nextMarkAsk(null, true); if (q) speakLines([{ t: q, tc: q }], null); },   /* 10-28 晩：見下ろす／見上げるの知らせは、最初の静かな間に */ active: () => QW.mode === "walk", ground: (x, z) => groundY(x, z) }); }
 const WL_HINT = { n: 0, done: (() => { try { return sessionStorage.getItem("wl_hint") === "1"; } catch { return false; } })() };
 const NARR = { L: null, sp: null, heard: new Set() };
