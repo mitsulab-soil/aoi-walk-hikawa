@@ -7,12 +7,12 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { QLAYERS, makeMarker, makeLabel, glowTex } from "./layers.js?v=8";
-import { makeQMarks, placeLabels } from "./qmarks.js?v=k21";
+import { makeQMarks, placeLabels } from "./qmarks.js?v=k22";
 import { makeSession } from "./session.js?v=s2";   // 10-29 本人「Qualium に音を実装」：自然とのセッション（kit/session.js）
 import { makeWorldLayers } from "./worldlayers.js?v=w19";   // 10-28 晩：層は世界の中に（関係の線・見下ろす／見上げるでミクロ⇄マクロ）
 import { groundFarMat } from "../kit/ground_far.js?v=7";
 const QM_OPT = { overWalls: true };   // 2026-10-27 夜：Qualium 共通の基準（大宮・川越・渋谷で同じ）
-import { makeStartPins } from "../kit/startpins.js?v=mg6";
+import { makeStartPins } from "../kit/startpins.js?v=mg7";
 import { makeMapGuide, makeEyeView } from "../kit/mapguide.js?v=mg2";
 import { makeHereWalk } from "./herewalk.js?v=2";
 import { sunDir } from "../kit/sunpos.js?v=1";   // 11-02：太陽の位置
@@ -888,9 +888,9 @@ function stepMapLabels() {
   const now = performance.now(); if (!MAP.av || now - MAP.avT > 500) { MAP.avT = now; const c = $("#skyUI .card")?.getBoundingClientRect(), l = $("#lstack")?.getBoundingClientRect(); MAP.av = { cy: c && c.height ? c.top - 6 : H, lx: l && l.width ? l.right + 4 : 0, ly: l && l.height ? l.bottom : 0 }; }   // 視野の札（始める場所・層の目盛り）の下に、地図の名前を重ねない
   for (const L of all) {
     _v3.copy(L.p).project(camera); const x = (_v3.x + 1) / 2 * W; let y = (1 - _v3.y) / 2 * H; if (L === MAP.hereLabel && _v3.z < 1) { y = Math.max(130, Math.min(H - 60, y)); }   // 「いま」の札は上の端で切らない
-    const lw = (L.w ||= L.e.offsetWidth || 80) / 2; let ok = _v3.z < 1 && x > (MOBILE ? 72 : -40) && x + lw * 2 + 14 < W && x > 4 &&   /* 2026-10-27：画面の端で切れる地名は出さない */ y > 70 && y < H - 40 && y < MAP.av.cy && !(x < MAP.av.lx && y < MAP.av.ly + 10);
+    const lw = (L.w ||= L.e.offsetWidth || 80) / 2; let ok = _v3.z < 1 && x > (MOBILE ? 72 : -40) && x + lw * 2 + 14 < W && x > 4 &&   /* 2026-10-27：画面の端で切れる地名は出さない */ y > (MOBILE ? 150 : H * .2) && y < H - 40 && (MOBILE || (x > W * .1 && x < W * .86)) && y < MAP.av.cy && !(x < MAP.av.lx && y < MAP.av.ly + 10);
     if (ok && START.rects) for (const r of START.rects) if (Math.abs(r[0] - x) < (MOBILE ? 100 : 110) && Math.abs(r[1] - y) < 40) { ok = false; break; }   // 始める場所の名札を優先（地区の札は重ねない）
-    if (ok && L !== MAP.hereLabel) for (const q of placed) if (Math.abs(q[0] - x) < (MOBILE ? 96 : 70) && Math.abs(q[1] - y) < (MOBILE ? 22 : 18)) { ok = false; break; }   // 重なる名札は出さない（大きな鳥居の名札も）
+    if (ok && L !== MAP.hereLabel) for (const q of placed) if (Math.abs(q[0] - x) < (MOBILE ? 104 : 120) && Math.abs(q[1] - y) < (MOBILE ? 26 : 28)) { ok = false; break; }   // 重なる名札は出さない（大きな鳥居の名札も）
     if (!ok) { if (L.vis !== false) { L.e.style.display = "none"; L.vis = false; } continue; }
     placed.push([x, y]); if (L.vis !== true) { L.e.style.display = ""; L.vis = true; }
     L.e.style.transform = `translate(${x | 0}px,${y | 0}px)`;
@@ -904,7 +904,7 @@ const SKY = { az: .3, el: .98, dist: MOBILE ? 2550 : 2150, tx: MOBILE ? -330 : -
 const EYE = 1.55;
 let tween = null, TWFOG = null;
 // どの見方も、空と霞は同じ色。切りかえのあいだも、霞の近さ・遠さだけが連続して変わる（黒い画面にしない）
-const FOGS = { sky: () => ({ c: FOG_SKY, n: 1700, f: 4200 }), walk: () => ({ c: FOG_SKY, n: 320, f: 695 })   /* 10-29 本人「淡くなりすぎ」→ 近景〜中景（〜320 m）は霞を掛けない */   /* 2026-10-29 遠景：歩くときは描く距離が 700 m なので、霞をその手前で満たす（旧 220〜1500 m＝700 m で景色が霞の途中で切れていた） */, fly: () => ({ c: FOG_SKY, n: 260, f: MOBILE ? 1100 : 1700 }), mid: () => ({ c: FOG_SKY, n: 400, f: 2600 }) };
+const FOGS = { sky: () => ({ c: FOG_SKY, n: 1450, f: 3700 }), walk: () => ({ c: FOG_SKY, n: 320, f: 695 })   /* 10-29 本人「淡くなりすぎ」→ 近景〜中景（〜320 m）は霞を掛けない */   /* 2026-10-29 遠景：歩くときは描く距離が 700 m なので、霞をその手前で満たす（旧 220〜1500 m＝700 m で景色が霞の途中で切れていた） */, fly: () => ({ c: FOG_SKY, n: 260, f: MOBILE ? 1100 : 1700 }), mid: () => ({ c: FOG_SKY, n: 400, f: 2600 }) };
 function applyFog(f) { scene.fog.color.copy(f.c); scene.fog.near = f.n; scene.fog.far = f.f; }
 function setMode(m) {
   const prev = QW.mode; QW.mode = m; document.body.dataset.mode = m; if (m === "walk" && prev !== "walk") window.__qnav?.firstWalk(); if (m === "sky") window.__qnav?.leaveAR?.();

@@ -78,7 +78,7 @@ export function makeStartPins({ THREE, parent, camera, groundY, mobile = false, 
       if (!g.visible) return []; const W = innerWidth, H = innerHeight, F = fpx(), placed = [];
       const rank = k => (k === api.sel ? 4 : 0) + (pins[k].it.kind === "area" ? 2 : 0) + (pins[k].it.kind === "here" ? 1 : 0); const order = pins.map((p, k) => k).sort((a, b) => rank(b) - rank(a));
       for (const k of order) { const p = pins[k], on = k === api.sel, d = camera.position.distanceTo(p.P.position);
-        const s = d * (mobile ? 6.4 : 5.8) / F * (on ? 1.3 : 1) * (p.it.kind === "area" ? .8 : 1);   // 地面の同心円（外の輪で画面およそ直径 28〜32px）
+        const s = d * (mobile ? 6.4 : 5.8) / F * (on ? 1.3 : 1) * (p.it.kind === "area" ? .8 : p.it.kind === "here" ? 1.5 : 1);   // 地面の同心円（現在地は大きめに）（外の輪で画面およそ直径 28〜32px）
         const hy = s * 7; p.head.position.y = .3; p.head.scale.setScalar(s); p.ring2.rotation.y = t * .12 + k; p.foot.rotation.y = -t * .05 + k * .3;
         p.beam.scale.set(s, hy, s); const ph = (t * .32 + k * .23) % 1, e = 1 - (1 - ph) ** 2; p.pulse.scale.setScalar(1 + e * 1.1); p.pulse.material.opacity = (1 - ph) ** 1.5 * (on ? .7 : .38);
         p.core.material.opacity = (on ? 1 : .8) * (.85 + .15 * Math.sin(t * 1.6 + k)); p.ring.material.opacity = on ? .9 : .6; p.ring2.material.opacity = on ? .6 : .32; p.foot.material.opacity = on ? .5 : .24; p.beam.material.opacity = on ? .45 : .18;
