@@ -46,7 +46,7 @@ const EMB = /* glsl */`
 `;
 
 export function makeQMarks(THREE, parent, cap, mobile = false, opt = {}) {
-  const SKYK = opt.skyK ?? 2.6, SKYR = opt.skyR ?? 2.4, WALKK = opt.walkK ?? 1.05, MINPX = opt.minPx ?? 5, CAPK = opt.capK ?? 2.5, MAXN = opt.maxShow ?? 7, _f = new THREE.Vector3(); MK = opt.mk ?? .24;
+  const SKYK = opt.skyK ?? 1.55, SKYR = opt.skyR ?? 1.35, WALKK = opt.walkK ?? .82, MINPX = opt.minPx ?? 5, CAPK = opt.capK ?? 2.5, MAXN = opt.maxShow ?? 7, _f = new THREE.Vector3(); MK = opt.mk ?? .24;
   cap = Math.max(1, cap);
   const mk = (geo, vs, fs, order, blend, side = THREE.DoubleSide) => {
     const g = geo.clone();
